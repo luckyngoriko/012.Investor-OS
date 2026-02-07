@@ -1,0 +1,11 @@
+/mnt/nas-data/dev/012.Investor-OS/target/debug/deps/xattr-d504276790f40801.d: /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/lib.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/error.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/sys/mod.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/util.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/sys/linux_macos.rs
+
+/mnt/nas-data/dev/012.Investor-OS/target/debug/deps/libxattr-d504276790f40801.rlib: /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/lib.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/error.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/sys/mod.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/util.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/sys/linux_macos.rs
+
+/mnt/nas-data/dev/012.Investor-OS/target/debug/deps/libxattr-d504276790f40801.rmeta: /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/lib.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/error.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/sys/mod.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/util.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/sys/linux_macos.rs
+
+/home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/lib.rs:
+/home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/error.rs:
+/home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/sys/mod.rs:
+/home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/util.rs:
+/home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xattr-1.6.1/src/sys/linux_macos.rs:

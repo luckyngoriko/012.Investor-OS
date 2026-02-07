@@ -1,0 +1,11 @@
+/mnt/nas-data/dev/012.Investor-OS/target/debug/deps/socket2-bf1eb31bd2abcd3d.d: /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/lib.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/sockaddr.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/socket.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/sockref.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/sys/unix.rs
+
+/mnt/nas-data/dev/012.Investor-OS/target/debug/deps/libsocket2-bf1eb31bd2abcd3d.rlib: /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/lib.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/sockaddr.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/socket.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/sockref.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/sys/unix.rs
+
+/mnt/nas-data/dev/012.Investor-OS/target/debug/deps/libsocket2-bf1eb31bd2abcd3d.rmeta: /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/lib.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/sockaddr.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/socket.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/sockref.rs /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/sys/unix.rs
+
+/home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/lib.rs:
+/home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/sockaddr.rs:
+/home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/socket.rs:
+/home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/sockref.rs:
+/home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/socket2-0.6.2/src/sys/unix.rs:

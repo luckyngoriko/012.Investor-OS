@@ -1,0 +1,5 @@
+/mnt/nas-data/dev/012.Investor-OS/target/debug/build/serde-aa5e38066815aef6/build_script_build-aa5e38066815aef6.d: /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/build.rs
+
+/mnt/nas-data/dev/012.Investor-OS/target/debug/build/serde-aa5e38066815aef6/build_script_build-aa5e38066815aef6: /home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/build.rs
+
+/home/luckyngoriko/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/build.rs:
