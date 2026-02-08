@@ -1,0 +1,44 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Node
+node_modules/
+.next/
+dist/
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Playwright
+test-results/
+playwright-report/
+
+# Firebase
+.firebase/
+firebase-debug.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

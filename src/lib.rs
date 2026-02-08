@@ -28,3 +28,12 @@ pub mod prelude {
         AutonomousMonitor, HealthStatus,
     };
 }
+
+/// RAG (Retrieval-Augmented Generation) module for financial document analysis
+/// 
+/// Sprint 5: PostgreSQL Optimization + RAG Integration
+/// - SEC filings parsing (10-K, 10-Q)
+/// - Earnings call transcript analysis
+/// - Semantic search on decision journal
+pub mod rag;
+
