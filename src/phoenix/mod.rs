@@ -1,5 +1,5 @@
-//! Phoenix Mode: Autonomous Learning System
-//! 
+//! Phoenix Mode: Autonomous Learning System v2.0
+//!
 //! Self-learning trading system that:
 //! 1. Trains on historical data with paper trading
 //! 2. Uses RAG memory to learn from past experiences
@@ -14,32 +14,24 @@
 
 pub mod assessment;
 pub mod graduation;
+pub mod memory;
+pub mod simulator;
+pub mod strategist;
+pub mod engine;
+
+// Re-export main components
+pub use assessment::GraduationAssessor;
+pub use graduation::GraduationAssessment;
+pub use graduation::*;
+pub use memory::{RagMemory, MemoryStats, RegimeInsight, TradingExperience, ExperienceQuery, OutcomeFilter};
+pub use simulator::{PaperTradingSimulator, SimulatorConfig, MarketDataPoint};
+pub use strategist::{LlmStrategist, StrategistConfig, Sentiment, DecisionContext};
+pub use engine::{PhoenixEngine, TrainingResult, EngineStats};
 
 use rust_decimal::Decimal;
 use std::collections::HashMap;
 
-pub use graduation::*;
-
-/// Phoenix Engine - Main autonomous learning orchestrator (skeleton)
-pub struct PhoenixEngine {
-    config: PhoenixConfig,
-}
-
-impl PhoenixEngine {
-    pub fn new(config: PhoenixConfig) -> Self {
-        Self { config }
-    }
-    
-    pub fn run_training_epoch(&self) -> EpochResult {
-        // Skeleton implementation
-        EpochResult {
-            epoch_number: 1,
-            metrics: EpochMetrics::default(),
-            daily_results: vec![],
-        }
-    }
-}
-
+/// Phoenix Engine Configuration
 #[derive(Debug, Clone)]
 pub struct PhoenixConfig {
     pub initial_capital: Decimal,
@@ -65,6 +57,7 @@ impl Default for PhoenixConfig {
     }
 }
 
+/// Epoch training result
 #[derive(Debug, Clone, Default)]
 pub struct EpochResult {
     pub epoch_number: u32,
@@ -72,6 +65,7 @@ pub struct EpochResult {
     pub daily_results: Vec<DailyResult>,
 }
 
+/// Epoch performance metrics
 #[derive(Debug, Clone, Default)]
 pub struct EpochMetrics {
     pub final_portfolio_value: Decimal,
@@ -83,12 +77,14 @@ pub struct EpochMetrics {
     pub profit_factor: f64,
 }
 
+/// Daily trading result
 #[derive(Debug, Clone, Default)]
 pub struct DailyResult {
     pub decision: TradingDecision,
 }
 
-#[derive(Debug, Clone, Default)]
+/// Trading decision
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct TradingDecision {
     pub action: Action,
     pub ticker: String,
@@ -97,7 +93,8 @@ pub struct TradingDecision {
     pub rationale: String,
 }
 
-#[derive(Debug, Clone, Default)]
+/// Trading action
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Action {
     #[default]
     Hold,
@@ -105,9 +102,11 @@ pub enum Action {
     Sell,
 }
 
+/// Training outcome
 #[derive(Debug, Clone, Default)]
 pub struct TrainingOutcome;
 
+/// Feature vector for ML
 #[derive(Debug, Clone, Default)]
 pub struct FeatureVector {
     pub features: HashMap<String, f64>,
@@ -122,5 +121,17 @@ impl FeatureVector {
             ticker: "UNKNOWN".to_string(),
             timestamp: chrono::Utc::now(),
         }
+    }
+}
+
+/// Helper trait for Decimal conversion
+pub trait DecimalExt {
+    fn to_f64(&self) -> Option<f64>;
+}
+
+impl DecimalExt for Decimal {
+    fn to_f64(&self) -> Option<f64> {
+        use std::str::FromStr;
+        f64::from_str(&self.to_string()).ok()
     }
 }
