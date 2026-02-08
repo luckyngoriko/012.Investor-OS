@@ -1,0 +1,109 @@
+{
+  "dashboard": {
+    "title": "RAG Analytics - Sprint 5",
+    "tags": ["sprint-5", "rag", "ai"],
+    "timezone": "browser",
+    "schemaVersion": 36,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "RAG Queries Per Minute",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "SELECT time_bucket('1 minute', created_at) as time, count(*) FROM rag_queries GROUP BY time ORDER BY time",
+            "datasource": "PostgreSQL"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Average Query Latency",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "SELECT time_bucket('5 minutes', created_at) as time, AVG(latency_ms) FROM rag_queries GROUP BY time ORDER BY time",
+            "datasource": "PostgreSQL"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Documents Indexed by Type",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "SELECT document_type, count(*) FROM document_embeddings GROUP BY document_type",
+            "format": "table",
+            "datasource": "PostgreSQL"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Top Tickers by Document Count",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "SELECT ticker, count(DISTINCT document_date) as doc_count FROM document_embeddings GROUP BY ticker ORDER BY doc_count DESC LIMIT 10",
+            "format": "table",
+            "datasource": "PostgreSQL"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 16, "x": 8, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Similarity Score Distribution",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "SELECT similarity_score FROM search_results_log WHERE created_at > NOW() - INTERVAL '24 hours'",
+            "format": "table",
+            "datasource": "PostgreSQL"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Embedding Generation Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "SELECT time, duration_ms FROM embedding_generation_log ORDER BY time DESC LIMIT 100",
+            "datasource": "PostgreSQL"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Recent Search Queries",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "SELECT query_text, context_ticker, latency_ms, created_at FROM rag_queries ORDER BY created_at DESC LIMIT 20",
+            "format": "table",
+            "datasource": "PostgreSQL"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24}
+      }
+    ]
+  }
+}

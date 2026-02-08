@@ -57,7 +57,7 @@ pub async fn readiness() -> Json<ApiResponse<serde_json::Value>> {
 
 // ==================== RAG Endpoints (S5-D9) ====================
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct RagSearchRequest {
     pub query: String,
     pub ticker: Option<String>,
@@ -66,7 +66,7 @@ pub struct RagSearchRequest {
     pub limit: usize,
 }
 
-fn default_limit() -> usize {
+pub fn default_limit() -> usize {
     10
 }
 
@@ -146,7 +146,7 @@ pub async fn rag_search(
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct RagSummarizeRequest {
     pub ticker: String,
     pub document_type: Option<String>,
@@ -204,7 +204,7 @@ pub async fn rag_summarize(
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct JournalSearchRequest {
     pub query: String,
     pub portfolio_id: Option<uuid::Uuid>,
@@ -262,7 +262,7 @@ pub async fn rag_journal_search(
 
 // ==================== SEC Filings Endpoint ====================
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct SecFilingRequest {
     pub ticker: String,
     pub document_type: String,
@@ -318,7 +318,7 @@ pub async fn process_sec_filing(
 
 // ==================== Earnings Endpoint ====================
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct EarningsRequest {
     pub ticker: String,
     pub transcript: String,

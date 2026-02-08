@@ -177,8 +177,8 @@ impl SecParser {
         // 8-Ks are typically event-driven, extract based on item numbers
         let mut sections = Vec::new();
         
-        let item_markers: Vec<(String, Vec<&str>)> = (1..=9)
-            .map(|i| (format!("Item {}", i), vec![&format!("ITEM {}.", i), &format!("ITEM {}", i)]))
+        let item_markers: Vec<(String, Vec<String>)> = (1..=9)
+            .map(|i| (format!("Item {}", i), vec![format!("ITEM {}.", i), format!("ITEM {}", i)]))
             .collect();
         
         let content_upper = content.to_uppercase();

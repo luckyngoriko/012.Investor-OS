@@ -37,3 +37,6 @@ pub mod prelude {
 /// - Semantic search on decision journal
 pub mod rag;
 
+/// HTTP API handlers
+pub mod api;
+

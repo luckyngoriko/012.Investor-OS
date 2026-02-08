@@ -38,7 +38,7 @@ pub enum RagError {
 pub type Result<T> = std::result::Result<T, RagError>;
 
 /// Document types supported by the RAG system
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum DocumentType {
     /// Annual report (Form 10-K)
