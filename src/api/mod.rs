@@ -40,5 +40,12 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/broker/account", get(handlers::broker::get_account))
         .route("/api/broker/kill-switch", post(handlers::broker::trigger_kill_switch))
         
+        // Analytics endpoints (S7)
+        .route("/api/analytics/backtest", post(handlers::analytics::run_backtest))
+        .route("/api/analytics/risk", get(handlers::analytics::get_risk_metrics))
+        .route("/api/analytics/attribution", get(handlers::analytics::get_attribution))
+        .route("/api/analytics/predict", post(handlers::analytics::get_ml_prediction))
+        .route("/api/analytics/anomalies", get(handlers::analytics::check_anomalies))
+        
         .with_state(state)
 }

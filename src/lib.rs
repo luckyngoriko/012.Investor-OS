@@ -49,3 +49,17 @@ pub mod api;
 /// - Execution engine
 pub mod broker;
 
+/// Analytics module
+///
+/// Sprint 7: Advanced Analytics & Backtesting
+/// - Backtesting engine
+/// - Risk metrics
+/// - Performance attribution
+/// - ML predictions
+pub mod analytics;
+
+/// Signals module
+///
+/// Trading signals and CQ calculation
+pub mod signals;
+

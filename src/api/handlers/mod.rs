@@ -1,5 +1,6 @@
 //! API Handlers
 
+pub mod analytics;
 pub mod broker;
 pub mod rag;
 
