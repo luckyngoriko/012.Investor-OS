@@ -1,0 +1,81 @@
+groups:
+  - name: investor_os_alerts
+    interval: 30s
+    rules:
+      # Data Staleness Alert
+      - alert: DataStaleness
+        expr: time() - investor_os_last_price_update > 86400
+        for: 1h
+        labels:
+          severity: warning
+          team: trading
+        annotations:
+          summary: "Price data is stale (> 24h)"
+          description: "The last price update was more than 24 hours ago. Data collectors may be failing."
+          runbook_url: "https://wiki.internal/runbooks/data-staleness"
+          
+      # Drawdown Warning
+      - alert: DrawdownWarning
+        expr: investor_os_drawdown < -0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: trading
+        annotations:
+          summary: "Drawdown exceeded 5%"
+          description: "Current drawdown is {{ $value | humanizePercentage }}. Consider reviewing positions."
+          
+      # Drawdown Critical - Kill Switch
+      - alert: DrawdownCritical
+        expr: investor_os_drawdown < -0.10
+        for: 1m
+        labels:
+          severity: critical
+          team: trading
+        annotations:
+          summary: "KILL SWITCH: Drawdown exceeded 10%"
+          description: "CRITICAL: Drawdown is {{ $value | humanizePercentage }}. Emergency kill switch should be triggered."
+          
+      # Collector Failure Alert
+      - alert: CollectorFailure
+        expr: rate(investor_os_collector_errors_total[5m]) > 0.1
+        for: 30m
+        labels:
+          severity: warning
+          team: data-engineering
+        annotations:
+          summary: "Data collector failing repeatedly"
+          description: "Collector {{ $labels.collector }} has high error rate."
+          
+      # API Response Time Alert
+      - alert: ApiHighLatency
+        expr: investor_os_api_response_time_seconds > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "API response time is high"
+          description: "Average response time is {{ $value }}s, expected < 2s."
+          
+      # Database Connection Alert
+      - alert: DatabaseHighConnections
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Database connections are high"
+          description: "Current connections: {{ $value }}. Approaching limit."
+          
+      # Kill Switch Triggered Alert
+      - alert: KillSwitchTriggered
+        expr: investor_os_killswitch_enabled == 1
+        for: 0m
+        labels:
+          severity: critical
+          team: trading
+        annotations:
+          summary: "Kill switch has been triggered"
+          description: "The trading kill switch is active. All new trades are blocked."
