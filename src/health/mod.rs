@@ -4,8 +4,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use tokio::time::{timeout, Duration};
 use tracing::info;
 
 /// Health check status
