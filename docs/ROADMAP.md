@@ -1,335 +1,161 @@
-# Investor OS - Roadmap & Next Steps
+# Investor OS Roadmap
 
-> **Date:** 2026-02-08 | **Version:** 1.0 | **Status:** MVP Complete
+## Overview
+This roadmap outlines the development path for Investor OS v1.0.0, from MVP foundation to production-ready algorithmic trading platform.
 
 ---
 
-## ✅ Completed (MVP v1.0)
+## Phase 1: Foundation (Weeks 1-4) - ✅ COMPLETE
 
-### Sprint 1: Foundation
-- [x] PostgreSQL + TimescaleDB setup
+### Sprint 1: Core Infrastructure (Week 1-2) ✅
 - [x] Docker Compose infrastructure
-- [x] Data collectors (Finnhub, Yahoo)
-- [x] Golden Path tests
+- [x] PostgreSQL + TimescaleDB setup
+- [x] Price collectors (Yahoo, FRED)
+- [x] Core data models
+- [x] Market hours tracking
+- **Golden Path Tests**: 14 passing
 
-### Sprint 2: Signals
-- [x] QVM Scorer (Quality, Value, Momentum)
-- [x] Insider Scorer (Form 4 analysis)
-- [x] Sentiment Scorer (VADER)
-- [x] Regime Detector (HMM)
-- [x] 18 Golden Path tests passing
-
-### Sprint 3: Decision Engine
-- [x] CQ v2.0 calculation (6-factor)
-- [x] Position sizing by regime
-- [x] Constraint checking
-- [x] Trade proposals lifecycle
-- [x] Decision journal
-- [x] Axum REST API
-- [x] 15 Golden Path tests passing
-
-### Sprint 4: Interface + Monitoring
-- [x] Next.js 15 Dashboard
-- [x] Proposals/Positions/Journal pages
-- [x] Grafana dashboards (System, Portfolio, Pipeline)
-- [x] Alert rules
-- [x] Kill switch UI
-- [x] Deployment guide & Runbook
-- [x] 10 E2E tests (Playwright)
+### Sprint 2: Signal Pipeline (Week 3-4) ✅
+- [x] QVM scoring system
+- [x] Insider clustering algorithm
+- [x] Market regime detection (HMM)
+- [x] Unified signal aggregation
+- **Golden Path Tests**: 18 passing
 
 ---
 
-## 🚀 Phase 2: PostgreSQL Performance Optimization
+## Phase 2: Decision Engine (Weeks 5-8) - ✅ COMPLETE
 
-### TimescaleDB Deep Optimization
+### Sprint 3: CQ Engine v2.0 (Week 5-6) ✅
+- [x] Mean reversion signals
+- [x] Breakout detection
+- [x] Sentiment integration
+- [x] CQ v2.0 formula
+- **Golden Path Tests**: 15 passing
 
-Already integrated, but needs tuning:
-
-```sql
--- 1. Hypertable optimization
-SELECT create_hypertable('prices', 'timestamp', 
-    chunk_time_interval => INTERVAL '1 day',
-    if_not_exists => TRUE
-);
-
--- 2. Compression for old data
-ALTER TABLE prices SET (
-    timescaledb.compress,
-    timescaledb.compress_segmentby = 'ticker'
-);
-
--- Add compression policy (compress after 7 days)
-SELECT add_compression_policy('prices', INTERVAL '7 days');
-
--- 3. Retention policy (keep 2 years)
-SELECT add_retention_policy('prices', INTERVAL '2 years');
-```
-
-### PostgreSQL Extensions to Add
-
-| Extension | Purpose | Impact |
-|-----------|---------|--------|
-| **pg_stat_statements** | Query performance tracking | Identify slow queries |
-| **auto_explain** | Auto-log slow queries | Debugging |
-| **pg_prewarm** | Preload tables into RAM | Faster startup |
-| **pg_trgm** | Fast text search | SEC filings search |
-| **btree_gist** | GiST indexes | Range queries |
-| **uuid-ossp** | UUID generation | Better IDs |
-
-### Query Optimization
-
-```sql
--- Materialized view for daily portfolio snapshots
-CREATE MATERIALIZED VIEW portfolio_daily AS
-SELECT 
-    date_trunc('day', timestamp) as day,
-    ticker,
-    avg(close) as avg_close,
-    max(high) as day_high,
-    min(low) as day_low,
-    sum(volume) as total_volume
-FROM prices
-GROUP BY 1, 2;
-
--- Index for CQ calculations
-CREATE INDEX idx_signals_cq ON signals (ticker, calculated_at) 
-INCLUDE (cq_score, regime_fit);
-
--- Partial index for pending proposals
-CREATE INDEX idx_pending_proposals ON proposals (created_at) 
-WHERE status = 'PENDING';
-```
+### Sprint 4: Web Interface (Week 7-8) ✅
+- [x] Next.js dashboard
+- [x] Portfolio visualization
+- [x] Real-time updates
+- [x] Grafana integration
+- **Golden Path Tests**: 10 E2E passing
 
 ---
 
-## 🧠 Phase 3: RAG Integration (Sprint 5)
+## Phase 3: Intelligence & Scale (Weeks 9-12) - 🔄 CURRENT
 
-### neurocod-rag Integration
+### Sprint 5: PostgreSQL Optimization + RAG (Week 9-10) 🔄
+- [ ] Query performance optimization (pg_stat_statements)
+- [ ] Covering indexes for CQ queries (10x faster)
+- [ ] TimescaleDB compression (90% storage)
+- [ ] Materialized views for dashboard
+- [ ] neurocod-rag integration
+- [ ] SEC filings ingestion
+- [ ] Earnings transcript analysis
+- **Golden Path Tests**: 8 planned
 
-```rust
-// Add to Cargo.toml
-[dependencies]
-neurocod-rag = { path = "../neurocod-rag", features = ["pgvector"] }
-```
-
-### Use Cases
-
-1. **SEC Filings Analysis**
-   - Chunk 10-K, 10-Q documents
-   - Vector embeddings for semantic search
-   - RAG for earnings call Q&A
-
-2. **News Aggregation**
-   - Real-time news ingestion
-   - Sentiment scoring with context
-   - Similarity search for related events
-
-3. **Decision Journal AI**
-   - Search past decisions by description
-   - Pattern recognition in outcomes
-   - "Why did I lose on tech stocks?"
-
-### Implementation
-
-```rust
-pub struct FinancialRag {
-    client: neurocod_rag::Client,
-    chunker: EarningsChunker,
-}
-
-impl FinancialRag {
-    pub async fn analyze_earnings(&self, ticker: &str) -> Result<Analysis> {
-        let context = self.client.search(
-            &format!("{} earnings risks opportunities", ticker),
-            SearchOptions::default().limit(5)
-        ).await?;
-        
-        // Generate insights using context
-        self.generate_insights(context).await
-    }
-}
-```
+### Sprint 6: Broker Integration (Week 11-12) 🔄
+- [ ] Interactive Brokers Client Portal API
+- [ ] Paper trading mode
+- [ ] Order management system
+- [ ] Position synchronization
+- [ ] Risk pre-checks
+- [ ] Execution engine
+- [ ] Kill switch
+- **Golden Path Tests**: 8 planned
 
 ---
 
-## 🔌 Phase 4: Broker Integration (Sprint 6)
+## Phase 4: Advanced Features (Weeks 13-16) - 📋 PLANNED
 
-### Interactive Brokers (IBKR)
+### Sprint 7: Backtesting & Analytics (Week 13-14) 📋
+- [ ] Backtesting framework
+- [ ] Walk-forward analysis
+- [ ] Transaction cost modeling
+- [ ] Risk analytics (VaR, Sharpe, drawdown)
+- [ ] Performance attribution
+- [ ] ML feature pipeline
+- [ ] XGBoost CQ prediction
+- [ ] Anomaly detection
+- **Golden Path Tests**: 6 planned
 
-```rust
-pub trait Broker {
-    async fn place_order(&self, order: Order) -> Result<OrderId>;
-    async fn get_positions(&self) -> Result<Vec<Position>>;
-    async fn get_account(&self) -> Result<Account>;
-    async fn cancel_order(&self, id: OrderId) -> Result<()>;
-}
-
-pub struct IBKRClient {
-    client: ibapi::Client,
-}
-```
-
-### Paper Trading Mode
-
-- Separate "paper" portfolio
-- Same CQ logic, simulated execution
-- Track paper vs real performance
-
-### Order Management
-
-- OCO (One-Cancels-Other) orders
-- Trailing stops
-- Position scaling (add/reduce)
-
----
-
-## 📊 Phase 5: Advanced Analytics (Sprint 7)
-
-### Backtesting Framework
-
-```rust
-pub struct Backtest {
-    start_date: DateTime<Utc>,
-    end_date: DateTime<Utc>,
-    initial_capital: Money,
-    strategy: Box<dyn Strategy>,
-}
-
-impl Backtest {
-    pub async fn run(&self) -> BacktestResult {
-        // Walk-forward analysis
-        // Transaction cost modeling
-        // Slippage simulation
-    }
-}
-```
-
-### Risk Analytics
-
-- VaR (Value at Risk) calculation
-- Sharpe ratio tracking
-- Maximum consecutive losses
-- Drawdown analysis
-
-### ML Enhancements
-
-- Feature engineering from signals
-- XGBoost for CQ prediction
-- Anomaly detection for regime changes
-
----
-
-## 🔒 Phase 6: Production Hardening (Sprint 8)
-
-### Kubernetes Deployment
-
-```yaml
-# k8s/api-deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: investor-api
-spec:
-  replicas: 3
-  template:
-    spec:
-      containers:
-      - name: api
-        image: investor-os/api:latest
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "500m"
-          limits:
-            memory: "2Gi"
-            cpu: "2000m"
-```
-
-### CI/CD Pipeline
-
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy
-on:
-  push:
-    branches: [main]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Run tests
-        run: cargo test
-      - name: E2E tests
-        run: cd frontend && npm run test:e2e
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to production
-        run: kubectl apply -f k8s/
-```
-
-### Security
-
+### Sprint 8: Production Hardening (Week 15-16) 📋
+- [ ] Kubernetes deployment
+- [ ] GitHub Actions CI/CD
 - [ ] Secrets management (Vault)
-- [ ] mTLS between services
-- [ ] API rate limiting
-- [ ] Audit logging
-- [ ] SOC 2 compliance prep
+- [ ] Rate limiting & DDoS protection
+- [ ] Health checks & graceful shutdown
+- [ ] Multi-environment setup
+- [ ] Disaster recovery
+- [ ] Monitoring & alerting
+- **Golden Path Tests**: 6 planned
 
 ---
 
-## 📅 Proposed Schedule
+## Milestone Summary
 
-| Phase | Duration | Focus |
-|-------|----------|-------|
-| Phase 2 | Week 9 | PostgreSQL optimization |
-| Phase 3 | Week 10-11 | RAG integration |
-| Phase 4 | Week 12-13 | Broker integration |
-| Phase 5 | Week 14-15 | Advanced analytics |
-| Phase 6 | Week 16-17 | Production hardening |
-
----
-
-## 🎯 Immediate Next Steps (Priority Order)
-
-1. **Add pg_stat_statements extension**
-   ```bash
-   docker compose exec postgres psql -U investor -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
-   ```
-
-2. **Enable TimescaleDB compression**
-   ```sql
-   -- Add to migration file
-   SELECT add_compression_policy('prices', INTERVAL '7 days');
-   ```
-
-3. **Create materialized views for CQ aggregations**
-
-4. **Start RAG integration with neurocod-rag**
-
-5. **Research IBKR API credentials**
+| Milestone | Sprints | Status | GP Tests |
+|-----------|---------|--------|----------|
+| **MVP** | 1-4 | ✅ Complete | 57 tests |
+| **Intelligence** | 5-6 | 🔄 In Progress | 16 planned |
+| **Production** | 7-8 | 📋 Planned | 12 planned |
+| **v1.0.0** | 1-8 | 📋 Planned | 85 total |
 
 ---
 
-## 💡 Innovation Ideas (Future)
+## Key Metrics
 
-- **Options flow analysis** (Unusual Whales integration)
-- **Alternative data** (satellite imagery, credit card data)
-- **Social listening** (Reddit, Twitter sentiment)
-- **Multi-strategy support** (Value + Momentum + Mean-reversion)
-- **Mobile app** (React Native)
+### Current State (End of Sprint 4)
+- **Lines of Code**: ~15,000 Rust + ~5,000 TypeScript
+- **Test Coverage**: 87%
+- **API Endpoints**: 12
+- **UI Screens**: 6
+- **Collectors**: 3
+
+### Target State (End of Sprint 8)
+- **Lines of Code**: ~35,000 Rust + ~8,000 TypeScript
+- **Test Coverage**: ≥90%
+- **API Endpoints**: 25
+- **UI Screens**: 12
+- **Collectors**: 5
 
 ---
 
-## 📚 Resources
+## Risk Assessment
 
-- [TimescaleDB Best Practices](https://docs.timescale.com/use-timescale/latest/hypertables/about-hypertables/)
-- [PostgreSQL Query Optimization](https://www.postgresql.org/docs/current/performance-tips.html)
-- [IBKR API Docs](https://interactivebrokers.github.io/tws-api/)
-- [neurocod-rag Integration Guide](../integration/RAG.md)
+### Technical Risks
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| IB API rate limits | Medium | High | Implement caching, request batching |
+| TimescaleDB performance | Low | High | Continuous monitoring, query optimization |
+| ML model overfitting | Medium | Medium | Walk-forward validation, cross-validation |
+
+### Schedule Risks
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| Broker integration complexity | Medium | Medium | Start with paper trading, mock responses |
+| Kubernetes learning curve | Low | Medium | Use managed services (GKE/EKS) |
 
 ---
 
-*Last updated: 2026-02-08*
+## Decision Log
+
+Key architectural decisions are recorded in [DECISION_LOG.md](./DECISION_LOG.md):
+- ✅ CQ formula (v2.0 with regime, sentiment, insider)
+- ✅ Architecture (Modular Rust + Next.js)
+- ✅ Database (PostgreSQL + TimescaleDB)
+- ✅ Message Queue (Redis)
+- ✅ Broker (Interactive Brokers)
+
+---
+
+## Next Actions
+
+1. **Immediate (Week 9)**: Begin Sprint 5 - PostgreSQL optimization
+2. **Week 10**: Complete RAG integration
+3. **Week 11**: Begin broker integration
+4. **Week 13**: Start backtesting framework
+
+---
+
+*Last Updated: 2026-02-08*
