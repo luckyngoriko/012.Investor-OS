@@ -1,0 +1,12 @@
+# S8-D1: API Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: investor-os
+data:
+  paper-trading: "true"
+  log-level: "info"
+  rate-limit-enabled: "true"
+  rate-limit-requests: "100"
+  rate-limit-window: "60"

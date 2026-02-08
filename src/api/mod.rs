@@ -25,6 +25,9 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/health", get(handlers::health))
         .route("/api/ready", get(handlers::readiness))
         
+        // Prometheus metrics endpoint
+        .route("/metrics", get(handlers::metrics))
+        
         // RAG endpoints (S5-D9)
         .route("/api/rag/search", post(handlers::rag::rag_search))
         .route("/api/rag/summarize", post(handlers::rag::rag_summarize))
