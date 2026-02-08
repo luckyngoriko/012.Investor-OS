@@ -40,3 +40,12 @@ pub mod rag;
 /// HTTP API handlers
 pub mod api;
 
+/// Broker Integration module
+///
+/// Sprint 6: Interactive Brokers Integration
+/// - Order management
+/// - Position tracking
+/// - Risk management
+/// - Execution engine
+pub mod broker;
+
