@@ -63,3 +63,13 @@ pub mod analytics;
 /// Trading signals and CQ calculation
 pub mod signals;
 
+/// Health checks
+///
+/// Sprint 8: Health checks and graceful shutdown
+pub mod health;
+
+/// HTTP Middleware
+///
+/// Sprint 8: Rate limiting, logging, auth
+pub mod middleware;
+

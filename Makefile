@@ -1,199 +1,171 @@
-# Investor OS - Makefile
-# Quick commands for development and deployment
+# Investor OS Makefile
+# Sprint 8: Production Deployment Commands
 
-.PHONY: help dev build test docker-up docker-down db-optimize db-migrate frontend-dev e2e-test
+.PHONY: help build test deploy deploy-staging deploy-prod backup restore
 
 # Default target
 help:
-	@echo "Investor OS - Available Commands"
-	@echo "================================="
+	@echo "Investor OS - Available Commands:"
 	@echo ""
 	@echo "Development:"
-	@echo "  make dev              - Start all services with docker compose"
-	@echo "  make dev-api          - Run API locally (cargo run)"
-	@echo "  make dev-frontend     - Run frontend dev server (npm run dev)"
+	@echo "  make build          - Build Docker image"
+	@echo "  make test           - Run all tests"
+	@echo "  make lint           - Run clippy and fmt"
 	@echo ""
-	@echo "Build:"
-	@echo "  make build            - Build Rust release binary"
-	@echo "  make build-frontend   - Build frontend for production"
+	@echo "Kubernetes:"
+	@echo "  make k8s-apply      - Apply K8s manifests to current context"
+	@echo "  make k8s-delete     - Delete K8s resources"
+	@echo "  make k8s-status     - Show K8s status"
+	@echo ""
+	@echo "Deployment:"
+	@echo "  make deploy-dev     - Deploy to development"
+	@echo "  make deploy-staging - Deploy to staging"
+	@echo "  make deploy-prod    - Deploy to production"
 	@echo ""
 	@echo "Database:"
-	@echo "  make db-up            - Start PostgreSQL and Redis"
-	@echo "  make db-migrate       - Run SQL migrations"
-	@echo "  make db-optimize      - Apply PostgreSQL performance optimizations"
-	@echo "  make db-reset         - Reset database (WARNING: deletes data)"
-	@echo "  make db-psql          - Open PostgreSQL shell"
-	@echo ""
-	@echo "Testing:"
-	@echo "  make test             - Run all Rust tests"
-	@echo "  make test-sprint1     - Run Sprint 1 Golden Path tests"
-	@echo "  make test-sprint2     - Run Sprint 2 tests"
-	@echo "  make test-sprint3     - Run Sprint 3 tests"
-	@echo "  make e2e-test         - Run Playwright E2E tests"
-	@echo ""
-	@echo "Code Quality:"
-	@echo "  make lint             - Run clippy lints"
-	@echo "  make fmt              - Format Rust code"
+	@echo "  make migrate        - Run database migrations"
+	@echo "  make backup         - Create backup"
+	@echo "  make restore FILE=x - Restore from backup"
 	@echo ""
 	@echo "Monitoring:"
-	@echo "  make logs             - Show all container logs"
-	@echo "  make logs-api         - Show API logs only"
-	@echo "  make status           - Check container status"
-	@echo ""
-	@echo "Production:"
-	@echo "  make deploy           - Deploy to production"
-	@echo "  make backup           - Backup database"
-	@echo ""
+	@echo "  make logs           - View API logs"
+	@echo "  make logs-f         - Follow API logs"
+	@echo "  make health         - Check health status"
 
-# Development
-dev:
-	docker compose up -d
+# ==================== Development ====================
 
-dev-api:
-	cargo run --bin investor-api
-
-dev-frontend:
-	cd frontend/investor-dashboard && npm run dev
-
-# Build
 build:
-	cargo build --release
+	docker build -t investor-os-api:latest .
 
-build-frontend:
-	cd frontend/investor-dashboard && npm run build
-
-# Testing
 test:
 	cargo test -- --test-threads=1
 
-test-sprint1:
-	cargo test -p investor-tests golden_path_sprint1 -- --nocapture
+test-e2e:
+	cd frontend/investor-dashboard && npx playwright test
 
-test-sprint2:
-	cargo test -p investor-tests golden_path_sprint2 -- --nocapture
-
-test-sprint3:
-	cargo test -p investor-tests golden_path_sprint3 -- --nocapture
-
-test-golden-path: test-sprint1 test-sprint2 test-sprint3
-
-e2e-test:
-	cd frontend/investor-dashboard && npm run test:e2e
-
-e2e-test-ui:
-	cd frontend/investor-dashboard && npm run test:e2e:ui
-
-# Database
-db-up:
-	docker compose up -d postgres redis
-
-db-migrate:
-	docker compose exec -T postgres psql -U investor -d investor_os < migrations/001_postgres_optimization.sql
-
-db-optimize: db-migrate
-	@echo "PostgreSQL optimizations applied!"
-
-db-reset:
-	docker compose down -v
-	docker volume rm investor-os_postgres_data || true
-	docker compose up -d postgres redis
-	@echo "Waiting for PostgreSQL to start..."
-	@sleep 5
-	@echo "Database reset complete!"
-
-db-psql:
-	docker compose exec postgres psql -U investor -d investor_os
-
-db-stats:
-	docker compose exec postgres psql -U investor -c "SELECT * FROM timescaledb_information.hypertables;"
-
-db-slow-queries:
-	docker compose exec postgres psql -U investor -c "SELECT query, mean_exec_time FROM pg_stat_statements ORDER BY mean_exec_time DESC LIMIT 10;"
-
-db-refresh-views:
-	docker compose exec postgres psql -U investor -c "SELECT refresh_dashboard_views();"
-
-# Code Quality
 lint:
 	cargo clippy -- -D warnings
-
-fmt:
-	cargo fmt
-
-fmt-check:
 	cargo fmt -- --check
 
-# Docker
-docker-up:
-	docker compose up -d --build
+# ==================== Kubernetes ====================
 
-docker-down:
-	docker compose down
+NAMESPACE ?= investor-os
+K8S_DIR = k8s/base
 
-docker-clean:
-	docker compose down -v
-	docker system prune -f
+k8s-apply:
+	kubectl apply -k $(K8S_DIR) -n $(NAMESPACE)
+	kubectl apply -k $(K8S_DIR) -n $(NAMESPACE)
 
-# Monitoring
-logs:
-	docker compose logs -f
+k8s-delete:
+	kubectl delete -k $(K8S_DIR) -n $(NAMESPACE) --ignore-not-found
 
-logs-api:
-	docker compose logs -f api
+k8s-status:
+	@echo "=== Pods ==="
+	kubectl get pods -n $(NAMESPACE)
+	@echo ""
+	@echo "=== Services ==="
+	kubectl get svc -n $(NAMESPACE)
+	@echo ""
+	@echo "=== Ingress ==="
+	kubectl get ingress -n $(NAMESPACE)
 
-logs-postgres:
-	docker compose logs -f postgres
+# ==================== Deployment ====================
 
-status:
-	docker compose ps
+IMAGE_TAG ?= $(shell git rev-parse --short HEAD)
+IMAGE = ghcr.io/neurocod/investor-os-api
 
-# Production
+deploy-dev:
+	kubectl set image deployment/investor-api \
+		api=$(IMAGE):$(IMAGE_TAG) -n investor-os-dev
+	kubectl rollout status deployment/investor-api -n investor-os-dev
+
+deploy-staging:
+	kubectl set image deployment/investor-api \
+		api=$(IMAGE):$(IMAGE_TAG) -n investor-os-staging
+	kubectl rollout status deployment/investor-api -n investor-os-staging
+
+deploy-prod:
+	@echo "⚠️  Deploying to PRODUCTION..."
+	@read -p "Are you sure? (yes/no): " confirm && [ $$confirm = yes ]
+	$(MAKE) migrate-prod
+	kubectl set image deployment/investor-api \
+		api=$(IMAGE):$(IMAGE_TAG) -n investor-os
+	kubectl rollout status deployment/investor-api -n investor-os
+
+# ==================== Database ====================
+
+migrate:
+	sqlx migrate run
+
+migrate-prod:
+	kubectl run migrate-$$(date +%s) \
+		--image=$(IMAGE):$(IMAGE_TAG) \
+		--rm -i --restart=Never \
+		--env="DATABASE_URL=$$(kubectl get secret api-secret -n investor-os -o jsonpath='{.data.database-url}' | base64 -d)" \
+		-- ./investor-api migrate
+
 backup:
-	docker compose exec postgres pg_dump -U investor investor_os > backup_$$(date +%Y%m%d_%H%M%S).sql
-	@echo "Backup created: backup_$$(date +%Y%m%d_%H%M%S).sql"
+	./scripts/backup.sh $(NAMESPACE)
 
 restore:
-	@if [ -z "$(FILE)" ]; then \
-		echo "Usage: make restore FILE=backup_20260101_120000.sql"; \
-		exit 1; \
-	fi
-	docker compose exec -T postgres psql -U investor -d investor_os < $(FILE)
-	@echo "Restore complete from $(FILE)"
+ifndef FILE
+	$(error FILE is required. Usage: make restore FILE=backup.sql.gz)
+endif
+	./scripts/restore.sh $(FILE) $(NAMESPACE)
 
-# Grafana
-grafana-import:
-	@echo "Grafana dashboards are auto-provisioned from config/grafana/dashboards/"
+# ==================== Monitoring ====================
 
-# Full test suite (all 5 gates)
-gates:
-	@echo "=== Gate 1: Golden Path Tests ==="
-	cargo test -- --test-threads=1
-	@echo "=== Gate 2: Clippy ==="
-	cargo clippy -- -D warnings
-	@echo "=== Gate 3: Build ==="
-	cargo build --release
-	@echo "=== Gate 4: Format Check ==="
-	cargo fmt -- --check
-	@echo "=== All Gates Passed! ==="
+logs:
+	kubectl logs -l app=investor-api -n $(NAMESPACE) --tail=100
 
-# CI/CD
-ci: fmt-check lint test build
-	@echo "CI checks complete!"
+logs-f:
+	kubectl logs -l app=investor-api -n $(NAMESPACE) -f
 
-# Setup for new developers
-setup:
-	@echo "Setting up Investor OS..."
-	@cp .env.example .env
-	@echo "Installing Rust dependencies..."
-	cargo fetch
-	@echo "Installing frontend dependencies..."
-	cd frontend/investor-dashboard && npm install
-	@echo "Installing Playwright browsers..."
-	cd frontend/investor-dashboard && npx playwright install
-	@echo "Setup complete! Edit .env and run 'make dev'"
+health:
+	@curl -s http://localhost:3000/api/health | jq || curl -s http://localhost:3000/api/health
 
-# Clean build artifacts
-clean:
-	cargo clean
-	rm -rf frontend/investor-dashboard/.next
-	rm -rf frontend/investor-dashboard/dist
+# ==================== Secrets Management ====================
+
+secrets-create:
+	# Create PostgreSQL secret
+	kubectl create secret generic postgres-secret \
+		--from-literal=username=investor \
+		--from-literal=password=$$(openssl rand -base64 32) \
+		-n $(NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
+
+	# Create API secret
+	kubectl create secret generic api-secret \
+		--from-literal=database-url="postgres://investor:$$(kubectl get secret postgres-secret -n $(NAMESPACE) -o jsonpath='{.data.password}' | base64 -d)@postgres:5432/investor_os" \
+		--from-literal=redis-url="redis://redis:6379" \
+		-n $(NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
+
+# ==================== Development Environment ====================
+
+dev-up:
+	docker-compose up -d
+
+dev-down:
+	docker-compose down
+
+dev-logs:
+	docker-compose logs -f
+
+# ==================== Utilities ====================
+
+port-forward:
+	kubectl port-forward svc/investor-api 3000:80 -n $(NAMESPACE)
+
+shell:
+	kubectl exec -it deployment/investor-api -n $(NAMESPACE) -- /bin/sh
+
+# Version bump
+VERSION ?=
+bump-version:
+ifndef VERSION
+	$(error VERSION is required. Usage: make bump-version VERSION=1.2.3)
+endif
+	sed -i 's/^version = ".*"/version = "$(VERSION)"/' Cargo.toml
+	git add Cargo.toml Cargo.lock
+	git commit -m "chore(release): bump version to $(VERSION)"
+	git tag -a "v$(VERSION)" -m "Release v$(VERSION)"
+	@echo "Created tag v$(VERSION). Push with: git push && git push origin v$(VERSION)"

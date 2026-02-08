@@ -1,0 +1,11 @@
+# S8-D1: Pod Disruption Budget for high availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: investor-api-pdb
+  namespace: investor-os
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: investor-api
