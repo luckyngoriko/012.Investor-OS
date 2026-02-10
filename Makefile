@@ -169,3 +169,41 @@ endif
 	git commit -m "chore(release): bump version to $(VERSION)"
 	git tag -a "v$(VERSION)" -m "Release v$(VERSION)"
 	@echo "Created tag v$(VERSION). Push with: git push && git push origin v$(VERSION)"
+
+# Status & Reporting
+status:
+	@echo "📊 Investor OS Current Status"
+	@echo "=============================="
+	@echo "Current Sprint: $$(cat .current_sprint)"
+	@echo ""
+	@echo "Test Status:"
+	@cargo test --lib --quiet 2>&1 | grep "test result" || echo "Tests need attention"
+	@echo ""
+	@echo "Last 5 commits:"
+	@git log --oneline -5
+
+status-update:
+	@./scripts/status_update.sh
+
+sprint-report:
+	@echo "Generating Sprint Report..."
+	@echo "Current Sprint: $$(cat .current_sprint)"
+	@cat docs/current_status.yaml | grep -A 20 "sprint_$$(cat .current_sprint):"
+
+health-check:
+	@echo "🏥 Full Health Check"
+	@echo "===================="
+	@echo ""
+	@echo "1. Building project..."
+	@cargo build --quiet 2>&1 | tail -5 || echo "Build check complete"
+	@echo ""
+	@echo "2. Running all tests..."
+	@cargo test --quiet 2>&1 | tail -10
+	@echo ""
+	@echo "3. Checking formatting..."
+	@cargo fmt -- --check 2>&1 | head -5 || echo "✅ Formatting OK"
+	@echo ""
+	@echo "4. Clippy checks..."
+	@cargo clippy --quiet 2>&1 | tail -10 || echo "✅ Clippy OK"
+	@echo ""
+	@echo "Health check complete!"
