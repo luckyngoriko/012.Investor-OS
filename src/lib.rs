@@ -148,3 +148,13 @@ pub mod resilience;
 /// - Structured logging
 pub mod observability;
 
+/// Treasury Module
+///
+/// Sprint 15: Capital Management
+/// - Multi-currency wallet (fiat + crypto)
+/// - Deposits and withdrawals
+/// - FX conversion
+/// - Yield optimization
+/// - Cross-collateralization
+pub mod treasury;
+
