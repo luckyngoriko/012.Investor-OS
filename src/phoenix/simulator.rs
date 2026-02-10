@@ -3,14 +3,13 @@
 //! Virtual trading environment using real market data
 //! Uses IB API pattern from Sprint 6
 
-use chrono::{DateTime, Utc, Duration};
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use std::collections::HashMap;
 
 use super::{
-    Action, DailyResult, EpochMetrics, EpochResult, FeatureVector, TradingDecision,
-    memory::{MarketCondition, MarketRegime, TradeOutcome, TradingExperience, TrendDirection, VolatilityLevel, ExitReason},
-    strategist::Sentiment,
+    Action, EpochMetrics, TradingDecision,
+    memory::{TradeOutcome, ExitReason},
     DecimalExt,
 };
 
@@ -177,7 +176,7 @@ impl PaperTradingSimulator {
         decision: &TradingDecision,
         price: Decimal,
         timestamp: DateTime<Utc>,
-        data: &MarketDataPoint,
+        _data: &MarketDataPoint,
     ) -> TradeOutcome {
         let quantity = decision.quantity.unwrap_or(0);
         if quantity == 0 {
@@ -249,7 +248,7 @@ impl PaperTradingSimulator {
         decision: &TradingDecision,
         price: Decimal,
         timestamp: DateTime<Utc>,
-        data: &MarketDataPoint,
+        _data: &MarketDataPoint,
     ) -> TradeOutcome {
         let position = match self.portfolio.positions.get(&decision.ticker) {
             Some(p) if p.quantity > 0 => p.clone(),
@@ -266,10 +265,8 @@ impl PaperTradingSimulator {
         // Update or remove position
         if quantity >= position.quantity {
             self.portfolio.positions.remove(&decision.ticker);
-        } else {
-            if let Some(p) = self.portfolio.positions.get_mut(&decision.ticker) {
-                p.quantity -= quantity;
-            }
+        } else if let Some(p) = self.portfolio.positions.get_mut(&decision.ticker) {
+            p.quantity -= quantity;
         }
         
         // Add cash
@@ -322,7 +319,7 @@ impl PaperTradingSimulator {
     }
     
     /// Hold action outcome
-    fn hold_outcome(&self, data: &MarketDataPoint) -> TradeOutcome {
+    fn hold_outcome(&self, _data: &MarketDataPoint) -> TradeOutcome {
         TradeOutcome {
             profit_loss: Decimal::ZERO,
             profit_loss_pct: 0.0,
@@ -402,7 +399,7 @@ impl PaperTradingSimulator {
         let final_value = self.portfolio_value();
         let start_value = self.portfolio.start_value;
         let total_return = final_value - start_value;
-        let return_pct = (total_return / start_value).to_f64().unwrap_or(0.0);
+        let _return_pct = (total_return / start_value).to_f64().unwrap_or(0.0);
         
         // Calculate CAGR (assuming 252 trading days per year)
         let trading_days = self.portfolio.equity_curve.len() as f64;

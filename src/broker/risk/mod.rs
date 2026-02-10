@@ -5,7 +5,7 @@
 use rust_decimal::Decimal;
 use tracing::{info, warn};
 
-use crate::broker::{Broker, BrokerConfig, BrokerError, Order, OrderSide, Position, Result};
+use crate::broker::{BrokerConfig, Order, OrderSide, Position, Result};
 
 /// Risk checker for validating orders before submission
 pub struct RiskChecker {
@@ -142,11 +142,10 @@ impl RiskChecker {
         }
 
         // Check limit price for limit orders
-        if order.order_type == crate::broker::OrderType::Limit {
-            if order.limit_price.is_none() || order.limit_price.unwrap() <= Decimal::ZERO {
+        if order.order_type == crate::broker::OrderType::Limit
+            && (order.limit_price.is_none() || order.limit_price.unwrap() <= Decimal::ZERO) {
                 return false;
             }
-        }
 
         true
     }

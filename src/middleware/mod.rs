@@ -46,7 +46,7 @@ impl RateLimiter {
     /// Check rate limit for a key
     pub async fn check(&mut self, key: &str) -> RateLimitResult {
         let window_key = format!("rate_limit:{}", key);
-        let now = SystemTime::now()
+        let _now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
@@ -99,7 +99,7 @@ pub async fn rate_limit_middleware(
             
             Ok(response)
         }
-        RateLimitResult::Exceeded { retry_after } => {
+        RateLimitResult::Exceeded { retry_after: _ } => {
             warn!("Rate limit exceeded for client: {}", client_key);
             Err(StatusCode::TOO_MANY_REQUESTS)
         }

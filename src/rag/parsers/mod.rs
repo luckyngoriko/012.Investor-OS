@@ -3,9 +3,7 @@
 //! S5-D6: SEC Filings Parser (10-K, 10-Q)
 //! S5-D7: Earnings Analyzer (FinBERT sentiment on transcripts)
 
-use super::{DocumentChunk, DocumentMetadata, DocumentType, FinancialMetric, Result, RagError};
-use chrono::{DateTime, Utc};
-use uuid::Uuid;
+use super::{DocumentChunk, DocumentMetadata, DocumentType, FinancialMetric, Result};
 
 mod sec;
 mod earnings;
@@ -42,12 +40,13 @@ fn chunk_text(text: &str, max_size: usize, overlap: usize) -> Vec<String> {
         
         chunks.push(text[start..chunk_end].trim().to_string());
         
-        // Move start forward with overlap
-        start = chunk_end.saturating_sub(overlap);
-        
-        // Prevent infinite loop
-        if start >= chunk_end {
+        // Move start forward with overlap, but ensure we make progress
+        let next_start = chunk_end.saturating_sub(overlap);
+        if next_start <= start {
+            // Force progress if overlap would keep us at same position
             start = chunk_end;
+        } else {
+            start = next_start;
         }
     }
     
@@ -120,6 +119,7 @@ fn contains_forward_looking(text: &str) -> bool {
     let lower = text.to_lowercase();
     let forward_indicators = [
         "will",
+        "expect",
         "expects",
         "anticipates",
         "projects",

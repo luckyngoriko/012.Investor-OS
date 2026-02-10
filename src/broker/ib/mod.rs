@@ -7,15 +7,14 @@ use async_trait::async_trait;
 use reqwest::{Client, ClientBuilder, StatusCode};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
 use crate::broker::{
-    AccountInfo, Broker, BrokerConfig, BrokerError, BrokerType, Execution, Order, OrderSide,
-    OrderStatus, OrderType, Position, Result, TimeInForce,
+    AccountInfo, Broker, BrokerConfig, BrokerError, Execution, Order,
+    OrderStatus, Position, Result,
 };
 
 // Re-export client
@@ -379,7 +378,7 @@ impl Broker for InteractiveBrokers {
         Ok(status)
     }
 
-    async fn get_executions(&self, order_id: uuid::Uuid) -> Result<Vec<Execution>> {
+    async fn get_executions(&self, _order_id: uuid::Uuid) -> Result<Vec<Execution>> {
         // Would implement execution retrieval
         // For now, return empty
         Ok(vec![])
@@ -389,7 +388,7 @@ impl Broker for InteractiveBrokers {
         // Get snapshot for ticker
         let snapshot: serde_json::Value = self.request(
             reqwest::Method::GET,
-            &format!("/iserver/marketdata/snapshot?conids=0&fields=31"),
+            &"/iserver/marketdata/snapshot?conids=0&fields=31".to_string(),
             None,
         ).await?;
 

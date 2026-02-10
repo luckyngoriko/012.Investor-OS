@@ -15,8 +15,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { AlertTriangle, Shield, AlertCircle, Loader2 } from "lucide-react";
+import { AlertTriangle, Shield, AlertCircle, Loader2, Bot, User, UserCog } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { 
+  TradingModeCard,
+  ModeSettingsPanel,
+  TRADING_MODES,
+  type TradingMode,
+  DEFAULT_MODE_CONFIG,
+  type TradingModeConfig,
+} from "@/components/trading-mode";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
@@ -26,6 +34,10 @@ export default function SettingsPage() {
   const [showKillswitchDialog, setShowKillswitchDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  
+  // Trading Mode State
+  const [tradingMode, setTradingMode] = useState<TradingMode>("semi_auto");
+  const [modeConfig, setModeConfig] = useState<TradingModeConfig>(DEFAULT_MODE_CONFIG);
 
   useEffect(() => {
     checkKillswitchStatus();
@@ -144,6 +156,66 @@ export default function SettingsPage() {
             )}
           </div>
         </CardContent>
+      </Card>
+
+      {/* Trading Mode Section */}
+      <Card className="border-blue-200">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-blue-100">
+              <Bot className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <CardTitle>Trading Mode</CardTitle>
+              <CardDescription>
+                Configure how Investor OS executes trades
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Mode Selection Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {(Object.keys(TRADING_MODES) as TradingMode[]).map((mode) => (
+              <TradingModeCard
+                key={mode}
+                mode={mode}
+                isActive={tradingMode === mode}
+                onSelect={(selectedMode) => {
+                  setTradingMode(selectedMode);
+                  setModeConfig({ ...modeConfig, mode: selectedMode });
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Mode-specific Settings */}
+          <div className="border-t pt-6">
+            <ModeSettingsPanel
+              config={modeConfig}
+              onConfigChange={(newConfig) => {
+                setModeConfig(newConfig);
+                setTradingMode(newConfig.mode);
+              }}
+            />
+          </div>
+        </CardContent>
+        <CardFooter className="bg-slate-50 border-t">
+          <div className="flex items-center justify-between w-full">
+            <p className="text-sm text-slate-500">
+              Current Mode: <span className="font-medium text-slate-700">{TRADING_MODES[tradingMode].name}</span>
+            </p>
+            <Button 
+              onClick={() => {
+                // Save to localStorage or API
+                localStorage.setItem("trading-mode", JSON.stringify(modeConfig));
+                alert("Trading mode settings saved!");
+              }}
+            >
+              Save Settings
+            </Button>
+          </div>
+        </CardFooter>
       </Card>
 
       {/* API Settings */}

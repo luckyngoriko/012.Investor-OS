@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use super::{Action, TradingDecision};
-use super::memory::{RagMemory, ExperienceQuery, OutcomeFilter, TradingExperience, MarketRegime, RegimeInsight};
+use super::memory::{RagMemory, ExperienceQuery, OutcomeFilter, TradingExperience, MarketRegime};
 
 /// LLM Strategist that makes trading decisions
 pub struct LlmStrategist {
@@ -198,8 +198,7 @@ SIMILAR PAST EXPERIENCES:
             }
         }
         
-        prompt.push_str(&format!(
-            r#"
+        prompt.push_str(&r#"
 DECISION INSTRUCTIONS:
 1. Analyze the current market conditions
 2. Consider similar past experiences and their outcomes
@@ -209,15 +208,14 @@ DECISION INSTRUCTIONS:
 6. Explain your reasoning in 1-2 sentences
 
 RESPONSE FORMAT:
-{{
+{
     "action": "BUY|SELL|HOLD",
     "confidence": 0.85,
     "rationale": "Brief explanation of decision"
-}}
+}
 
 Only respond with the JSON object, nothing else.
-"#
-        ));
+"#.to_string());
         
         prompt
     }

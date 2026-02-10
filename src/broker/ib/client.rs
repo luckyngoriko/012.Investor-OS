@@ -5,7 +5,7 @@
 use reqwest::{Client, Method, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use tracing::{debug, error, trace, warn};
+use tracing::{error, trace, warn};
 
 use crate::broker::{BrokerError, Result};
 

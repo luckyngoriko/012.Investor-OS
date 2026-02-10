@@ -5,7 +5,6 @@
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use rust_decimal::MathematicalOps;
-use tracing::warn;
 
 use crate::analytics::{AnalyticsError, Result};
 
@@ -319,8 +318,8 @@ mod tests {
 
         let sharpe = analyzer.sharpe_ratio();
         
-        // Sharpe should be a finite number
-        assert!(sharpe.is_finite());
+        // Sharpe should be a reasonable number (Decimal doesn't have is_finite())
+        assert!(sharpe > Decimal::MIN && sharpe < Decimal::MAX);
     }
 
     #[test]

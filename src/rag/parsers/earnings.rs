@@ -200,7 +200,7 @@ impl EarningsParser {
             r"^([A-Z][a-z]+\s+[A-Z][a-z]+)\s*--\s*(.*)$",
         ];
         
-        for pattern in &patterns {
+        for _pattern in &patterns {
             // Simple pattern matching (in production would use regex)
             if line.contains(" - ") || line.contains(" -- ") {
                 let parts: Vec<&str> = line.split(" - ").collect();

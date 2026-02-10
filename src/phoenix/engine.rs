@@ -13,8 +13,8 @@ use super::{
     assessment::GraduationAssessor,
     memory::*,
     simulator::{MarketDataPoint, PaperTradingSimulator, SimulatorConfig},
-    strategist::{DecisionContext, LlmStrategist, MockLlmProvider, Sentiment, StrategistConfig, RuleBasedStrategist},
-    Action, DailyResult, EpochMetrics, EpochResult, FeatureVector, PhoenixConfig, TradingDecision,
+    strategist::{DecisionContext, LlmStrategist, MockLlmProvider, Sentiment, RuleBasedStrategist},
+    Action, DailyResult, EpochMetrics, PhoenixConfig, TradingDecision,
     DecimalExt,
 };
 
@@ -233,7 +233,7 @@ impl PhoenixEngine {
         
         // Assess graduation (if enough epochs)
         let graduation_assessment = if epoch_number >= self.config.min_epochs_before_graduation 
-            && epoch_number % self.config.assessment_frequency == 0 
+            && epoch_number.is_multiple_of(self.config.assessment_frequency) 
         {
             let stress_test = StressTestResult::default();
             let walk_forward = WalkForwardResult::default();

@@ -10,8 +10,8 @@ use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use crate::broker::{
-    orders::OrderManager, Broker, BrokerConfig, BrokerError, Order, OrderSide, OrderStatus,
-    OrderType, Position, Result,
+    orders::OrderManager, Broker, BrokerConfig, BrokerError, Order, OrderSide,
+    OrderType, Result,
 };
 use crate::broker::risk::{RiskChecker, RiskSeverity};
 

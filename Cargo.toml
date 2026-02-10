@@ -11,7 +11,7 @@ license = "LGPL-2.1"
 neurocod-rag = { path = "/mnt/nas-data/dev/neurocod-rag" }
 
 # Async runtime
-tokio = { version = "1.48", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.48", features = ["rt-multi-thread", "macros", "signal"] }
 async-trait = "0.1"
 
 # Serialization
@@ -24,6 +24,7 @@ rust_decimal = { version = "1.35", features = ["serde", "maths"] }
 # Error handling & logging
 thiserror = "2.0"
 tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # Database
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
@@ -38,6 +39,15 @@ redis = { version = "0.24", features = ["tokio-comp"] }
 
 # HTTP client (for external APIs)
 reqwest = { version = "0.12", features = ["json"] }
+
+# Graph library for LangGraph
+petgraph = "0.6"
+
+# Async utilities
+futures = "0.3"
+
+# Regex for parsing
+regex = "1.0"
 
 [dev-dependencies]
 tokio = { version = "1.48", features = ["full", "test-util"] }

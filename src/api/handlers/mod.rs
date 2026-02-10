@@ -5,14 +5,11 @@ pub mod broker;
 pub mod rag;
 
 use axum::{
-    extract::State,
     http::StatusCode,
     Json,
 };
-use serde::{Serialize, Deserialize};
-use std::sync::Arc;
+use serde::Serialize;
 
-use crate::api::AppState;
 
 /// Standard API response wrapper
 #[derive(Serialize)]

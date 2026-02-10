@@ -20,9 +20,6 @@ use uuid::Uuid;
 
 use crate::api::handlers::ApiResponse;
 use crate::api::AppState;
-use crate::broker::{
-    OrderSide, OrderStatus, OrderType, Position, TimeInForce,
-};
 
 /// Request to place an order
 #[derive(Serialize, Deserialize)]

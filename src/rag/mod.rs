@@ -324,7 +324,7 @@ impl RagService {
             sorted_chunks.sort_by_key(|c| c.chunk_index);
             
             // Combine content
-            let full_content: String = sorted_chunks.iter()
+            let _full_content: String = sorted_chunks.iter()
                 .map(|c| c.content.as_str())
                 .collect::<Vec<_>>()
                 .join("\n\n");

@@ -3,6 +3,7 @@
 use investor_os::rag::embeddings::{cosine_similarity, EmbeddingGenerator};
 
 #[tokio::test]
+#[ignore = "Slow test - requires embedding model"]
 async fn test_embedding_generation() {
     let generator = EmbeddingGenerator::new().await
         .expect("Should create embedding generator");
@@ -22,6 +23,7 @@ async fn test_embedding_generation() {
 }
 
 #[tokio::test]
+#[ignore = "Slow test - requires embedding model"]
 async fn test_embedding_determinism() {
     let generator = EmbeddingGenerator::new().await
         .expect("Should create embedding generator");
@@ -39,6 +41,7 @@ async fn test_embedding_determinism() {
 }
 
 #[tokio::test]
+#[ignore = "Slow test - requires embedding model"]
 async fn test_different_texts_different_embeddings() {
     let generator = EmbeddingGenerator::new().await
         .expect("Should create embedding generator");
@@ -57,6 +60,7 @@ async fn test_different_texts_different_embeddings() {
 }
 
 #[tokio::test]
+#[ignore = "Slow test - requires embedding model"]
 async fn test_cosine_similarity_range() {
     let generator = EmbeddingGenerator::new().await
         .expect("Should create embedding generator");
@@ -82,6 +86,7 @@ async fn test_cosine_similarity_range() {
 }
 
 #[tokio::test]
+#[ignore = "Slow test - requires embedding model"]
 async fn test_batch_embedding_generation() {
     let generator = EmbeddingGenerator::new().await
         .expect("Should create embedding generator");

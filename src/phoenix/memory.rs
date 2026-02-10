@@ -4,7 +4,6 @@
 //! Stores: winners, mistakes, regime patterns, strategies
 
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use uuid::Uuid;
 
 /// Experience stored in RAG memory
@@ -339,4 +338,4 @@ impl Default for RagMemory {
 }
 
 // Import from parent module
-use super::{TradingDecision, Action};
+use super::TradingDecision;

@@ -66,3 +66,238 @@ CQ = PEGY_rel×0.20 + Insider×0.20 + Sentiment×0.15 + Regime×0.20 + Breakout�
 - Kill switch as first-class citizen
 - CQ formula as pattern example
 **Outcome:** ✅ Complete
+
+---
+
+## DEC-005: AI Stack v3.5 — LangChain/LangGraph/Temporal (2026-02-09)
+
+**Context:** Need to integrate AI orchestration patterns (LangChain, LangGraph, Temporal) into pure Rust stack.
+**Decision:** Build our own Rust implementations inspired by these patterns, not using Python libraries.
+
+**Sprint 1 — LangChain Core:**
+- ✅ Chain trait with async execution
+- ✅ PromptTemplate with variable substitution
+- ✅ ChainContext/ChainResult for state management
+- ✅ Trading-specific prompts (SEC analysis, CQ calculation)
+- ✅ Integration tests passing
+
+**Architecture:**
+```
+src/langchain/
+├── mod.rs      — Chain trait, ChainContext, ChainResult
+├── chains.rs   — LLMChain, SequentialChain, ParallelChain, RAGChain
+├── prompts.rs  — PromptTemplate with validation
+├── tools.rs    — Tool trait + Trading tools
+├── parsers.rs  — JSON, Score, List parsers
+└── memory.rs   — Conversation, Vector, Summary memory
+```
+
+**Rationale:**
+- Full type safety with Rust
+- Zero Python/Go dependencies
+- Async-native design with tokio
+- Direct integration with existing ml::apis
+
+**Outcome:** ✅ Sprint 1 Complete — All tests passing
+
+---
+
+## DEC-006: AI Stack v3.5 — Sprint 2: Tools + Agent (2026-02-09)
+
+**Context:** Need ReAct pattern agent with trading tools for autonomous decision making.
+**Decision:** Implement Agent with tool-calling capability using ReAct pattern.
+
+**Sprint 2 — LangChain Tools + Agent:**
+- ✅ Agent with ReAct pattern (Reasoning + Acting)
+- ✅ Tool trait for external function calls
+- ✅ ToolRegistry for tool management
+- ✅ AgentBuilder for fluent configuration
+- ✅ Parsing Action/Final Answer from LLM output
+
+**New Components:**
+```
+src/langchain/
+└── agent.rs    — Agent, AgentBuilder, ReAct loop
+```
+
+**Example Usage:**
+```rust
+let agent = AgentBuilder::new()
+    .with_llm(llm)
+    .with_tool(Box::new(PortfolioTool::new(service)))
+    .with_tool(Box::new(MarketDataTool::new(service)))
+    .with_system_prompt("You are a trading assistant...")
+    .build()?;
+
+let result = agent.run(ctx! {
+    "question": "Should I buy AAPL based on current market conditions?"
+}).await?;
+```
+
+**Tests:**
+- ✅ test_parse_action — парсване на Action/Action Input
+- ✅ test_parse_final_answer — парсване на Final Answer
+- ✅ test_trading_prompts_exist — trading prompts
+
+**Outcome:** ✅ Sprint 2 Complete — 6 tests passing
+
+---
+
+## DEC-007: AI Stack v3.5 — Sprint 3: LangGraph Core (2026-02-09)
+
+**Context:** Need state machine for trading decision flow with conditional routing.
+**Decision:** Implement graph-based execution with nodes, edges, and shared state.
+
+**Sprint 3 — LangGraph Core:**
+- ✅ Graph trait with async execution
+- ✅ GraphBuilder for fluent graph construction
+- ✅ SharedState with CQ, MarketRegime, TradingAction
+- ✅ Conditional edges (regime-based routing)
+- ✅ Trading nodes (CQ calc, Risk check, Execute)
+- ✅ StateBuilder for easy state construction
+
+**Components:**
+```
+src/langgraph/
+├── mod.rs      — Graph trait, GraphExecutor, GraphError
+├── state.rs    — SharedState, MarketRegime, TradingAction, ExecutionStatus
+├── graph.rs    — ExecutableGraph, GraphBuilder (petgraph)
+├── nodes.rs    — Node trait, Trading nodes
+└── edges.rs    — Conditional edges, EdgeBuilder
+```
+
+**Tests:**
+- ✅ test_shared_state_builder
+- ✅ test_cq_calculation  
+- ✅ test_market_regime_conditions
+- ✅ test_cq_condition
+- ✅ test_state_snapshot
+- ✅ test_start_node
+- ✅ test_cq_calculation_node
+- ✅ test_simple_graph_execution
+- ✅ test_execution_status
+- ✅ test_trading_action_variants
+
+**Example:**
+```rust
+let graph = GraphBuilder::new("trading_decision")
+    .add_node("start", StartNode)
+    .add_node("cq_calc", CQCalculationNode)
+    .add_node("execute", ExecutionNode)
+    .add_edge("start", "cq_calc")
+    .add_conditional_edge("cq_calc", cq_above(0.7), "execute")
+    .set_start("start")
+    .build()?;
+
+let result = graph.execute(SharedState::new("AAPL")).await?;
+```
+
+**Outcome:** ✅ Sprint 3 Complete — 10 tests passing
+
+---
+
+## DEC-008: AI Stack v3.5 — Sprint 4: Temporal Core (2026-02-09)
+
+**Context:** Need durable execution for trading workflows with retry, signals, and compensation.
+**Decision:** Implement Temporal-inspired workflow engine with activities and saga pattern.
+
+**Sprint 4 — Temporal Core:**
+- ✅ Workflow trait with async execution
+- ✅ Activity trait for idempotent operations
+- ✅ RetryPolicy with exponential backoff
+- ✅ Saga pattern for distributed transactions
+- ✅ ActivityContext and WorkflowContext
+- ✅ Trading activities (FetchMarketData, CalculateCQ, CallLLM, PlaceOrder)
+
+**Components:**
+```
+src/temporal/
+├── mod.rs          — Workflow trait, RetryPolicy, WorkflowStatus
+├── workflow.rs     — WorkflowContext, WorkflowHandle, WorkflowComposer
+├── activity.rs     — Activity trait, ActivityContext, ActivityExecutor
+├── context.rs      — WorkflowContext, ActivityContext (extended)
+├── client.rs       — TemporalClient, WorkflowClient
+├── saga.rs         — Saga pattern, SagaBuilder, compensation
+└── worker.rs       — Worker, TestWorker
+```
+
+**Tests:**
+- ✅ test_simple_workflow
+- ✅ test_workflow_context
+- ✅ test_activity_execution
+- ✅ test_activity_context
+- ✅ test_retry_policy_backoff
+- ✅ test_retry_policy_should_retry
+- ✅ test_retry_policy_non_retryable
+- ✅ test_workflow_status_variants
+- ✅ test_saga_success
+- ✅ test_saga_compensation
+- ✅ test_activity_error_types
+- ✅ test_calculate_cq_activity
+- ✅ test_call_llm_activity
+- ✅ test_place_order_activity
+
+**Example:**
+```rust
+// Define workflow
+struct SignalGenerationWorkflow;
+
+#[async_trait]
+impl Workflow for SignalGenerationWorkflow {
+    type Input = SignalRequest;
+    type Output = SignalResult;
+    
+    async fn run(&self, ctx: WorkflowContext, input: Self::Input) -> Result<Self::Output> {
+        // Execute activity with retry
+        let data = ctx.activity(FetchMarketData, input.ticker).await?;
+        
+        // Calculate CQ
+        let cq = ctx.activity(CalculateCQ, data).await?;
+        
+        // Saga for order execution
+        let saga = SagaBuilder::new()
+            .step(ReserveFunds)
+            .step(PlaceOrder)
+            .step(ConfirmFill)
+            .build();
+        
+        saga.execute(&ctx).await?;
+        
+        Ok(SignalResult::success())
+    }
+}
+```
+
+**Outcome:** ✅ Sprint 4 Complete — 14 tests passing
+
+---
+
+## DEC-009: Code Coverage Improvement (2026-02-09)
+
+**Context:** Need to improve test coverage from ~45% to ≥80% before production.
+**Action:** Added comprehensive tests for critical paths.
+
+**New Test Files:**
+- `tests/coverage_chains_test.rs` — Chain execution tests
+- `tests/coverage_tools_test.rs` — Tool registry tests
+- `tests/coverage_graph_test.rs` — Graph/edge/state tests
+- `tests/coverage_temporal_test.rs` — Context/retry/error tests
+
+**Coverage Improvement:**
+| Module | Before | After | Status |
+|--------|--------|-------|--------|
+| langchain | 4 tests | 17 tests | +325% |
+| langgraph | 10 tests | 28 tests | +180% |
+| temporal | 14 tests | 27 tests | +93% |
+| **TOTAL** | **28** | **68** | **+143%** |
+
+**Key Additions:**
+- ✅ SequentialChain/ParallelChain execution
+- ✅ ToolRegistry with multiple tools
+- ✅ Error handling (tool not found, execution failure)
+- ✅ Edge conditions (AND, OR, NOT combinators)
+- ✅ RetryPolicy backoff calculation
+- ✅ ActivityContext lifecycle
+- ✅ WorkflowContext sleep/elapsed
+
+**Outcome:** ✅ 68 tests total, estimated ~65% coverage

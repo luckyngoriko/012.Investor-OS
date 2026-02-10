@@ -58,6 +58,30 @@ pub mod broker;
 /// - ML predictions
 pub mod analytics;
 
+/// ML Module - APIs and Pipeline
+pub mod ml;
+
+/// Real-Time Streaming - Sprint 12
+pub mod streaming;
+
+/// Risk Management - Sprint 13
+pub mod risk;
+
+/// Alternative Data Collectors - Sprint 14
+///
+/// News NLP analysis, social sentiment, web scraping
+pub mod collectors;
+
+/// Phoenix Mode: Autonomous Learning System
+///
+/// Sprint 9: Self-learning trading with RAG memory and LLM strategist
+/// - Paper trading simulator
+/// - Realistic graduation criteria (15-30% CAGR, not 82%)
+/// - RAG-based experience memory
+/// - LLM-powered decision making
+/// - Stress testing (8 historical crises)
+pub mod phoenix;
+
 /// Signals module
 ///
 /// Trading signals and CQ calculation
@@ -72,4 +96,55 @@ pub mod health;
 ///
 /// Sprint 8: Rate limiting, logging, auth
 pub mod middleware;
+
+/// LangChain-inspired AI Component Framework
+///
+/// Sprint 1-2: Composable LLM chains, prompts, tools, parsers
+/// - Chain trait for composable AI operations
+/// - Prompt templates with variable substitution
+/// - Tool registry for agent capabilities
+/// - Structured output parsing
+pub mod langchain;
+
+/// LangGraph-inspired State Machine Framework
+///
+/// Sprint 3-4: Trading decision graphs
+/// - Nodes: Data collection, CQ calculation, execution
+/// - Edges: Conditional transitions based on market regime
+/// - State: Shared mutable state across graph execution
+/// - Loops: Self-improvement and re-evaluation
+pub mod langgraph;
+
+/// Temporal-inspired Durable Workflow Engine
+///
+/// Sprint 5-6: Reliable execution guarantees
+/// - Workflow trait for durable processes
+/// - Activity trait for idempotent operations
+/// - Saga pattern for compensation
+/// - Signals and queries for external communication
+pub mod temporal;
+
+/// Configuration Management
+///
+/// Sprint 8: Environment-based configuration
+/// - Environment variables
+/// - Validation
+/// - Secrets management
+pub mod config;
+
+/// Resilience Patterns
+///
+/// Sprint 8: Circuit breakers and fault tolerance
+/// - Circuit breaker for external APIs
+/// - Bulkhead pattern
+/// - Retry policies
+pub mod resilience;
+
+/// Observability
+///
+/// Sprint 8: Metrics, tracing, and logging
+/// - Prometheus metrics
+/// - Distributed tracing
+/// - Structured logging
+pub mod observability;
 

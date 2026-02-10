@@ -37,9 +37,9 @@ impl SecParser {
         for (section_name, section_content) in sections {
             // Chunk the section content
             let section_chunks = chunk_text(&section_content, super::CHUNK_SIZE, super::CHUNK_OVERLAP);
-            let total_section_chunks = section_chunks.len();
+            let _total_section_chunks = section_chunks.len();
             
-            for (i, chunk_content) in section_chunks.into_iter().enumerate() {
+            for (_i, chunk_content) in section_chunks.into_iter().enumerate() {
                 let metadata = DocumentMetadata {
                     section: Some(section_name.clone()),
                     page_number: None,
@@ -79,43 +79,46 @@ impl SecParser {
     fn extract_10k_sections(&self, content: &str) -> Vec<(String, String)> {
         let mut sections = Vec::new();
         
-        // Common 10-K section markers
-        let section_markers = [
-            ("Business", vec!["ITEM 1.", "ITEM 1 - BUSINESS", "BUSINESS"]),
-            ("Risk Factors", vec!["ITEM 1A.", "ITEM 1A - RISK FACTORS", "RISK FACTORS"]),
-            ("Properties", vec!["ITEM 2.", "ITEM 2 - PROPERTIES"]),
-            ("Legal Proceedings", vec!["ITEM 3.", "ITEM 3 - LEGAL PROCEEDINGS"]),
-            ("MD&A", vec!["ITEM 7.", "ITEM 7 - MANAGEMENT", "MANAGEMENT'S DISCUSSION"]),
-            ("Financial Statements", vec!["ITEM 8.", "ITEM 8 - FINANCIAL STATEMENTS"]),
-            ("Controls", vec!["ITEM 9A.", "ITEM 9A - CONTROLS"]),
+        // Use only ITEM X. markers to avoid confusion with text content
+        let section_markers: Vec<(&str, &str)> = vec![
+            ("Business", "ITEM 1."),
+            ("Risk Factors", "ITEM 1A."),
+            ("Properties", "ITEM 2."),
+            ("Legal Proceedings", "ITEM 3."),
+            ("MD&A", "ITEM 7."),
+            ("Financial Statements", "ITEM 8."),
+            ("Controls", "ITEM 9A."),
         ];
         
         let content_upper = content.to_uppercase();
         
-        for (name, markers) in &section_markers {
-            for marker in markers {
-                if let Some(start_pos) = content_upper.find(&marker.to_uppercase()) {
-                    // Find the next section marker
-                    let section_start = start_pos;
-                    let mut section_end = content.len();
-                    
-                    for (_, next_markers) in &section_markers {
-                        for next_marker in next_markers {
-                            if let Some(pos) = content_upper[section_start + marker.len()..].find(&next_marker.to_uppercase()) {
-                                let absolute_pos = section_start + marker.len() + pos;
-                                if absolute_pos < section_end {
-                                    section_end = absolute_pos;
-                                }
-                            }
-                        }
-                    }
-                    
-                    let section_content = content[section_start..section_end].trim().to_string();
-                    if section_content.len() > 100 {
-                        sections.push((name.to_string(), section_content));
-                    }
-                    break;
-                }
+        // Find all marker positions first
+        let mut found_markers: Vec<(usize, &str, &str)> = Vec::new(); // (pos, name, marker)
+        
+        for (name, marker) in &section_markers {
+            let mut search_start = 0;
+            while let Some(pos) = content_upper[search_start..].find(&marker.to_uppercase()) {
+                let absolute_pos = search_start + pos;
+                found_markers.push((absolute_pos, name, marker));
+                search_start = absolute_pos + marker.len();
+            }
+        }
+        
+        // Sort by position
+        found_markers.sort_by_key(|m| m.0);
+        
+        // Extract sections
+        for (i, (start_pos, name, marker)) in found_markers.iter().enumerate() {
+            let section_start = *start_pos;
+            let section_end = if i + 1 < found_markers.len() {
+                found_markers[i + 1].0
+            } else {
+                content.len()
+            };
+            
+            let section_content = content[section_start..section_end].trim().to_string();
+            if section_content.len() > 30 {
+                sections.push((name.to_string(), section_content));
             }
         }
         
@@ -234,13 +237,13 @@ mod tests {
         let parser = SecParser::new();
         let content = r#"
 ITEM 1. BUSINESS
-We are a technology company.
+We are a technology company specializing in software development, cloud computing, and artificial intelligence solutions. Our business model focuses on recurring revenue streams.
 
 ITEM 1A. RISK FACTORS
-There are many risks.
+There are many risks associated with our business including market volatility, competition, regulatory changes, and technological disruption that could materially affect our operations.
 
 ITEM 7. MANAGEMENT'S DISCUSSION
-Revenue increased.
+Revenue increased significantly this quarter driven by strong demand for our cloud services and new product launches across multiple geographic regions.
 "#;
         
         let sections = parser.extract_10k_sections(content);

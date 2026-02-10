@@ -231,7 +231,7 @@ impl DocumentSearch {
     /// Semantic search on decision journal
     pub async fn search_journal(
         &self,
-        query_embedding: &[f32],
+        _query_embedding: &[f32],
         portfolio_id: Option<Uuid>,
         limit: usize,
     ) -> Result<Vec<JournalSearchResult>> {

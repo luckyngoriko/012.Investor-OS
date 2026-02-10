@@ -102,9 +102,7 @@ impl ResponseCache {
     
     /// Get cached response
     pub async fn get(&self, provider: &str, prompt: &str) -> Option<String> {
-        if self.redis.is_none() {
-            return None;
-        }
+        self.redis.as_ref()?;
         
         let key = generate_cache_key(provider, &sanitize_prompt(prompt));
         
@@ -323,7 +321,7 @@ mod tests {
     fn test_should_cache() {
         assert!(!should_cache_prompt("test"));
         assert!(!should_cache_prompt("current price of AAPL?"));
-        assert!(should_cache_prompt("Analyze this SEC filing for AAPL..."));
+        assert!(should_cache_prompt("Analyze this SEC filing for AAPL with detailed financial metrics and risk assessment"));
     }
     
     #[test]

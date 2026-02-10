@@ -4,11 +4,8 @@
 //! S7-D5: XGBoost CQ prediction model
 //! S7-D6: Anomaly detection
 
-use rust_decimal::Decimal;
-use std::collections::HashMap;
 
 use crate::analytics::{AnalyticsError, Result};
-use crate::rag::DocumentChunk;
 
 /// ML feature pipeline
 pub struct FeaturePipeline;
@@ -31,22 +28,22 @@ impl FeaturePipeline {
     ) -> FeatureVector {
         let features = vec![
             // Quality features
-            signals.quality_score.inner() as f64,
-            signals.value_score.inner() as f64,
-            signals.momentum_score.inner() as f64,
+            signals.quality_score.inner(),
+            signals.value_score.inner(),
+            signals.momentum_score.inner(),
             
             // Insider features
-            signals.insider_score.inner() as f64,
+            signals.insider_score.inner(),
             signals.insider_flow_ratio,
             if signals.insider_cluster_signal { 1.0 } else { 0.0 },
             
             // Sentiment features
-            signals.sentiment_score.inner() as f64,
+            signals.sentiment_score.inner(),
             signals.news_sentiment,
             signals.social_sentiment,
             
             // Regime features
-            signals.regime_fit.inner() as f64,
+            signals.regime_fit.inner(),
             signals.vix_level,
             signals.market_breadth,
             
@@ -57,9 +54,9 @@ impl FeaturePipeline {
             signals.macd_signal,
             
             // Interactions
-            signals.quality_score.inner() as f64 * signals.value_score.inner() as f64,
-            signals.momentum_score.inner() as f64 * signals.regime_fit.inner() as f64,
-            signals.insider_score.inner() as f64 * signals.sentiment_score.inner() as f64,
+            signals.quality_score.inner() * signals.value_score.inner(),
+            signals.momentum_score.inner() * signals.regime_fit.inner(),
+            signals.insider_score.inner() * signals.sentiment_score.inner(),
         ];
 
         let feature_names = vec![
@@ -460,8 +457,8 @@ mod tests {
     fn test_anomaly_detector() {
         let mut detector = AnomalyDetector::new(2.0, 20);
         
-        // Set baseline with normal data
-        let baseline: Vec<f64> = (0..100).map(|_| 10.0).collect();
+        // Set baseline with normal data (with some variation)
+        let baseline: Vec<f64> = (0..100).map(|i| 10.0 + (i as f64 * 0.01)).collect();
         detector.set_baseline(&baseline);
 
         // Normal value

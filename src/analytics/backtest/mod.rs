@@ -6,13 +6,13 @@ use chrono::{DateTime, Duration, Utc};
 use rust_decimal::Decimal;
 use rust_decimal::MathematicalOps;
 use std::collections::HashMap;
-use tracing::{debug, info, warn};
+use tracing::info;
 
 use crate::analytics::{
     AnalyticsError, DailySnapshot, MarketData, PositionSnapshot, PriceBar, Result, Signal,
     Strategy, Trade,
 };
-use crate::broker::{Order, OrderSide, OrderType};
+use crate::broker::OrderSide;
 
 /// Backtest configuration
 #[derive(Debug, Clone)]

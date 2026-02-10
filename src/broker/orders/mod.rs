@@ -3,14 +3,13 @@
 //! S6-D3: Order Management - Place, modify, cancel orders
 //! S6-D7: Order Journal - Log all broker interactions
 
-use chrono::{DateTime, Utc};
-use rust_decimal::Decimal;
+use chrono::Utc;
 use sqlx::PgPool;
 use std::sync::Arc;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 use uuid::Uuid;
 
-use crate::broker::{Broker, BrokerError, Execution, Order, OrderStatus, Position, Result};
+use crate::broker::{Broker, BrokerError, Execution, Order, OrderStatus, Result};
 
 /// Order manager for tracking and persisting orders
 pub struct OrderManager {
@@ -99,7 +98,7 @@ impl OrderManager {
     }
 
     /// Get order by ID
-    pub async fn get_order(&self, order_id: Uuid) -> Result<Option<Order>> {
+    pub async fn get_order(&self, _order_id: Uuid) -> Result<Option<Order>> {
         // Implementation would query database
         Ok(None)
     }
@@ -107,7 +106,7 @@ impl OrderManager {
     /// Get orders for a portfolio
     pub async fn get_portfolio_orders(
         &self,
-        portfolio_id: Uuid,
+        _portfolio_id: Uuid,
         _status_filter: Option<OrderStatus>,
     ) -> Result<Vec<Order>> {
         // Implementation would query database
@@ -134,7 +133,7 @@ impl OrderManager {
     }
 
     /// Get executions for an order
-    pub async fn get_order_executions(&self, order_id: Uuid) -> Result<Vec<Execution>> {
+    pub async fn get_order_executions(&self, _order_id: Uuid) -> Result<Vec<Execution>> {
         // Implementation would query database
         Ok(vec![])
     }

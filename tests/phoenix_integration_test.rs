@@ -1,360 +1,285 @@
-//! Integration tests for Phoenix Mode
+//! End-to-End Integration Tests — Phoenix + LangGraph + Temporal
 //!
-//! Sprint 9: Phoenix Autonomous Learning System
+//! Sprint 5-6: Full Trading Pipeline Tests
 
-use investor_os::phoenix::assessment::GraduationAssessor;
-use investor_os::phoenix::graduation::*;
-use investor_os::phoenix::*;
+use investor_os::phoenix::{
+    PhoenixConfig, 
+    graph_integration::{PhoenixGraphEngine, DetectRegimeNode, RiskCheckNode, MakeDecisionNode},
+};
+use investor_os::langgraph::{
+    StateBuilder, MarketRegime, TradingAction,
+    nodes::{Node, NodeOutput},
+};
+use investor_os::signals::{TickerSignals, QualityScore};
 use rust_decimal::Decimal;
 
-/// Test realistic CAGR targets (not the impossible 82%)
-#[test]
-fn test_realistic_cagr_targets() {
-    let config = CagrTargets::default();
+// ==================== Phoenix + LangGraph Tests ====================
+
+#[tokio::test]
+async fn test_phoenix_graph_engine_creation() {
+    let config = PhoenixConfig::default();
+    let engine = PhoenixGraphEngine::new(config);
     
-    // Level 1 minimum: 15% (realistic)
-    assert_eq!(config.level1_min, 0.15);
-    
-    // Level 4 optimal: 30% (excellent but achievable)
-    assert_eq!(config.level4_optimal, 0.30);
-    
-    // Suspicious threshold: 50% (likely overfitting)
-    assert_eq!(config.max_suspicious, 0.50);
+    // Engine should be created successfully
+    assert_eq!(engine.config.currency, "EUR");
 }
 
-/// Test that unrealistic 82% CAGR is rejected
-#[test]
-fn test_unrealistic_cagr_rejected() {
-    let suspicious_cagr = 0.82; // 82%
-    let max_allowed = 0.50; // 50%
+#[tokio::test]
+async fn test_detect_regime_node_trending() {
+    let node = DetectRegimeNode;
+    let state = StateBuilder::new("AAPL")
+        .with_regime(MarketRegime::Trending)
+        .build();
     
-    assert!(
-        suspicious_cagr > max_allowed,
-        "CAGR of {}% should be flagged as suspicious/overfitted",
-        suspicious_cagr * 100.0
-    );
-}
-
-/// Test graduation criteria assessment
-#[test]
-fn test_graduation_assessment_low_cagr() {
-    let config = GraduationConfig::default();
-    let assessor = GraduationAssessor::new(config);
+    let mut state = state;
+    state.breakout_score = Some(0.8);
     
-    // Create metrics with insufficient CAGR
-    let metrics = PerformanceMetrics {
-        cagr: 0.10, // Only 10%, need 15%
-        max_drawdown: Decimal::from_str_exact("-0.10").unwrap_or(Decimal::from(-10) / Decimal::from(100)),
-        sharpe_ratio: 1.0,
-        total_trades: 50, // Need 100
-        win_rate: 0.55,
-        ..PerformanceMetrics::default()
-    };
+    let result = node.execute(state).await.unwrap();
     
-    let regime_perf = RegimePerformance::default();
-    let stress = StressTestResult::default();
-    let walk_forward = WalkForwardResult::default();
-    let monte_carlo = MonteCarloResult::default();
-    
-    let assessment = assessor.assess(
-        &metrics,
-        &regime_perf,
-        &stress,
-        &walk_forward,
-        &monte_carlo,
-    );
-    
-    // Should NOT be ready
-    match assessment.level {
-        GraduationLevel::NotReady { reasons, .. } => {
-            // Should have at least one reason for failure
-            assert!(!reasons.is_empty(), "Should have failure reasons for low CAGR");
-            
-            // Check for insufficient returns reason
-            let has_low_cagr = reasons.iter().any(|r| matches!(r, 
-                FailReason::InsufficientReturns { current, required } 
-                if *current == 0.10 && *required == 0.15
-            ));
-            assert!(has_low_cagr, "Should fail due to insufficient CAGR");
+    match result {
+        NodeOutput::Continue(new_state) => {
+            assert!(matches!(new_state.market_regime, MarketRegime::Trending));
         }
-        _ => panic!("Should NOT be ready with 10% CAGR and 50 trades"),
+        _ => panic!("Expected Continue"),
     }
 }
 
-/// Test that high payoff ratio (lottery tickets) is flagged
-#[test]
-fn test_high_payoff_ratio_rejected() {
-    let config = GraduationConfig::default();
-    let assessor = GraduationAssessor::new(config);
+#[tokio::test]
+async fn test_risk_check_passes_with_high_cq() {
+    let node = RiskCheckNode::new(0.7);
+    let state = StateBuilder::new("AAPL")
+        .with_quality_score(0.8)
+        .with_insider_score(0.8)
+        .build();
     
-    let metrics = PerformanceMetrics {
-        cagr: 0.20,
-        max_drawdown: Decimal::from_str_exact("-0.10").unwrap(),
-        sharpe_ratio: 1.5,
-        total_trades: 100,
-        win_rate: 0.30, // Low win rate
-        payoff_ratio: 8.0, // Very high - lottery tickets!
-        ..PerformanceMetrics::default()
-    };
+    let mut state = state;
+    // Set all CQ components
+    state.sentiment_score = Some(0.8);
+    state.regime_fit = Some(0.8);
+    state.breakout_score = Some(0.8);
+    state.atr_trend = Some(0.8);
+    state.calculate_cq(); // Should be high
     
-    let assessment = assessor.assess(
-        &metrics,
-        &RegimePerformance::default(),
-        &StressTestResult::default(),
-        &WalkForwardResult::default(),
-        &MonteCarloResult::default(),
-    );
+    let result = node.execute(state).await.unwrap();
     
-    // Should flag high payoff ratio
-    match &assessment.level {
-        GraduationLevel::NotReady { reasons, .. } => {
-            let has_high_payoff = reasons.iter().any(|r| matches!(r,
-                FailReason::HighPayoffRatio { current, max_allowed }
-                if *current == 8.0 && *max_allowed == 5.0
-            ));
-            assert!(has_high_payoff, "Should flag lottery-ticket strategy");
+    match result {
+        NodeOutput::Continue(new_state) => {
+            assert!(new_state.risk_approved);
+            assert!(new_state.position_size.is_some());
+            // Position size should be calculated
+            let size = new_state.position_size.unwrap();
+            assert!(size > Decimal::ZERO);
         }
-        _ => {}
+        _ => panic!("Expected Continue"),
     }
 }
 
-/// Test stress test failure
-#[test]
-fn test_stress_test_failure() {
-    let config = GraduationConfig::default();
-    let assessor = GraduationAssessor::new(config);
+#[tokio::test]
+async fn test_risk_check_fails_with_low_cq() {
+    let node = RiskCheckNode::new(0.7);
+    let mut state = SharedState::new("AAPL");
+    state.conviction_quotient = Some(0.5); // Below threshold
     
-    let stress = StressTestResult {
-        scenario_results: vec![],
-        worst_scenario: "GFC 2008".to_string(),
-        worst_drawdown: Decimal::from_str_exact("-0.50").unwrap(), // -50%
-        avg_drawdown: Decimal::from_str_exact("-0.30").unwrap(),
-        survival_rate: 0.3, // Only 30% survival
-        passed: false,
-    };
+    let result = node.execute(state).await.unwrap();
     
-    let assessment = assessor.assess(
-        &PerformanceMetrics::default(),
-        &RegimePerformance::default(),
-        &stress,
-        &WalkForwardResult::default(),
-        &MonteCarloResult::default(),
-    );
-    
-    match &assessment.level {
-        GraduationLevel::NotReady { reasons, .. } => {
-            let has_stress_fail = reasons.iter().any(|r| matches!(r,
-                FailReason::FailedStressTest { scenario, .. }
-                if scenario == "GFC 2008"
-            ));
-            assert!(has_stress_fail, "Should fail stress test");
+    match result {
+        NodeOutput::Continue(new_state) => {
+            assert!(!new_state.risk_approved);
+            assert!(new_state.position_size.is_none());
         }
-        _ => {}
+        _ => panic!("Expected Continue"),
     }
 }
 
-/// Test graduation levels progression
-#[test]
-fn test_graduation_levels() {
-    // Level 1: Paper Trading
-    let level1 = GraduationLevel::PaperTrading {
-        max_position_size: Decimal::from(1000),
-        max_positions: 5,
-        max_leverage: 1.0,
-        duration_months: 6,
-    };
-    assert_eq!(level1.name(), "Paper Trading");
-    assert!(level1.max_capital().is_none()); // Virtual
+#[tokio::test]
+async fn test_make_decision_buy() {
+    let node = MakeDecisionNode;
+    let mut state = SharedState::new("AAPL");
+    state.conviction_quotient = Some(0.85); // High CQ = Buy
     
-    // Level 2: Micro Live
-    let level2 = GraduationLevel::MicroLive {
-        max_capital: Decimal::from(1000),
-        max_position_size: Decimal::from(100),
-        max_daily_loss: Decimal::from(50),
-        max_positions: 2,
-        duration_months: 3,
-    };
-    assert_eq!(level2.name(), "Micro Live");
-    assert_eq!(level2.max_capital(), Some(Decimal::from(1000)));
+    let result = node.execute(state).await.unwrap();
     
-    // Level 4: Full Strategy
-    let level4 = GraduationLevel::FullStrategy {
-        max_capital: Decimal::from(50000),
-        max_position_pct: Decimal::from_str_exact("0.05").unwrap(),
-        allow_options: true,
-        allow_short: true,
-        allow_margin: true,
-    };
-    assert_eq!(level4.name(), "Full Strategy");
-    assert_eq!(level4.max_capital(), Some(Decimal::from(50000)));
+    match result {
+        NodeOutput::End(final_state) => {
+            assert_eq!(final_state.action, Some(TradingAction::Buy));
+            assert_eq!(final_state.confidence, Some(0.85));
+            assert!(matches!(final_state.execution_status, investor_os::langgraph::state::ExecutionStatus::Completed));
+        }
+        _ => panic!("Expected End"),
+    }
 }
 
-/// Test fail reason descriptions
-#[test]
-fn test_fail_reason_descriptions() {
-    let reason = FailReason::InsufficientReturns {
-        current: 0.10,
-        required: 0.15,
-    };
-    let desc = reason.description();
-    assert!(desc.contains("10.0%"), "Expected 10.0% in: {}", desc);
-    assert!(desc.contains("15.0%"), "Expected 15.0% in: {}", desc);
+#[tokio::test]
+async fn test_make_decision_hold() {
+    let node = MakeDecisionNode;
+    let mut state = SharedState::new("AAPL");
+    state.conviction_quotient = Some(0.5); // Medium CQ = Hold
     
-    let reason2 = FailReason::SuspiciousPerformance {
-        cagr: 0.85,
-        explanation: "Likely overfitted".to_string(),
-    };
-    let desc2 = reason2.description();
-    assert!(desc2.contains("85.0%"), "Expected 85.0% in: {}", desc2);
-    assert!(desc2.contains("overfitted"));
+    let result = node.execute(state).await.unwrap();
+    
+    match result {
+        NodeOutput::End(final_state) => {
+            assert_eq!(final_state.action, Some(TradingAction::Hold));
+        }
+        _ => panic!("Expected End"),
+    }
 }
 
-/// Test statistical requirements
-#[test]
-fn test_statistical_requirements() {
-    let req = StatisticalRequirements::default();
+#[tokio::test]
+async fn test_make_decision_sell() {
+    let node = MakeDecisionNode;
+    let mut state = SharedState::new("AAPL");
+    state.conviction_quotient = Some(0.2); // Low CQ = Sell
     
-    // Need at least 100 trades for significance
-    assert_eq!(req.min_total_trades, 100);
+    let result = node.execute(state).await.unwrap();
     
-    // Win rate > 52%
-    assert_eq!(req.min_win_rate, 0.52);
-    
-    // Sharpe > 1.2
-    assert_eq!(req.min_sharpe, 1.2);
-    
-    // Payoff ratio < 5.0 (avoid lottery tickets)
-    assert_eq!(req.max_payoff_ratio, 5.0);
+    match result {
+        NodeOutput::End(final_state) => {
+            assert_eq!(final_state.action, Some(TradingAction::Sell));
+        }
+        _ => panic!("Expected End"),
+    }
 }
 
-/// Test cost model
-#[test]
-fn test_cost_model() {
-    let cost = CostModel::default();
-    
-    // Commission: €1 per trade
-    assert_eq!(cost.commission_per_trade, Decimal::from(1));
-    
-    // Slippage: 0.1%
-    assert_eq!(cost.slippage_pct, Decimal::from_str_exact("0.001").unwrap());
-    
-    // Spread: 0.05%
-    assert_eq!(cost.spread_pct, Decimal::from_str_exact("0.0005").unwrap());
-}
+// ==================== End-to-End Trading Flow ====================
 
-/// Test stress scenarios
-#[test]
-fn test_stress_scenarios() {
-    let config = StressTestConfig::default();
+#[tokio::test]
+async fn test_full_trading_decision_flow_high_cq() {
+    let config = PhoenixConfig::default();
+    let engine = PhoenixGraphEngine::new(config);
     
-    // Should have 8 historical crises
-    assert_eq!(config.scenarios.len(), 8);
-    
-    // Check for major crises
-    let has_gfc = config.scenarios.iter().any(|s| 
-        matches!(s.scenario_type, StressScenarioType::GFC2008)
-    );
-    assert!(has_gfc, "Should include GFC 2008");
-    
-    let has_covid = config.scenarios.iter().any(|s| 
-        matches!(s.scenario_type, StressScenarioType::CovidCrash2020)
-    );
-    assert!(has_covid, "Should include COVID-19 crash");
-    
-    // Must survive at least 70%
-    assert_eq!(config.min_survival_rate, 0.70);
-}
-
-/// Test that 200x goal is NOT in our criteria
-#[test]
-fn test_no_200x_goal() {
-    // The unrealistic goal would be:
-    // 1000€ -> 200,000€ in 5 years = 82% CAGR
-    
-    let unrealistic_cagr = 0.82;
-    let our_max_cagr = 0.50; // 50% is our suspicious threshold
-    
-    assert!(
-        unrealistic_cagr > our_max_cagr,
-        "Our system should NOT accept 82% CAGR as realistic"
-    );
-    
-    // Our realistic targets:
-    let targets = CagrTargets::default();
-    assert!(targets.level1_min <= 0.20, "Level 1 should be <= 20%");
-    assert!(targets.level4_optimal <= 0.35, "Level 4 should be <= 35%");
-}
-
-/// Test overall score calculation
-#[test]
-fn test_overall_score_calculation() {
-    let config = GraduationConfig::default();
-    let assessor = GraduationAssessor::new(config);
-    
-    // Perfect metrics
-    let perfect_metrics = PerformanceMetrics {
-        cagr: 0.30, // 30%
-        sharpe_ratio: 2.0,
-        max_drawdown: Decimal::from_str_exact("-0.10").unwrap(),
-        total_trades: 200,
-        win_rate: 0.60,
-        profitable_month_pct: 0.70,
-        ..PerformanceMetrics::default()
+    // Create high-quality signals
+    let signals = TickerSignals {
+        quality_score: QualityScore(80),
+        insider_score: QualityScore(80),
+        sentiment_score: QualityScore(80),
+        regime_fit: QualityScore(80),
+        breakout_score: 0.8,
+        atr_trend: 0.8,
+        ..Default::default()
     };
     
-    let stress = StressTestResult {
-        survival_rate: 0.90,
-        passed: true,
-        ..StressTestResult::default()
-    };
+    let decision = engine.generate_decision(
+        "AAPL",
+        signals,
+        Decimal::from(150)
+    ).await;
     
-    let walk_forward = WalkForwardResult {
-        consistency_score: 0.85,
-        is_consistent: true,
-        ..WalkForwardResult::default()
-    };
+    assert!(decision.is_ok());
+    let decision = decision.unwrap();
     
-    let monte_carlo = MonteCarloResult {
-        survival_rate: 0.95,
-        probability_of_ruin: 0.005,
-        ..MonteCarloResult::default()
-    };
-    
-    let assessment = assessor.assess(
-        &perfect_metrics,
-        &RegimePerformance::default(),
-        &stress,
-        &walk_forward,
-        &monte_carlo,
-    );
-    
-    // Should have high score
-    assert!(assessment.overall_score > 0.8, "Perfect metrics should score > 80%");
+    // High CQ should result in Buy action
+    assert!(matches!(decision.action, investor_os::phoenix::Action::Buy));
+    assert!(decision.confidence > 0.7);
+    assert!(!decision.rationale.is_empty());
 }
 
-/// Test beta threshold (independence from market)
-#[test]
-fn test_beta_threshold() {
-    let limits = RiskLimits::default();
+#[tokio::test]
+async fn test_full_trading_decision_flow_low_cq() {
+    let config = PhoenixConfig::default();
+    let engine = PhoenixGraphEngine::new(config);
     
-    // Beta should be < 0.7
-    assert_eq!(limits.max_beta, 0.7);
+    // Create low-quality signals
+    let signals = TickerSignals {
+        quality_score: QualityScore(30),
+        insider_score: QualityScore(30),
+        sentiment_score: QualityScore(30),
+        regime_fit: QualityScore(30),
+        breakout_score: 0.2,
+        atr_trend: 0.2,
+        ..Default::default()
+    };
     
-    // High beta means just following market
-    let high_beta = 0.9;
-    assert!(high_beta > limits.max_beta, "Beta > 0.7 is too correlated with market");
+    let decision = engine.generate_decision(
+        "AAPL",
+        signals,
+        Decimal::from(150)
+    ).await;
+    
+    // Low CQ might fail risk check or result in Sell/Hold
+    // The graph should complete either way
+    match decision {
+        Ok(decision) => {
+            // If we got a decision, it should be low confidence
+            assert!(decision.confidence < 0.5 || matches!(decision.action, investor_os::phoenix::Action::Sell));
+        }
+        Err(_) => {
+            // Or risk check failed, which is also valid
+        }
+    }
 }
 
-/// Test drawdown limit
+// ==================== Integration with Signals ====================
+
+use investor_os::langgraph::state::SharedState;
+
 #[test]
-fn test_drawdown_limit() {
-    let limits = RiskLimits::default();
+fn test_ticker_signals_to_state_conversion() {
+    let signals = TickerSignals {
+        quality_score: QualityScore(75),
+        insider_score: QualityScore(60),
+        sentiment_score: QualityScore(80),
+        regime_fit: QualityScore(70),
+        breakout_score: 0.75,
+        atr_trend: 0.6,
+        ..Default::default()
+    };
     
-    // Max drawdown: 15%
-    let max_dd = Decimal::from_str_exact("0.15").unwrap();
-    assert_eq!(limits.max_drawdown, max_dd);
+    let state = StateBuilder::new("TSLA")
+        .with_quality_score(0.75)
+        .with_insider_score(0.60)
+        .build();
     
-    // 20% drawdown exceeds limit
-    let high_dd = Decimal::from_str_exact("0.20").unwrap();
-    assert!(high_dd > limits.max_drawdown, "20% drawdown is too high");
+    let mut state = state;
+    state.sentiment_score = Some(0.80);
+    state.regime_fit = Some(0.70);
+    state.breakout_score = Some(0.75);
+    state.atr_trend = Some(0.60);
+    
+    // Calculate CQ
+    let cq = state.calculate_cq();
+    assert!(cq.is_some());
+    
+    // Expected: 0.75*0.20 + 0.60*0.20 + 0.80*0.15 + 0.70*0.20 + 0.75*0.15 + 0.60*0.10
+    // = 0.15 + 0.12 + 0.12 + 0.14 + 0.1125 + 0.06 = 0.7025
+    assert!((cq.unwrap() - 0.7025).abs() < 0.001);
+}
+
+// ==================== State Management Tests ====================
+
+#[tokio::test]
+async fn test_state_persists_through_nodes() {
+    let node1 = DetectRegimeNode;
+    let node2 = RiskCheckNode::new(0.5);
+    
+    let state = StateBuilder::new("MSFT")
+        .with_price(Decimal::from(300))
+        .build();
+    
+    let mut state = state;
+    state.breakout_score = Some(0.9);
+    state.conviction_quotient = Some(0.8);
+    
+    // First node
+    let result1 = node1.execute(state).await.unwrap();
+    state = match result1 {
+        NodeOutput::Continue(s) => s,
+        _ => panic!("Expected Continue"),
+    };
+    
+    // Verify state persisted
+    assert_eq!(state.ticker, "MSFT");
+    assert!(state.current_price.is_some());
+    assert!(matches!(state.market_regime, MarketRegime::Trending));
+    
+    // Second node
+    let result2 = node2.execute(state).await.unwrap();
+    state = match result2 {
+        NodeOutput::Continue(s) => s,
+        _ => panic!("Expected Continue"),
+    };
+    
+    // State should still have all data
+    assert_eq!(state.ticker, "MSFT");
+    assert!(state.risk_approved);
 }

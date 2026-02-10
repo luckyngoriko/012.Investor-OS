@@ -18,6 +18,7 @@ pub mod memory;
 pub mod simulator;
 pub mod strategist;
 pub mod engine;
+pub mod graph_integration;
 
 // Re-export main components
 pub use assessment::GraduationAssessor;
@@ -27,6 +28,7 @@ pub use memory::{RagMemory, MemoryStats, RegimeInsight, TradingExperience, Exper
 pub use simulator::{PaperTradingSimulator, SimulatorConfig, MarketDataPoint};
 pub use strategist::{LlmStrategist, StrategistConfig, Sentiment, DecisionContext};
 pub use engine::{PhoenixEngine, TrainingResult, EngineStats};
+pub use graph_integration::{PhoenixGraphEngine, CollectSignalsNode, DetectRegimeNode, ApplyStrategyNode, RiskCheckNode, MakeDecisionNode};
 
 use rust_decimal::Decimal;
 use std::collections::HashMap;

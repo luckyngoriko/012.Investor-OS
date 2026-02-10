@@ -15,6 +15,15 @@ pub mod ib;
 pub mod orders;
 pub mod risk;
 
+/// Sprint 11: Crypto Trading (Binance)
+pub mod binance;
+
+/// Sprint 11: Forex Trading (OANDA)
+pub mod oanda;
+
+/// Sprint 11: Multi-Asset Portfolio Management
+pub mod multi_asset;
+
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -156,7 +165,9 @@ impl OrderType {
 /// Time in force for orders
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "UPPERCASE")]
+#[derive(Default)]
 pub enum TimeInForce {
+    #[default]
     Day,
     Gtc, // Good Till Canceled
     Ioc, // Immediate or Cancel
@@ -165,11 +176,6 @@ pub enum TimeInForce {
     Cls, // Closing
 }
 
-impl Default for TimeInForce {
-    fn default() -> Self {
-        TimeInForce::Day
-    }
-}
 
 /// Order status
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
