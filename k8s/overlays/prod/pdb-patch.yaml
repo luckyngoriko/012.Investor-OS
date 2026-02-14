@@ -1,0 +1,10 @@
+# Sprint 35: Production Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: investor-api
+spec:
+  minAvailable: 60%
+  selector:
+    matchLabels:
+      app: investor-api

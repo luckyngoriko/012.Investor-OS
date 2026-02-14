@@ -24,6 +24,9 @@ pub mod oanda;
 /// Sprint 11: Multi-Asset Portfolio Management
 pub mod multi_asset;
 
+/// Sprint 25: Paper Trading & Backtesting
+pub mod paper;
+
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -62,6 +65,9 @@ pub enum BrokerError {
     
     #[error("Insufficient funds")]
     InsufficientFunds,
+    
+    #[error("Market data error: {0}")]
+    MarketData(String),
 }
 
 /// Result type for broker operations

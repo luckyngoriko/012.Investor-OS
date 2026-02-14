@@ -1,0 +1,29 @@
+{
+  "version": "1.0",
+  "model": "hrm_synthetic_v1",
+  "generated_at": "2025-02-12",
+  "total_cases": 20,
+  "tolerance": 0.001,
+  "cases": [
+    {"name": "strong_bull", "description": "Strong bull market with excellent signals", "input": [0.9, 0.9, 0.9, 10.0, 0.0, 0.5], "expected": {"conviction": 0.9294, "confidence": 0.9956, "regime_raw": 0.0, "regime": "Bull"}},
+    {"name": "moderate_bull", "description": "Moderate bull market", "input": [0.7, 0.7, 0.7, 15.0, 0.0, 0.5], "expected": {"conviction": 0.8482, "confidence": 0.9993, "regime_raw": 0.0, "regime": "Bull"}},
+    {"name": "weak_bull", "description": "Weak bull signals", "input": [0.5, 0.5, 0.5, 20.0, 0.0, 0.5], "expected": {"conviction": 0.6965, "confidence": 0.9999, "regime_raw": 0.0, "regime": "Bull"}},
+    {"name": "strong_bear", "description": "Strong bear market", "input": [0.1, 0.1, 0.1, 50.0, 1.0, 0.5], "expected": {"conviction": 0.1329, "confidence": 1.0000, "regime_raw": 1.0, "regime": "Bear"}},
+    {"name": "moderate_bear", "description": "Moderate bear market", "input": [0.3, 0.3, 0.3, 40.0, 1.0, 0.5], "expected": {"conviction": 0.2595, "confidence": 1.0000, "regime_raw": 1.0, "regime": "Bear"}},
+    {"name": "sideways", "description": "Sideways market with mixed signals", "input": [0.5, 0.5, 0.5, 25.0, 2.0, 0.5], "expected": {"conviction": 0.5173, "confidence": 1.0000, "regime_raw": 1.0, "regime": "Bear"}},
+    {"name": "crisis", "description": "Crisis market - extreme fear", "input": [0.1, 0.1, 0.1, 80.0, 3.0, 0.5], "expected": {"conviction": 0.0166, "confidence": 1.0000, "regime_raw": 1.0, "regime": "Bear"}},
+    {"name": "high_pegy_low_sentiment", "description": "Good fundamentals but poor sentiment", "input": [0.9, 0.5, 0.2, 20.0, 0.0, 0.5], "expected": {"conviction": 0.7182, "confidence": 0.9999, "regime_raw": 0.0, "regime": "Bull"}},
+    {"name": "low_pegy_high_insider", "description": "Poor fundamentals but strong insider buying", "input": [0.2, 0.9, 0.5, 20.0, 0.0, 0.5], "expected": {"conviction": 0.7129, "confidence": 0.9999, "regime_raw": 0.0, "regime": "Bull"}},
+    {"name": "high_volatility", "description": "Good signals but high VIX", "input": [0.8, 0.8, 0.8, 60.0, 0.0, 0.5], "expected": {"conviction": 0.6722, "confidence": 1.0000, "regime_raw": 0.0, "regime": "Bull"}},
+    {"name": "low_volatility", "description": "Moderate signals with low VIX", "input": [0.6, 0.6, 0.6, 10.0, 0.0, 0.5], "expected": {"conviction": 0.8262, "confidence": 0.9941, "regime_raw": 0.0, "regime": "Bull"}},
+    {"name": "all_zeros", "description": "Edge case - all zeros", "input": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "expected": {"conviction": 0.4809, "confidence": 0.5775, "regime_raw": 1.0, "regime": "Bear"}},
+    {"name": "all_ones", "description": "Edge case - all max values", "input": [1.0, 1.0, 1.0, 100.0, 3.0, 1.0], "expected": {"conviction": 0.1792, "confidence": 1.0000, "regime_raw": 1.0, "regime": "Bear"}},
+    {"name": "random_1", "description": "Random test case 1", "input": [0.65, 0.42, 0.78, 23.5, 1.0, 0.3], "expected": {"conviction": 0.6795, "confidence": 1.0000, "regime_raw": 1.0, "regime": "Bear"}},
+    {"name": "random_2", "description": "Random test case 2", "input": [0.33, 0.88, 0.45, 45.2, 2.0, 0.7], "expected": {"conviction": 0.3482, "confidence": 1.0000, "regime_raw": 1.0, "regime": "Bear"}},
+    {"name": "random_3", "description": "Random test case 3", "input": [0.82, 0.15, 0.91, 12.8, 0.0, 0.9], "expected": {"conviction": 0.8067, "confidence": 0.9983, "regime_raw": 0.0, "regime": "Bull"}},
+    {"name": "random_4", "description": "Random test case 4", "input": [0.21, 0.67, 0.34, 67.3, 3.0, 0.2], "expected": {"conviction": 0.0911, "confidence": 1.0000, "regime_raw": 1.0, "regime": "Bear"}},
+    {"name": "random_5", "description": "Random test case 5", "input": [0.55, 0.73, 0.29, 31.4, 1.0, 0.6], "expected": {"conviction": 0.5187, "confidence": 1.0000, "regime_raw": 1.0, "regime": "Bear"}},
+    {"name": "opening", "description": "Market opening (time=0.1)", "input": [0.7, 0.7, 0.7, 20.0, 0.0, 0.1], "expected": {"conviction": 0.8216, "confidence": 0.9999, "regime_raw": 0.0, "regime": "Bull"}},
+    {"name": "closing", "description": "Market closing (time=0.9)", "input": [0.7, 0.7, 0.7, 20.0, 0.0, 0.9], "expected": {"conviction": 0.8089, "confidence": 0.9999, "regime_raw": 0.0, "regime": "Bull"}}
+  ]
+}

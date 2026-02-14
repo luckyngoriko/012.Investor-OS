@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hrm-inference
+  namespace: investor-os
+  labels:
+    app: hrm-inference
+    version: v3.0
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: hrm-inference
+  template:
+    metadata:
+      labels:
+        app: hrm-inference
+        version: v3.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: hrm-service-account
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - hrm-inference
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: hrm
+        image: investor-os:v3.0
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        - name: grpc
+          containerPort: 50051
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: hrm-config
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "2000m"
+            memory: "2Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 12
+      # Spot instance toleration
+      tolerations:
+      - key: "node-type"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+      # GPU node selector (optional)
+      nodeSelector:
+        {}  # Can be set to {"gpu": "nvidia"} for GPU nodes

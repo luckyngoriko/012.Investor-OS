@@ -301,8 +301,10 @@ export function TourTriggerButton() {
 
 export function FirstTimeWelcome() {
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const hasSeenWelcome = localStorage.getItem("investor-os-welcome-seen");
     if (!hasSeenWelcome) {
       // Small delay for better UX
@@ -318,7 +320,8 @@ export function FirstTimeWelcome() {
     setIsOpen(false);
   };
 
-  if (!isOpen) return null;
+  // Prevent hydration mismatch - don't render until mounted on client
+  if (!mounted || !isOpen) return null;
 
   return (
     <AnimatePresence>

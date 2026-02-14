@@ -23,6 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, BookOpen, CheckCircle, XCircle, HelpCircle } from "lucide-react";
+import { BackButton } from "@/components/back-button";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
@@ -192,7 +193,10 @@ export default function JournalPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-900">Decision Journal</h1>
+        <div className="flex items-center gap-4">
+          <BackButton />
+          <h1 className="text-3xl font-bold text-slate-900">Decision Journal</h1>
+        </div>
         <Button variant="outline" onClick={fetchEntries}>
           Refresh
         </Button>

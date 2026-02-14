@@ -2,6 +2,27 @@
 
 use super::*;
 
+/// Yield opportunity for a specific protocol and currency
+#[derive(Debug, Clone)]
+pub struct YieldOpportunity {
+    pub protocol: String,
+    pub currency: Currency,
+    pub apy: Decimal,
+    pub tvl: Decimal,
+    pub risk_score: u8,
+}
+
+/// Yield position - an active allocation to a yield protocol
+#[derive(Debug, Clone)]
+pub struct YieldPosition {
+    pub id: Uuid,
+    pub protocol: String,
+    pub currency: Currency,
+    pub amount: Decimal,
+    pub apy: Decimal,
+    pub opened_at: DateTime<Utc>,
+}
+
 /// Yield protocol
 #[derive(Debug, Clone)]
 pub struct YieldProtocol {
@@ -137,6 +158,44 @@ impl YieldOptimizer {
             .collect();
         
         Ok(allocations)
+    }
+    
+    /// Find all yield opportunities (alias for get_all_opportunities)
+    pub async fn find_opportunities(&self) -> Result<Vec<YieldOpportunity>> {
+        // Return opportunities for all supported currencies
+        let mut all = Vec::new();
+        for currency in [Currency::USDC, Currency::USDT, Currency::DAI, Currency::ETH] {
+            all.extend(self.get_all_opportunities(currency).await);
+        }
+        Ok(all)
+    }
+    
+    /// Allocate funds to a yield protocol (stub - requires DeFi integration)
+    pub async fn allocate(
+        &self,
+        currency: Currency,
+        amount: Decimal,
+        protocol: String,
+    ) -> Result<YieldPosition> {
+        // In production, this would interact with Aave/Compound/etc.
+        // For now, return a mock position
+        let opportunity = self.find_best(currency).await?;
+        
+        Ok(YieldPosition {
+            id: Uuid::new_v4(),
+            protocol,
+            currency,
+            amount,
+            apy: opportunity.apy,
+            opened_at: Utc::now(),
+        })
+    }
+    
+    /// Get total value of all yield positions in USD
+    pub async fn total_value_usd(&self) -> Result<Decimal> {
+        // In production, would sum all active positions
+        // For now, return zero
+        Ok(Decimal::ZERO)
     }
     
     fn init_protocols(&mut self) {

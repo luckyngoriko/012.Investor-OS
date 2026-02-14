@@ -5,8 +5,7 @@
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::time::sleep;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 /// Circuit breaker states
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -243,7 +242,7 @@ impl CircuitBreakerRegistry {
 
     /// Reset a circuit breaker
     pub fn reset(&self, name: &str) {
-        let mut breakers = self.breakers.write().unwrap();
+        let breakers = self.breakers.write().unwrap();
         if let Some(cb) = breakers.get(name) {
             *cb.state.write().unwrap() = CircuitState::Closed;
             cb.failure_count.store(0, Ordering::SeqCst);

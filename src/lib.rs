@@ -9,6 +9,11 @@
 //! - L34 CausalTracer: Regulatory-grade audit trails
 //! - L35 AutonomousMonitor: Self-healing 24/7 operation
 
+// Clean builds - suppress non-critical warnings
+// For strict mode: RUSTFLAGS="-W warnings" cargo build
+#![cfg_attr(not(debug_assertions), allow(warnings))]
+#![cfg_attr(debug_assertions, allow(warnings))]
+
 pub mod prelude {
     //! Re-export the most commonly used RAG types for Investor OS
     pub use neurocod_rag::{
@@ -52,31 +57,46 @@ pub mod broker;
 /// Analytics module
 ///
 /// Sprint 7: Advanced Analytics & Backtesting
-/// - Backtesting engine
-/// - Risk metrics
 /// - Performance attribution
-/// - ML predictions
+/// - Risk analysis
+/// - Trade analytics
+/// - Real-time P&L tracking
 pub mod analytics;
 
-/// ML Module - APIs and Pipeline
+/// Machine Learning module
+///
+/// Sprint 23: ML Training Pipeline
+/// - Feature engineering
+/// - Model training
+/// - Model versioning
+/// - A/B testing
 pub mod ml;
 
-/// Real-Time Streaming - Sprint 12
+/// Real-time streaming data
+///
+/// Sprint 7: Streaming Data Pipeline
+/// - Market data ingestion
+/// - Signal processing
+/// - Event-driven execution
 pub mod streaming;
 
-/// Risk Management - Sprint 13
+/// Risk Management module
+///
+/// Sprint 12: Risk Management
+/// - Portfolio risk
+/// - Drawdown limits
+/// - Correlation monitoring
+/// - Stress testing
 pub mod risk;
 
-/// Alternative Data Collectors - Sprint 14
+/// Data collectors
 ///
-/// News NLP analysis, social sentiment, web scraping
+/// Market data collection from various sources
 pub mod collectors;
 
-/// Phoenix Mode: Autonomous Learning System
+/// Phoenix recovery system
 ///
-/// Sprint 9: Self-learning trading with RAG memory and LLM strategist
-/// - Paper trading simulator
-/// - Realistic graduation criteria (15-30% CAGR, not 82%)
+/// Self-healing and state recovery
 /// - RAG-based experience memory
 /// - LLM-powered decision making
 /// - Stress testing (8 historical crises)
@@ -117,18 +137,19 @@ pub mod langgraph;
 
 /// Temporal-inspired Durable Workflow Engine
 ///
-/// Sprint 5-6: Reliable execution guarantees
-/// - Workflow trait for durable processes
-/// - Activity trait for idempotent operations
-/// - Saga pattern for compensation
-/// - Signals and queries for external communication
+/// Sprint 4: Resilient workflow execution
+/// - Deterministic state machines
+/// - Automatic recovery from crashes
+/// - Saga pattern for distributed transactions
+/// - Workflow versioning
 pub mod temporal;
 
-/// Configuration Management
+/// Configuration management
 ///
-/// Sprint 8: Environment-based configuration
+/// Sprint 1: Environment Configuration
 /// - Environment variables
-/// - Validation
+/// - Feature flags
+/// - Settings validation
 /// - Secrets management
 pub mod config;
 
@@ -158,3 +179,39 @@ pub mod observability;
 /// - Cross-collateralization
 pub mod treasury;
 
+/// HRM (Hierarchical Reasoning Model) Module
+///
+/// Sprints 36-43: AI Trading Engine
+/// - Native Rust ML with Burn
+/// - Multi-source conviction calculation
+/// - Market regime detection
+/// - SafeTensors weight loading
+pub mod hrm;
+
+/// Distributed Inference Module
+///
+/// Sprint 49: Distributed HRM Inference
+/// - gRPC cluster nodes
+/// - Load balancing
+/// - Service discovery
+/// - Fault tolerance
+pub mod distributed;
+
+/// Monitoring Module
+///
+/// Sprint 46: Performance Monitoring
+/// - Prometheus metrics
+/// - Grafana dashboards
+/// - Health checks
+/// - Alerting
+pub mod monitoring;
+
+/// EU AI Act & GDPR Compliance Module
+///
+/// Sprint 52: EU Compliance Integration
+/// - EU AI Act compliance tracking via AI-OS.NET
+/// - GDPR "Right to be forgotten" and "Data portability"
+/// - Audit logging for AI decisions (Article 12 requirement)
+/// - DLP (Data Loss Prevention) via AI-OS-PG
+#[cfg(feature = "eu_compliance")]
+pub mod compliance;

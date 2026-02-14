@@ -301,3 +301,70 @@ impl Workflow for SignalGenerationWorkflow {
 - ✅ WorkflowContext sleep/elapsed
 
 **Outcome:** ✅ 68 tests total, estimated ~65% coverage
+
+---
+
+## DEC-XXX: Sprint 36 — HRM Native Rust Implementation (2026-02-12)
+
+**Context:** Need adaptive Conviction Quotient that adjusts weights based on market regime. HRM (Hierarchical Reasoning Model) from Sapient Inc offers ideal architecture but is PyTorch/Python.
+
+**Options:**
+1. Python gRPC service — Easier, keep original HRM code
+2. ONNX Runtime — Convert to ONNX, run in Rust
+3. Native Rust (burn) — Full Rust implementation
+4. tch-rs (LibTorch bindings) — PyTorch C++ API in Rust
+
+**Chosen:** Option 3 — Native Rust with burn framework
+
+**Rationale:**
+- **Memory Safety:** Critical for financial system handling real money — Rust's ownership model prevents memory bugs
+- **Performance:** 10x faster inference (1-5ms vs 10-50ms with gRPC overhead)
+- **Deployment:** Single binary, no Python runtime, ~50MB vs 2.3GB Docker image
+- **Type Safety:** Compile-time guarantees prevent financial calculation errors
+- **Maintenance:** One language (Rust) across entire codebase
+- **Future:** Easier to extend with custom training pipeline in Rust
+
+**Trade-offs:**
+- ❌ Longer initial development time (1-2 weeks vs 2-3 days)
+- ❌ burn framework less mature than PyTorch (risk of bugs)
+- ❌ Need to port HRM architecture manually (no direct code reuse)
+- ❌ Training still needs Python (export weights to safetensors)
+
+**Architecture Decisions:**
+```
+HRM Structure:
+├── High-Level Module (LSTM 128) — Slow, abstract planning
+├── Low-Level Module (LSTM 64) — Fast, detailed execution
+├── Cross-connections (Linear layers) — Information flow
+└── Output (192→3) — [conviction, confidence, regime]
+```
+
+**Fallback Strategy:**
+- If HRM confidence < 0.7 → use static CQ formula
+- If HRM inference timeout > 5ms → use static CQ formula
+- If weights not loaded → use static CQ formula
+
+**Files Created:**
+- `src/hrm/mod.rs` — Module exports
+- `src/hrm/config.rs` — HRMConfig, DeviceConfig
+- `src/hrm/model.rs` — HRM struct, HRMBuilder
+- `src/hrm/inference.rs` — InferenceEngine, InferenceResult
+- `src/hrm/weights.rs` — WeightLoader, ModelWeights
+- `tests/golden_path/hrm_36_tests.rs` — 30 Golden Path tests
+- `docs/sprints/sprint36_hrm_engine.md` — Sprint documentation
+- `docs/hrm/ARCHITECTURE.md` — Technical deep dive
+
+**Dependencies Added:**
+```toml
+burn = { version = "0.16", features = ["std", "train-minimal"] }
+burn-ndarray = { version = "0.16", features = ["std"] }
+```
+
+**Golden Path Tests:**
+- 30 tests covering initialization, inference, batching, error handling
+- Target: < 5ms p99 latency, < 100MB memory
+
+**Borrowed Registry Entry:**
+- BORROWED.md entry for HRM architectural pattern (not code)
+
+**Outcome:** 🔄 In Progress — Module scaffolding complete, pending burn tensor integration

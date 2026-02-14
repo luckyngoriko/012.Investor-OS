@@ -198,7 +198,7 @@ SIMILAR PAST EXPERIENCES:
             }
         }
         
-        prompt.push_str(&r#"
+        prompt.push_str(r#"
 DECISION INSTRUCTIONS:
 1. Analyze the current market conditions
 2. Consider similar past experiences and their outcomes
@@ -215,7 +215,7 @@ RESPONSE FORMAT:
 }
 
 Only respond with the JSON object, nothing else.
-"#.to_string());
+"#);
         
         prompt
     }

@@ -1,0 +1,33 @@
+# Sprint 35: Development Environment Deployment Patch
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: investor-api
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: api
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        env:
+        - name: RUST_LOG
+          value: "debug,investor_os=trace"
+        - name: PAPER_TRADING
+          value: "true"
+        - name: RATE_LIMIT_ENABLED
+          value: "false"
+        - name: CACHE_TTL_SECONDS
+          value: "60"
+        livenessProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 10

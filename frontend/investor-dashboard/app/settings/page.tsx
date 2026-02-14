@@ -16,6 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { AlertTriangle, Shield, AlertCircle, Loader2, Bot, User, UserCog } from "lucide-react";
+import { BackButton } from "@/components/back-button";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   TradingModeCard,
@@ -92,7 +93,10 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
+      <div className="flex items-center gap-4">
+        <BackButton />
+        <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
+      </div>
 
       {/* Kill Switch Section */}
       <Card className={killswitchEnabled ? "border-red-500 border-2" : ""}>

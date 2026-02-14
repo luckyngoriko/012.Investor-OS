@@ -95,23 +95,25 @@ export default function LoginPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Input */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">Email</label>
+            <div className="space-y-2.5">
+              <label className="text-sm font-medium text-gray-300 block">Email</label>
               <motion.div
                 animate={{
-                  scale: focusedInput === "email" ? 1.02 : 1,
+                  scale: focusedInput === "email" ? 1.01 : 1,
                   boxShadow:
                     focusedInput === "email"
-                      ? "0 0 0 2px rgba(59, 130, 246, 0.5)"
+                      ? "0 0 0 3px rgba(59, 130, 246, 0.3)"
                       : "0 0 0 0px rgba(59, 130, 246, 0)",
                 }}
                 className="relative"
               >
-                <Mail
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                    focusedInput === "email" ? "text-blue-400" : "text-gray-500"
-                  }`}
-                />
+                <div className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center pointer-events-none z-10">
+                  <Mail
+                    className={`w-5 h-5 transition-colors ${
+                      focusedInput === "email" ? "text-blue-400" : "text-gray-500"
+                    }`}
+                  />
+                </div>
                 <input
                   type="email"
                   value={email}
@@ -119,48 +121,52 @@ export default function LoginPage() {
                   onFocus={() => setFocusedInput("email")}
                   onBlur={() => setFocusedInput(null)}
                   placeholder="admin@investor-os.com"
-                  className="w-full pl-12 pr-4 py-3.5 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-all"
+                  className="w-full pl-12 pr-4 py-4 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-base"
                   required
                 />
               </motion.div>
+              <p className="text-xs text-gray-500">Въведете вашия email адрес за достъп</p>
             </div>
 
             {/* Password Input */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">Password</label>
+            <div className="space-y-2.5">
+              <label className="text-sm font-medium text-gray-300 block">Password</label>
               <motion.div
                 animate={{
-                  scale: focusedInput === "password" ? 1.02 : 1,
+                  scale: focusedInput === "password" ? 1.01 : 1,
                   boxShadow:
                     focusedInput === "password"
-                      ? "0 0 0 2px rgba(59, 130, 246, 0.5)"
+                      ? "0 0 0 3px rgba(59, 130, 246, 0.3)"
                       : "0 0 0 0px rgba(59, 130, 246, 0)",
                 }}
                 className="relative"
               >
-                <Lock
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                    focusedInput === "password" ? "text-blue-400" : "text-gray-500"
-                  }`}
-                />
+                <div className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center pointer-events-none z-10">
+                  <Lock
+                    className={`w-5 h-5 transition-colors ${
+                      focusedInput === "password" ? "text-blue-400" : "text-gray-500"
+                    }`}
+                  />
+                </div>
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onFocus={() => setFocusedInput("password")}
                   onBlur={() => setFocusedInput(null)}
-                  placeholder="••••••••"
-                  className="w-full pl-12 pr-12 py-3.5 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-all"
+                  placeholder="Въведете паролата"
+                  className="w-full pl-12 pr-12 py-4 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-base"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                  className="absolute right-0 top-0 bottom-0 w-12 flex items-center justify-center text-gray-500 hover:text-gray-300 transition-colors z-10"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </motion.div>
+              <p className="text-xs text-gray-500">Парола по подразбиране: demo123</p>
             </div>
 
             {/* Remember & Forgot */}

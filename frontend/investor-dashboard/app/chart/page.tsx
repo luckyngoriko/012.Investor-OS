@@ -247,7 +247,7 @@ export default function ChartPage() {
   const currentPrice = 155.50;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0f1c] via-[#111827] to-[#0a0f1c]">
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0f1c] via-[#111827] to-[#0a0f1c] flex">
       {/* Header */}
       <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-lg">
         <div className="max-w-7xl mx-auto px-6 py-4">

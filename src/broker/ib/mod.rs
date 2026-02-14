@@ -388,7 +388,7 @@ impl Broker for InteractiveBrokers {
         // Get snapshot for ticker
         let snapshot: serde_json::Value = self.request(
             reqwest::Method::GET,
-            &"/iserver/marketdata/snapshot?conids=0&fields=31".to_string(),
+            "/iserver/marketdata/snapshot?conids=0&fields=31",
             None,
         ).await?;
 

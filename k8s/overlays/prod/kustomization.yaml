@@ -1,0 +1,60 @@
+# Sprint 35: Production Environment Configuration
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: investor-os
+
+resources:
+  - ../../base
+  - canary-deployment.yaml
+  - canary-service.yaml
+  - canary-ingress.yaml
+
+commonLabels:
+  environment: production
+  app.kubernetes.io/version: production
+
+images:
+  - name: ghcr.io/neurocod/investor-os-api
+    newTag: v1.0.0
+
+replicas:
+  - name: investor-api
+    count: 5
+
+configMapGenerator:
+  - name: api-config
+    behavior: merge
+    literals:
+      - paper-trading=false
+      - log-level=warn
+      - rate-limit-requests=1000
+      - enable-metrics=true
+      - enable-tracing=true
+      - circuit-breaker-enabled=true
+
+secretGenerator:
+  - name: api-secret
+    behavior: merge
+    literals:
+      - environment=production
+
+patchesStrategicMerge:
+  - deployment-patch.yaml
+  - hpa-patch.yaml
+  - pdb-patch.yaml
+
+patches:
+  - target:
+      kind: Ingress
+      name: investor-api
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: api.investor-os.io
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: api.investor-os.io
+      - op: add
+        path: /metadata/annotations/cert-manager.io~1cluster-issuer
+        value: letsencrypt-prod

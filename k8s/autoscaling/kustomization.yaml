@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: investor-os
+
+resources:
+- namespace.yaml
+- configmap.yaml
+- service-account.yaml
+- service.yaml
+- deployment.yaml
+- hpa.yaml
+- pod-disruption-budget.yaml
+
+commonLabels:
+  app: hrm-inference
+  version: v3.0
+  managed-by: kustomize
+
+images:
+- name: investor-os
+  newTag: v3.0
+
+replicas:
+- name: hrm-inference
+  count: 3

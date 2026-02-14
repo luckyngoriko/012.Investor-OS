@@ -1,0 +1,55 @@
+# Sprint 35: Staging Environment Configuration
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: investor-os-staging
+
+resources:
+  - ../../base
+
+namePrefix: staging-
+
+nameSuffix: -staging
+
+commonLabels:
+  environment: staging
+  app.kubernetes.io/version: staging
+
+images:
+  - name: ghcr.io/neurocod/investor-os-api
+    newTag: staging
+
+replicas:
+  - name: investor-api
+    count: 2
+
+configMapGenerator:
+  - name: api-config
+    behavior: merge
+    literals:
+      - paper-trading=true
+      - log-level=info
+      - rate-limit-requests=100
+      - enable-metrics=true
+
+secretGenerator:
+  - name: api-secret
+    behavior: merge
+    literals:
+      - environment=staging
+
+patchesStrategicMerge:
+  - deployment-patch.yaml
+  - hpa-patch.yaml
+
+patches:
+  - target:
+      kind: Ingress
+      name: investor-api
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: api-staging.investor-os.io
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: api-staging.investor-os.io

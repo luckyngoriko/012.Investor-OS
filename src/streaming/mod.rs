@@ -1,7 +1,14 @@
 //! Real-Time Streaming Engine - Sprint 12
 
 use rust_decimal::Decimal;
-use tokio::sync::broadcast;
+
+// Re-export submodules
+pub mod orderbook;
+pub mod trade_analyzer;
+pub mod websocket;
+
+// Re-export types from submodules for backward compatibility
+pub use orderbook::{OrderBook, PriceLevel, BookUpdate, UpdateType, Side};
 
 /// Real-time market data stream
 #[derive(Debug, Clone)]
@@ -14,30 +21,25 @@ pub struct MarketDataStream {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
-/// Streaming engine coordinator
-#[derive(Debug)]
-pub struct StreamingEngine {
-    signal_tx: broadcast::Sender<TradingSignal>,
+/// Market tick (for websocket compatibility)
+#[derive(Debug, Clone)]
+pub struct MarketTick {
+    pub exchange: String,
+    pub symbol: String,
+    pub price: Decimal,
+    pub quantity: Decimal,
+    pub side: orderbook::Side,
+    pub tick_type: TickType,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
-impl StreamingEngine {
-    pub fn new() -> Self {
-        let (signal_tx, _) = broadcast::channel(1000);
-        Self { signal_tx }
-    }
-    
-    pub async fn start(&mut self) -> Result<(), StreamError> {
-        tracing::info!("Streaming engine started");
-        Ok(())
-    }
-    
-    pub fn subscribe_signals(&self) -> broadcast::Receiver<TradingSignal> {
-        self.signal_tx.subscribe()
-    }
-}
-
-impl Default for StreamingEngine {
-    fn default() -> Self { Self::new() }
+/// Tick type
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TickType {
+    Trade,
+    Bid,
+    Ask,
+    BookDelta,
 }
 
 /// Trading signal from streaming engine
@@ -66,4 +68,9 @@ pub enum StreamError {
     Connection(String),
     #[error("Processing: {0}")]
     Processing(String),
+    #[error("Stream disconnected: {0}")]
+    StreamDisconnected(String),
 }
+
+pub type Result<T> = std::result::Result<T, StreamError>;
+pub type StreamingError = StreamError;

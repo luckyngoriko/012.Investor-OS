@@ -1,0 +1,17 @@
+# Sprint 35: Canary Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: investor-api-canary
+  labels:
+    app: investor-api
+    version: canary
+spec:
+  selector:
+    app: investor-api
+    version: canary
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+  type: ClusterIP

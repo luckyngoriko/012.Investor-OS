@@ -1,0 +1,66 @@
+# Sprint 35: Canary Deployment for Production
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: investor-api-canary
+  labels:
+    app: investor-api
+    version: canary
+    canary: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: investor-api
+      version: canary
+  template:
+    metadata:
+      labels:
+        app: investor-api
+        version: canary
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: investor-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: api
+        image: ghcr.io/neurocod/investor-os-api:v1.0.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        env:
+        - name: RUST_LOG
+          value: "warn,investor_os=info"
+        - name: PAPER_TRADING
+          value: "false"
+        - name: RATE_LIMIT_ENABLED
+          value: "true"
+        - name: CANARY
+          value: "true"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "4000m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 60
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /api/ready
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10

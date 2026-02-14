@@ -14,6 +14,9 @@ pub mod attribution;
 pub mod backtest;
 pub mod ml;
 pub mod risk;
+pub mod service;
+
+pub use service::AnalyticsService;
 
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;

@@ -39,7 +39,7 @@ impl SecParser {
             let section_chunks = chunk_text(&section_content, super::CHUNK_SIZE, super::CHUNK_OVERLAP);
             let _total_section_chunks = section_chunks.len();
             
-            for (_i, chunk_content) in section_chunks.into_iter().enumerate() {
+            for chunk_content in section_chunks.into_iter() {
                 let metadata = DocumentMetadata {
                     section: Some(section_name.clone()),
                     page_number: None,
@@ -108,7 +108,7 @@ impl SecParser {
         found_markers.sort_by_key(|m| m.0);
         
         // Extract sections
-        for (i, (start_pos, name, marker)) in found_markers.iter().enumerate() {
+        for (i, (start_pos, name, _marker)) in found_markers.iter().enumerate() {
             let section_start = *start_pos;
             let section_end = if i + 1 < found_markers.len() {
                 found_markers[i + 1].0

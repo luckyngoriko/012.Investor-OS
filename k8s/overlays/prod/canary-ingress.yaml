@@ -1,0 +1,27 @@
+# Sprint 35: Canary Ingress with Traffic Splitting
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: investor-api-canary
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "10"
+    nginx.ingress.kubernetes.io/canary-by-header: "X-Canary"
+    nginx.ingress.kubernetes.io/canary-by-header-value: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: api.investor-os.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: investor-api-canary
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - api.investor-os.io
+    secretName: investor-api-tls

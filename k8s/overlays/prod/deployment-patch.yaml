@@ -1,0 +1,62 @@
+# Sprint 35: Production Environment Deployment Patch
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: investor-api
+spec:
+  replicas: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - investor-api
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: api
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "4000m"
+        env:
+        - name: RUST_LOG
+          value: "warn,investor_os=info"
+        - name: PAPER_TRADING
+          value: "false"
+        - name: RATE_LIMIT_ENABLED
+          value: "true"
+        - name: CACHE_TTL_SECONDS
+          value: "600"
+        - name: CIRCUIT_BREAKER_ENABLED
+          value: "true"
+        - name: MAX_CONNECTIONS
+          value: "1000"
+        livenessProbe:
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        startupProbe:
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 30

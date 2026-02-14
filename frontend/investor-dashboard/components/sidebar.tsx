@@ -19,6 +19,12 @@ import {
   ChevronRight,
   Sparkles,
   CandlestickChart,
+  Lock,
+  Brain,
+  Calculator,
+  Activity,
+  Server,
+  BarChart3,
 } from "lucide-react";
 import { useAuth, RequireRole } from "@/lib/auth-context";
 
@@ -66,6 +72,56 @@ const getNavItems = (isAdmin: boolean) => [
     icon: Shield,
     description: "VaR & alerts",
     requiredRole: ["admin", "trader"] as const,
+  },
+  // NEW: Sprint 30-35 Features
+  { 
+    href: "/portfolio-opt", 
+    label: "Portfolio Optimization", 
+    icon: BarChart3,
+    description: "MPT & Black-Litterman (Sprint 32)",
+    requiredRole: ["admin", "trader", "viewer"] as const,
+  },
+  { 
+    href: "/strategy", 
+    label: "Strategy Selector", 
+    icon: Brain,
+    description: "ML regime detection (Sprint 31)",
+    requiredRole: ["admin", "trader"] as const,
+  },
+  { 
+    href: "/tax", 
+    label: "Tax & Compliance", 
+    icon: Calculator,
+    description: "Tax loss harvesting (Sprint 30)",
+    requiredRole: ["admin", "trader"] as const,
+  },
+  { 
+    href: "/monitoring", 
+    label: "Monitoring", 
+    icon: Activity,
+    description: "Real-time metrics (Sprint 33)",
+    requiredRole: ["admin", "trader", "viewer"] as const,
+  },
+  { 
+    href: "/security", 
+    label: "Security", 
+    icon: Lock,
+    description: "2FA & encryption (Sprint 34)",
+    requiredRole: ["admin", "trader"] as const,
+  },
+  { 
+    href: "/ai-train", 
+    label: "AI Train", 
+    icon: Brain,
+    description: "Train models to target confidence",
+    requiredRole: ["admin", "trader"] as const,
+  },
+  { 
+    href: "/deployment", 
+    label: "Deployment", 
+    icon: Server,
+    description: "CI/CD & K8s (Sprint 35)",
+    requiredRole: ["admin"] as const,
   },
   { 
     href: "/backtest", 
@@ -139,11 +195,11 @@ export default function Sidebar() {
           x: isMobileMenuOpen ? 0 : undefined 
         }}
         className={`
-          fixed lg:fixed left-0 top-0 h-full z-40
+          fixed lg:sticky left-0 top-0 h-screen z-40
           w-72 bg-gradient-to-b from-[#0a0f1c] via-[#111827] to-[#0a0f1c]
           border-r border-gray-800/50
           transform transition-transform duration-300 ease-in-out
-          lg:translate-x-0
+          lg:translate-x-0 flex-shrink-0
           ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >

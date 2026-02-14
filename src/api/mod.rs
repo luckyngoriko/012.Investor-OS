@@ -2,25 +2,31 @@
 //!
 //! HTTP API endpoints for Investor OS
 
+pub mod admin;
 pub mod handlers;
 
 use axum::{
-    routing::{delete, get, post},
+    routing::{delete, get, post, put},
     Router,
 };
 use std::sync::Arc;
 
 use crate::rag::RagService;
+use crate::analytics::AnalyticsService;
+use crate::broker::paper::PaperBroker;
 
 /// Application state shared across handlers
 pub struct AppState {
     pub rag_service: RagService,
+    pub analytics_service: AnalyticsService,
+    pub broker: PaperBroker,
     pub database_url: String,
+    pub pool: std::sync::Arc<sqlx::PgPool>,
 }
 
 /// Create the API router
 pub fn create_router(state: Arc<AppState>) -> Router {
-    Router::new()
+    let mut router = Router::new()
         // Health endpoints
         .route("/api/health", get(handlers::health))
         .route("/api/ready", get(handlers::readiness))
@@ -50,5 +56,18 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/analytics/predict", post(handlers::analytics::get_ml_prediction))
         .route("/api/analytics/anomalies", get(handlers::analytics::check_anomalies))
         
-        .with_state(state)
+        // Admin endpoints - Integration Management
+        .route("/api/admin/integrations", get(admin::list_integrations))
+        .route("/api/admin/integrations/:id", get(admin::get_integration_detail))
+        .route("/api/admin/integrations/:id/configure", post(admin::configure_integration))
+        .route("/api/admin/integrations/:id/test", post(admin::test_integration))
+        .route("/api/admin/stats", get(admin::get_admin_stats));
+    
+    // EU Compliance endpoints (Sprint 52) - requires eu_compliance feature
+    #[cfg(feature = "eu_compliance")]
+    {
+        router = router.nest("/api/v1/compliance", crate::compliance::routes());
+    }
+    
+    router.with_state(state)
 }

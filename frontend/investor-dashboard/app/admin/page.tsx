@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { SecuritySettingsPanel } from "@/components/security-settings";
 import { useAuth } from "@/lib/auth-context";
+import { BackButton } from "@/components/back-button";
 import { 
   TradingModeCard,
   ModeSettingsPanel,
@@ -956,6 +957,7 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <BackButton className="mr-2" />
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 
                 flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <Settings className="w-6 h-6 text-white" />

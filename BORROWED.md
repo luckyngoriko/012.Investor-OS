@@ -79,3 +79,19 @@ neurocod-synapse = { path = "../002.NeuroCOD.eu/neurocod_synapse", default-featu
 | 3 | **Risk:Reward philosophy** | "Lose small many times, win big few times" → CQ threshold logic |
 | 4 | **Multi-timeframe** | Period 20 for 1H, Period 55 for daily/weekly |
 | 5 | **SMA(200) trend filter** | Only trade in direction of 200-period moving average |
+
+---
+
+## From Sapient Inc — HRM Architecture Inspiration
+
+| # | Item | Source | Adaptation |
+|---|------|--------|------------|
+| 1 | **Hierarchical Reasoning concept** | [HRM GitHub](https://github.com/sapientinc/HRM) | Native Rust implementation using burn framework |
+| 2 | **Dual-module architecture** | High/Low level modules | Adapted for trading signals (regime detection + signal aggregation) |
+| 3 | **Cross-connections pattern** | Information flow between modules | Implemented as Linear layers |
+
+### Notes
+- HRM paper: arXiv:2506.21734
+- Original implementation: PyTorch (Python)
+- Investor OS implementation: Pure Rust (burn framework)
+- Not a direct code copy — architectural pattern only

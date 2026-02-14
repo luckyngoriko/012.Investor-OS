@@ -1,0 +1,47 @@
+# Sprint 35: Development Environment Configuration
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: investor-os-dev
+
+resources:
+  - ../../base
+
+namePrefix: dev-
+
+nameSuffix: -dev
+
+commonLabels:
+  environment: development
+  app.kubernetes.io/version: dev
+
+images:
+  - name: ghcr.io/neurocod/investor-os-api
+    newTag: latest
+
+replicas:
+  - name: investor-api
+    count: 1
+
+configMapGenerator:
+  - name: api-config
+    behavior: merge
+    literals:
+      - paper-trading=true
+      - log-level=debug
+      - rate-limit-requests=1000
+
+patchesStrategicMerge:
+  - deployment-patch.yaml
+
+patches:
+  - target:
+      kind: Ingress
+      name: investor-api
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: api-dev.investor-os.local
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: api-dev.investor-os.local

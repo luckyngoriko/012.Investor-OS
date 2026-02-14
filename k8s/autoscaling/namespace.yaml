@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: investor-os
+  labels:
+    app: investor-os
+    version: v3.0
+    managed-by: kubernetes

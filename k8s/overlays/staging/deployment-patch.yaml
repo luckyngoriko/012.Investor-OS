@@ -1,0 +1,27 @@
+# Sprint 35: Staging Environment Deployment Patch
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: investor-api
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+      - name: api
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1.5Gi"
+            cpu: "1500m"
+        env:
+        - name: RUST_LOG
+          value: "info,investor_os=debug"
+        - name: PAPER_TRADING
+          value: "true"
+        - name: RATE_LIMIT_ENABLED
+          value: "true"
+        - name: CACHE_TTL_SECONDS
+          value: "300"

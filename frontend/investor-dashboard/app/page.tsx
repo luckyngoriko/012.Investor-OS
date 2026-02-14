@@ -45,6 +45,7 @@ import {
   Bar,
 } from "recharts";
 import Sidebar from "@/components/sidebar";
+import { HelpProvider, HelpPanel } from "@/components/help-panel";
 import { FeatureCard, QuickActionsPanel, WhatYouCanDo, SystemStatusOverview } from "@/components/features";
 import { FeatureTour, TourTriggerButton, FirstTimeWelcome } from "@/components/feature-tour";
 import { features } from "@/components/features";
@@ -240,12 +241,26 @@ export default function DashboardPage() {
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [showTour, setShowTour] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<typeof features[0] | null>(null);
+  const [mounted, setMounted] = useState(false);
   
   // Trading Mode State
   const [tradingMode, setTradingMode] = useState<TradingMode>("semi_auto");
   const [modeConfig, setModeConfig] = useState<TradingModeConfig>(DEFAULT_MODE_CONFIG);
   const [showModeWizard, setShowModeWizard] = useState(false);
   const [showModeSelector, setShowModeSelector] = useState(false);
+
+  // Risk Levels for Chart - MUST be before any conditional returns
+  const [riskLevels, setRiskLevels] = useState({
+    entry: 155.50,
+    stopLoss: 152.00,
+    takeProfit: 162.00,
+    position: "long" as "long" | "short",
+  });
+
+  // Set mounted on client side to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -254,24 +269,7 @@ export default function DashboardPage() {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  // Show loading while checking auth
-  if (isLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0a0f1c] via-[#111827] to-[#0a0f1c] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  // Risk Levels for Chart
-  const [riskLevels, setRiskLevels] = useState({
-    entry: 155.50,
-    stopLoss: 152.00,
-    takeProfit: 162.00,
-    position: "long" as "long" | "short",
-  });
-
-  // Simulate real-time price updates
+  // Simulate real-time price updates - MUST be before any conditional returns
   useEffect(() => {
     const interval = setInterval(() => {
       setPositions(prev => prev.map(pos => ({
@@ -282,6 +280,15 @@ export default function DashboardPage() {
     }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Show loading while checking auth or before mounted (to prevent hydration mismatch)
+  if (!mounted || isLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0a0f1c] via-[#111827] to-[#0a0f1c] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const handleConfirmProposal = (index: number) => {
     const proposal = proposals[index];
@@ -312,7 +319,8 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0f1c] via-[#111827] to-[#0a0f1c]">
+    <HelpProvider>
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0f1c] via-[#111827] to-[#0a0f1c] flex">
       <Sidebar />
       
       {/* First Time Welcome Modal */}
@@ -433,9 +441,9 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
 
-      {/* Main Content */}
-      <main className="lg:ml-72 min-h-screen p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
+      {/* Main Content - Centered layout */}
+      <main className="flex-1 min-h-screen p-6 lg:p-8 flex justify-center">
+        <div className="max-w-7xl w-full space-y-6">
           
           {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -565,31 +573,15 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content Grid - Chart moved to right to avoid sidebar overlap */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden">
             
-            {/* Trading Chart */}
+            {/* Sector Allocation - Now on LEFT (order-1) */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="lg:col-span-2"
-            >
-              <TradingChart
-                symbol="AAPL"
-                mode={tradingMode}
-                onModeChange={setTradingMode}
-                riskLevels={riskLevels}
-                className="h-[500px]"
-              />
-            </motion.div>
-
-            {/* Sector Allocation */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="glass-card rounded-2xl p-6"
+              className="glass-card rounded-2xl p-6 lg:order-1 min-w-0"
             >
               <h3 className="text-lg font-semibold text-white mb-6">Sector Allocation</h3>
               <div className="h-48">
@@ -626,6 +618,22 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
+            </motion.div>
+
+            {/* Trading Chart - Now on RIGHT (order-2) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="lg:col-span-2 lg:order-2 min-w-0 overflow-hidden"
+            >
+              <TradingChart
+                symbol="AAPL"
+                mode={tradingMode}
+                onModeChange={setTradingMode}
+                riskLevels={riskLevels}
+                className="h-[500px]"
+              />
             </motion.div>
           </div>
 
@@ -848,6 +856,10 @@ export default function DashboardPage() {
 
         </div>
       </main>
+      
+      {/* Right Panel - Help System */}
+      <HelpPanel />
     </div>
+    </HelpProvider>
   );
 }

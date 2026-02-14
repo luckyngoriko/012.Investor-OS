@@ -9,7 +9,6 @@ pub use trading_mode::{TradingMode, TradingModeConfig, ModeNotifications};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::time::Duration;
 use thiserror::Error;
 
 /// Configuration errors
@@ -56,7 +55,9 @@ pub struct AppConfig {
 /// Environment type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum Environment {
+    #[default]
     Development,
     Staging,
     Production,
@@ -74,11 +75,6 @@ impl Environment {
     }
 }
 
-impl Default for Environment {
-    fn default() -> Self {
-        Environment::Development
-    }
-}
 
 /// Server configuration
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -331,14 +327,12 @@ impl AppConfig {
             commission_rate: std::env::var("COMMISSION_RATE")
                 .ok()
                 .and_then(|s| s.parse().ok())
-                .map(|f: f64| Decimal::try_from(f).ok())
-                .flatten()
+                .and_then(|f: f64| Decimal::try_from(f).ok())
                 .unwrap_or_else(|| Decimal::from(1) / Decimal::from(1000)),
             max_position_pct: std::env::var("MAX_POSITION_PCT")
                 .ok()
                 .and_then(|s| s.parse().ok())
-                .map(|f: f64| Decimal::try_from(f).ok())
-                .flatten()
+                .and_then(|f: f64| Decimal::try_from(f).ok())
                 .unwrap_or_else(|| Decimal::from(10) / Decimal::from(100)),
             min_cq_threshold: std::env::var("MIN_CQ_THRESHOLD")
                 .ok()
@@ -375,20 +369,17 @@ impl AppConfig {
             max_var_95: std::env::var("MAX_VAR_95")
                 .ok()
                 .and_then(|s| s.parse().ok())
-                .map(|f: f64| Decimal::try_from(f).ok())
-                .flatten()
+                .and_then(|f: f64| Decimal::try_from(f).ok())
                 .unwrap_or_else(|| Decimal::from(5) / Decimal::from(100)),
             max_daily_loss: std::env::var("MAX_DAILY_LOSS")
                 .ok()
                 .and_then(|s| s.parse().ok())
-                .map(|f: f64| Decimal::try_from(f).ok())
-                .flatten()
+                .and_then(|f: f64| Decimal::try_from(f).ok())
                 .unwrap_or_else(|| Decimal::from(10) / Decimal::from(100)),
             max_drawdown: std::env::var("MAX_DRAWDOWN")
                 .ok()
                 .and_then(|s| s.parse().ok())
-                .map(|f: f64| Decimal::try_from(f).ok())
-                .flatten()
+                .and_then(|f: f64| Decimal::try_from(f).ok())
                 .unwrap_or_else(|| Decimal::from(20) / Decimal::from(100)),
             kill_switch_enabled: std::env::var("KILL_SWITCH_ENABLED")
                 .map(|s| s == "true" || s == "1")
@@ -450,8 +441,8 @@ impl AppConfig {
             ));
         }
 
-        // Validate port range
-        if self.server.port == 0 || self.server.port > 65535 {
+        // Validate port range (u16 max is 65535)
+        if self.server.port == 0 {
             return Err(ConfigError::InvalidValue(
                 "SERVER_PORT must be between 1 and 65535".to_string()
             ));

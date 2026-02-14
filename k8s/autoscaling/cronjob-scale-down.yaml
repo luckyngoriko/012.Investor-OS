@@ -1,0 +1,49 @@
+# Scale down during off-hours to save costs
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hrm-scale-down-night
+  namespace: investor-os
+spec:
+  schedule: "0 22 * * *"  # 10 PM every day
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: hrm-service-account
+          containers:
+          - name: kubectl
+            image: bitnami/kubectl:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Scaling down HRM deployment for night..."
+              kubectl patch hpa hrm-hpa -p '{"spec":{"minReplicas":1}}' -n investor-os
+              echo "Scale down complete."
+          restartPolicy: OnFailure
+---
+# Scale up during business hours
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hrm-scale-up-morning
+  namespace: investor-os
+spec:
+  schedule: "0 8 * * 1-5"  # 8 AM weekdays
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: hrm-service-account
+          containers:
+          - name: kubectl
+            image: bitnami/kubectl:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Scaling up HRM deployment for business hours..."
+              kubectl patch hpa hrm-hpa -p '{"spec":{"minReplicas":3}}' -n investor-os
+              echo "Scale up complete."
+          restartPolicy: OnFailure

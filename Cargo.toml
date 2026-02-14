@@ -18,10 +18,11 @@ async-trait = "0.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.0", features = ["v4", "serde"] }
-rust_decimal = { version = "1.35", features = ["serde", "maths", "macros"] }
+uuid = { version = "1.0", features = ["v4", "v5", "serde"] }
+rust_decimal = { version = "1.35", features = ["serde", "maths", "macros", "db-postgres"] }
 
 # Error handling & logging
+anyhow = "1.0"
 thiserror = "2.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
@@ -31,14 +32,18 @@ sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid"
 pgvector = { version = "0.4", features = ["sqlx"] }
 
 # Web framework
-axum = "0.7"
+axum = { version = "0.7", features = ["ws"] }
 tower = "0.4"
+tokio-tungstenite = "0.21"
 
 # Redis (for caching and rate limiting)
 redis = { version = "0.24", features = ["tokio-comp"] }
 
 # HTTP client (for external APIs)
 reqwest = { version = "0.12", features = ["json"] }
+
+# Command line parsing (Sprint 49: Distributed)
+clap = { version = "4.4", features = ["derive"] }
 
 # Graph library for LangGraph
 petgraph = "0.6"
@@ -49,5 +54,71 @@ futures = "0.3"
 # Regex for parsing
 regex = "1.0"
 
+# Random number generation
+rand = "0.8"
+
+# ML Framework - HRM (Sprint 36)
+# Core burn (minimal features)
+burn = { version = "0.16", default-features = false, features = ["std"] }
+
+# Backends (Sprint 48: Multi-Backend GPU)
+burn-ndarray = { version = "0.16", optional = true, default-features = false, features = ["std"] }
+burn-cuda = { version = "0.16", optional = true }      # NVIDIA CUDA
+burn-wgpu = { version = "0.16", optional = true }      # Vulkan/WebGPU (Intel/AMD)
+
+# SafeTensors for weight loading
+safetensors = "0.4"
+
+# Quantum Computing (Sprint 51)
+roqoqo = "1.14"                    # Rust quantum computing
+roqoqo-quest = "0.14"              # Quest simulator backend
+num-complex = "0.4"                # Complex numbers for quantum
+fastrand = "2.3"
+
+# Treasury - Real Custody (optional)
+jsonwebtoken = { version = "9.3", optional = true }  # JWT for Fireblocks
+
+# Monitoring & Metrics (Sprint 46)
+prometheus = { version = "0.13", features = ["process"] }
+lazy_static = "1.4"
+
+[features]
+# Sprint 48: Multi-Backend GPU Support
+default = ["cpu"]              # CPU only by default
+cpu = ["burn-ndarray"]         # CPU fallback (always available)
+gpu-auto = ["cuda", "rocm", "intel"]  # Auto-detect all GPUs
+
+# GPU backends (optional)
+cuda = ["dep:burn-cuda"]       # NVIDIA CUDA
+rocm = []                      # AMD ROCm (placeholder)
+intel = []                     # Intel oneAPI (placeholder)
+wgpu = ["dep:burn-wgpu"]       # Cross-platform via Vulkan/WebGPU
+
+# Treasury - Real custody providers
+fireblocks = ["dep:jsonwebtoken"]  # Fireblocks custody integration
+
+# Sprint 52: EU AI Act & GDPR Compliance
+eu_compliance = []  # EU compliance integration (AI-OS.NET + AI-OS-PG)
+
 [dev-dependencies]
 tokio = { version = "1.48", features = ["full", "test-util"] }
+tempfile = "3.0"
+
+# GPU Benchmarking
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bin]]
+name = "gpu-check"
+path = "src/bin/gpu_check.rs"
+
+[[bin]]
+name = "hrm-node"
+path = "src/bin/hrm_node.rs"
+
+[[bin]]
+name = "hrm-lb"
+path = "src/bin/hrm_lb.rs"
+
+[[bench]]
+name = "hrm_inference"
+harness = false

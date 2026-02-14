@@ -1,0 +1,150 @@
+# Investor OS HRM - TrueNAS 25.10.1 Deployment
+# 
+# Deploys Investor OS with GPU acceleration on RTX 3090
+# Usage: docker-compose up -d
+
+version: '3.8'
+
+services:
+  investor-os:
+    build:
+      context: ../..
+      dockerfile: docker/truenas/Dockerfile
+      target: runtime
+    image: investor-os:hrm-cuda
+    container_name: investor-os-hrm
+    
+    # NVIDIA Container Toolkit configuration
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    
+    # GPU environment variables
+    environment:
+      # CUDA configuration
+      - NVIDIA_VISIBLE_DEVICES=0
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - CUDA_VISIBLE_DEVICES=0
+      
+      # HRM configuration
+      - HRM_DEVICE=cuda
+      - HRM_CUDA_MEM_FRACTION=0.8
+      - HRM_WEIGHTS_PATH=/app/models/hrm_v1.safetensors
+      
+      # Application
+      - RUST_LOG=info
+      - INVESTOR_OS_ENV=production
+      - DATABASE_URL=postgresql://investor:password@postgres:5432/investor_os
+      - REDIS_URL=redis://redis:6379
+    
+    # Port mapping
+    ports:
+      - "3000:3000"
+    
+    # Volumes
+    volumes:
+      # HRM model weights
+      - /mnt/nas-data/models:/app/models:ro
+      
+      # Logs
+      - /mnt/nas-data/logs/investor-os:/app/logs
+      
+      # Configuration
+      - /mnt/nas-data/config:/app/config:ro
+    
+    # Network
+    networks:
+      - investor-network
+    
+    # Dependencies
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits for RTX 3090 (24GB)
+    # Reserve 4GB for system, use up to 16GB for HRM
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+          memory: 32G
+        reservations:
+          cpus: '4'
+          memory: 16G
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # PostgreSQL with TimescaleDB
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: investor-postgres
+    environment:
+      - POSTGRES_USER=investor
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=investor_os
+    volumes:
+      - /mnt/nas-data/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - investor-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U investor -d investor_os"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: investor-redis
+    volumes:
+      - /mnt/nas-data/redis:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - investor-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # GPU Monitoring
+  dcgm-exporter:
+    image: nvidia/dcgm-exporter:latest
+    container_name: investor-dcgm
+    environment:
+      - DCGM_EXPORTER_INTERVAL=1000
+    ports:
+      - "9400:9400"
+    networks:
+      - investor-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+networks:
+  investor-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

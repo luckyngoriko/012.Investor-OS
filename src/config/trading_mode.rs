@@ -11,6 +11,7 @@ use std::fmt;
 /// Trading mode enum - controls how autonomous the AI is
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum TradingMode {
     /// Manual mode: AI analyzes but never executes
     /// - AI generates proposals with CQ scores
@@ -23,6 +24,7 @@ pub enum TradingMode {
     /// - Human reviews and confirms/rejects each proposal
     /// - AI automatically executes confirmed proposals
     /// - Best for: Most users, balance of control and convenience
+    #[default]
     SemiAuto,
     
     /// Fully automatic mode: AI proposes and executes within limits
@@ -134,12 +136,6 @@ impl TradingMode {
     }
 }
 
-impl Default for TradingMode {
-    fn default() -> Self {
-        // Default to SemiAuto as the safest balanced option
-        TradingMode::SemiAuto
-    }
-}
 
 impl fmt::Display for TradingMode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

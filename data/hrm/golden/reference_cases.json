@@ -1,0 +1,1502 @@
+[
+  {
+    "name": "perfect_bull",
+    "input": [
+      0.95,
+      0.95,
+      0.95,
+      10.0,
+      0.0,
+      0.5
+    ],
+    "expected": {
+      "conviction": 1.0,
+      "regime": 0
+    }
+  },
+  {
+    "name": "perfect_bear",
+    "input": [
+      0.05,
+      0.05,
+      0.05,
+      60.0,
+      1.0,
+      0.5
+    ],
+    "expected": {
+      "conviction": 0.0717,
+      "regime": 1
+    }
+  },
+  {
+    "name": "extreme_crisis",
+    "input": [
+      0.05,
+      0.05,
+      0.05,
+      90.0,
+      3.0,
+      0.5
+    ],
+    "expected": {
+      "conviction": 0.0172,
+      "regime": 3
+    }
+  },
+  {
+    "name": "neutral",
+    "input": [
+      0.5,
+      0.5,
+      0.5,
+      20.0,
+      2.0,
+      0.5
+    ],
+    "expected": {
+      "conviction": 0.545,
+      "regime": 2
+    }
+  },
+  {
+    "name": "high_vix_bull",
+    "input": [
+      0.8,
+      0.8,
+      0.8,
+      50.0,
+      0.0,
+      0.5
+    ],
+    "expected": {
+      "conviction": 0.8682,
+      "regime": 0
+    }
+  },
+  {
+    "name": "insider_only",
+    "input": [
+      0.3,
+      0.95,
+      0.3,
+      25.0,
+      0.0,
+      0.5
+    ],
+    "expected": {
+      "conviction": 0.6469,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_0",
+    "input": [
+      0.5147,
+      0.4904,
+      0.6428,
+      27.66,
+      2.0,
+      0.4998
+    ],
+    "expected": {
+      "conviction": 0.5707,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_1",
+    "input": [
+      0.9017,
+      0.6565,
+      0.7688,
+      22.43,
+      0.0,
+      0.2547
+    ],
+    "expected": {
+      "conviction": 0.8924,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_2",
+    "input": [
+      0.2637,
+      0.2565,
+      0.5074,
+      56.26,
+      1.0,
+      0.077
+    ],
+    "expected": {
+      "conviction": 0.244,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_3",
+    "input": [
+      0.5544,
+      0.4988,
+      0.4902,
+      26.65,
+      2.0,
+      0.0276
+    ],
+    "expected": {
+      "conviction": 0.5485,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_4",
+    "input": [
+      0.4137,
+      0.3778,
+      0.4738,
+      16.32,
+      2.0,
+      0.527
+    ],
+    "expected": {
+      "conviction": 0.4814,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_5",
+    "input": [
+      0.6165,
+      0.5339,
+      0.6359,
+      17.0,
+      0.0,
+      0.1809
+    ],
+    "expected": {
+      "conviction": 0.7229,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_6",
+    "input": [
+      0.6447,
+      0.68,
+      0.9223,
+      13.77,
+      0.0,
+      0.4024
+    ],
+    "expected": {
+      "conviction": 0.8709,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_7",
+    "input": [
+      0.4868,
+      0.2264,
+      0.5989,
+      23.09,
+      2.0,
+      0.4554
+    ],
+    "expected": {
+      "conviction": 0.4791,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_8",
+    "input": [
+      1.0,
+      0.4403,
+      0.5268,
+      18.53,
+      0.0,
+      0.0596
+    ],
+    "expected": {
+      "conviction": 0.7889,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_9",
+    "input": [
+      0.6022,
+      0.6435,
+      0.6572,
+      23.62,
+      0.0,
+      0.9437
+    ],
+    "expected": {
+      "conviction": 0.7505,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_10",
+    "input": [
+      0.5047,
+      0.4047,
+      0.6361,
+      11.55,
+      0.0,
+      0.1033
+    ],
+    "expected": {
+      "conviction": 0.6492,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_11",
+    "input": [
+      0.4709,
+      0.433,
+      0.297,
+      14.87,
+      2.0,
+      0.8359
+    ],
+    "expected": {
+      "conviction": 0.4731,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_12",
+    "input": [
+      0.4464,
+      0.4387,
+      0.2719,
+      17.68,
+      2.0,
+      0.6512
+    ],
+    "expected": {
+      "conviction": 0.457,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_13",
+    "input": [
+      0.3893,
+      0.4122,
+      0.0593,
+      32.8,
+      1.0,
+      0.6067
+    ],
+    "expected": {
+      "conviction": 0.2493,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_14",
+    "input": [
+      0.2326,
+      0.1112,
+      0.2353,
+      62.97,
+      3.0,
+      0.1066
+    ],
+    "expected": {
+      "conviction": 0.0653,
+      "regime": 3
+    }
+  },
+  {
+    "name": "random_15",
+    "input": [
+      0.5074,
+      0.7723,
+      0.7825,
+      12.39,
+      0.0,
+      0.7794
+    ],
+    "expected": {
+      "conviction": 0.8176,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_16",
+    "input": [
+      1.0,
+      0.6482,
+      0.9582,
+      14.27,
+      0.0,
+      0.883
+    ],
+    "expected": {
+      "conviction": 0.992,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_17",
+    "input": [
+      0.9625,
+      0.858,
+      0.7464,
+      20.67,
+      0.0,
+      0.289
+    ],
+    "expected": {
+      "conviction": 0.9795,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_18",
+    "input": [
+      0.3901,
+      0.5708,
+      0.4386,
+      15.33,
+      2.0,
+      0.4041
+    ],
+    "expected": {
+      "conviction": 0.5249,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_19",
+    "input": [
+      0.5388,
+      0.0,
+      0.4016,
+      36.75,
+      1.0,
+      0.0324
+    ],
+    "expected": {
+      "conviction": 0.2498,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_20",
+    "input": [
+      0.709,
+      0.6272,
+      0.9854,
+      19.38,
+      0.0,
+      0.1036
+    ],
+    "expected": {
+      "conviction": 0.8834,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_21",
+    "input": [
+      0.4209,
+      0.0333,
+      0.4483,
+      43.01,
+      1.0,
+      0.5786
+    ],
+    "expected": {
+      "conviction": 0.2337,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_22",
+    "input": [
+      0.8227,
+      0.4779,
+      0.8391,
+      14.07,
+      0.0,
+      0.8565
+    ],
+    "expected": {
+      "conviction": 0.8382,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_23",
+    "input": [
+      0.728,
+      0.704,
+      0.839,
+      5.0,
+      0.0,
+      0.0296
+    ],
+    "expected": {
+      "conviction": 0.8991,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_24",
+    "input": [
+      0.6732,
+      0.862,
+      0.7497,
+      13.33,
+      0.0,
+      0.4132
+    ],
+    "expected": {
+      "conviction": 0.8947,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_25",
+    "input": [
+      0.1833,
+      0.2862,
+      0.0609,
+      71.56,
+      3.0,
+      0.5686
+    ],
+    "expected": {
+      "conviction": 0.0596,
+      "regime": 3
+    }
+  },
+  {
+    "name": "random_26",
+    "input": [
+      0.2458,
+      0.3234,
+      0.0532,
+      27.85,
+      1.0,
+      0.0957
+    ],
+    "expected": {
+      "conviction": 0.2046,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_27",
+    "input": [
+      0.081,
+      0.306,
+      0.265,
+      55.75,
+      3.0,
+      0.2661
+    ],
+    "expected": {
+      "conviction": 0.0746,
+      "regime": 3
+    }
+  },
+  {
+    "name": "random_28",
+    "input": [
+      0.4047,
+      0.2289,
+      0.6009,
+      51.74,
+      1.0,
+      0.2686
+    ],
+    "expected": {
+      "conviction": 0.2889,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_29",
+    "input": [
+      0.4732,
+      0.4915,
+      0.3731,
+      24.7,
+      2.0,
+      0.0606
+    ],
+    "expected": {
+      "conviction": 0.4956,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_30",
+    "input": [
+      0.3681,
+      0.2985,
+      0.0964,
+      50.04,
+      1.0,
+      0.8684
+    ],
+    "expected": {
+      "conviction": 0.2093,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_31",
+    "input": [
+      0.6003,
+      0.0,
+      0.1553,
+      29.13,
+      1.0,
+      0.8835
+    ],
+    "expected": {
+      "conviction": 0.2277,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_32",
+    "input": [
+      0.2389,
+      0.6778,
+      0.6638,
+      19.2,
+      2.0,
+      0.9216
+    ],
+    "expected": {
+      "conviction": 0.5622,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_33",
+    "input": [
+      0.2714,
+      0.3944,
+      0.5938,
+      16.06,
+      2.0,
+      0.0804
+    ],
+    "expected": {
+      "conviction": 0.4741,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_34",
+    "input": [
+      0.2991,
+      0.1501,
+      0.1038,
+      69.31,
+      3.0,
+      0.4456
+    ],
+    "expected": {
+      "conviction": 0.062,
+      "regime": 3
+    }
+  },
+  {
+    "name": "random_35",
+    "input": [
+      0.4015,
+      0.6402,
+      0.5033,
+      23.57,
+      2.0,
+      0.8882
+    ],
+    "expected": {
+      "conviction": 0.553,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_36",
+    "input": [
+      0.2501,
+      0.2452,
+      0.1737,
+      57.49,
+      1.0,
+      0.9414
+    ],
+    "expected": {
+      "conviction": 0.179,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_37",
+    "input": [
+      0.6634,
+      0.9717,
+      0.9247,
+      22.94,
+      0.0,
+      0.1983
+    ],
+    "expected": {
+      "conviction": 0.9629,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_38",
+    "input": [
+      0.7801,
+      0.7181,
+      0.6657,
+      16.62,
+      0.0,
+      0.8351
+    ],
+    "expected": {
+      "conviction": 0.8521,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_39",
+    "input": [
+      0.7743,
+      1.0,
+      0.7976,
+      16.8,
+      0.0,
+      0.9168
+    ],
+    "expected": {
+      "conviction": 0.985,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_40",
+    "input": [
+      0.7771,
+      0.4804,
+      0.503,
+      14.85,
+      0.0,
+      0.2239
+    ],
+    "expected": {
+      "conviction": 0.7253,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_41",
+    "input": [
+      0.4555,
+      1.0,
+      0.7661,
+      22.2,
+      0.0,
+      0.8083
+    ],
+    "expected": {
+      "conviction": 0.8566,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_42",
+    "input": [
+      0.9688,
+      0.603,
+      0.9389,
+      16.07,
+      0.0,
+      0.2786
+    ],
+    "expected": {
+      "conviction": 0.9569,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_43",
+    "input": [
+      0.3682,
+      0.165,
+      0.1707,
+      41.39,
+      1.0,
+      0.9789
+    ],
+    "expected": {
+      "conviction": 0.2034,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_44",
+    "input": [
+      0.1019,
+      0.0455,
+      0.0004,
+      79.59,
+      3.0,
+      0.0053
+    ],
+    "expected": {
+      "conviction": 0.0225,
+      "regime": 3
+    }
+  },
+  {
+    "name": "random_45",
+    "input": [
+      0.7869,
+      0.8395,
+      0.7143,
+      10.31,
+      0.0,
+      0.5628
+    ],
+    "expected": {
+      "conviction": 0.9212,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_46",
+    "input": [
+      0.0617,
+      0.4838,
+      0.6148,
+      25.23,
+      2.0,
+      0.7562
+    ],
+    "expected": {
+      "conviction": 0.4295,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_47",
+    "input": [
+      0.4138,
+      0.1733,
+      0.8457,
+      13.23,
+      0.0,
+      0.0609
+    ],
+    "expected": {
+      "conviction": 0.5954,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_48",
+    "input": [
+      0.2883,
+      0.5514,
+      0.7494,
+      21.03,
+      2.0,
+      0.6158
+    ],
+    "expected": {
+      "conviction": 0.5577,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_49",
+    "input": [
+      0.7159,
+      0.5661,
+      0.2546,
+      53.19,
+      1.0,
+      0.9866
+    ],
+    "expected": {
+      "conviction": 0.3629,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_50",
+    "input": [
+      0.8463,
+      0.4237,
+      0.7986,
+      22.3,
+      0.0,
+      0.6989
+    ],
+    "expected": {
+      "conviction": 0.8018,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_51",
+    "input": [
+      0.8096,
+      0.5926,
+      0.6144,
+      7.14,
+      0.0,
+      0.6047
+    ],
+    "expected": {
+      "conviction": 0.8206,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_52",
+    "input": [
+      0.7169,
+      0.4317,
+      0.8965,
+      12.07,
+      0.0,
+      0.7007
+    ],
+    "expected": {
+      "conviction": 0.8057,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_53",
+    "input": [
+      0.1004,
+      0.121,
+      0.1958,
+      66.25,
+      3.0,
+      0.4933
+    ],
+    "expected": {
+      "conviction": 0.0498,
+      "regime": 3
+    }
+  },
+  {
+    "name": "random_54",
+    "input": [
+      0.3726,
+      0.1471,
+      0.268,
+      40.77,
+      1.0,
+      0.087
+    ],
+    "expected": {
+      "conviction": 0.2182,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_55",
+    "input": [
+      0.728,
+      0.4351,
+      0.5284,
+      16.51,
+      2.0,
+      0.1179
+    ],
+    "expected": {
+      "conviction": 0.6063,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_56",
+    "input": [
+      0.7915,
+      0.9659,
+      0.6256,
+      18.45,
+      0.0,
+      0.3481
+    ],
+    "expected": {
+      "conviction": 0.9268,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_57",
+    "input": [
+      0.6844,
+      0.6746,
+      0.7786,
+      13.82,
+      0.0,
+      0.9749
+    ],
+    "expected": {
+      "conviction": 0.8414,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_58",
+    "input": [
+      0.401,
+      0.2272,
+      0.2756,
+      47.67,
+      1.0,
+      0.4292
+    ],
+    "expected": {
+      "conviction": 0.2351,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_59",
+    "input": [
+      0.6975,
+      0.5202,
+      0.7437,
+      17.24,
+      0.0,
+      0.4304
+    ],
+    "expected": {
+      "conviction": 0.7767,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_60",
+    "input": [
+      0.184,
+      0.2308,
+      0.3794,
+      46.28,
+      1.0,
+      0.3951
+    ],
+    "expected": {
+      "conviction": 0.2099,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_61",
+    "input": [
+      0.6515,
+      0.6699,
+      0.8669,
+      11.53,
+      0.0,
+      0.1716
+    ],
+    "expected": {
+      "conviction": 0.8578,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_62",
+    "input": [
+      0.5007,
+      0.5842,
+      0.5029,
+      25.09,
+      2.0,
+      0.553
+    ],
+    "expected": {
+      "conviction": 0.5635,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_63",
+    "input": [
+      0.9858,
+      0.7463,
+      0.8488,
+      11.31,
+      0.0,
+      0.9772
+    ],
+    "expected": {
+      "conviction": 0.9946,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_64",
+    "input": [
+      0.1548,
+      0.4851,
+      0.042,
+      46.54,
+      1.0,
+      0.2648
+    ],
+    "expected": {
+      "conviction": 0.1979,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_65",
+    "input": [
+      0.2656,
+      0.3597,
+      0.5674,
+      15.52,
+      2.0,
+      0.5864
+    ],
+    "expected": {
+      "conviction": 0.4562,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_66",
+    "input": [
+      0.806,
+      0.883,
+      0.8491,
+      14.77,
+      0.0,
+      0.7228
+    ],
+    "expected": {
+      "conviction": 0.9738,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_67",
+    "input": [
+      0.3178,
+      0.0427,
+      0.3559,
+      34.55,
+      1.0,
+      0.5461
+    ],
+    "expected": {
+      "conviction": 0.2067,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_68",
+    "input": [
+      0.7703,
+      0.2672,
+      0.8969,
+      12.39,
+      0.0,
+      0.0028
+    ],
+    "expected": {
+      "conviction": 0.7669,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_69",
+    "input": [
+      0.6434,
+      0.4755,
+      0.5896,
+      16.73,
+      2.0,
+      0.9937
+    ],
+    "expected": {
+      "conviction": 0.608,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_70",
+    "input": [
+      0.5296,
+      0.5607,
+      0.4732,
+      28.15,
+      2.0,
+      0.8465
+    ],
+    "expected": {
+      "conviction": 0.5532,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_71",
+    "input": [
+      0.4194,
+      0.8853,
+      0.588,
+      17.55,
+      0.0,
+      0.0446
+    ],
+    "expected": {
+      "conviction": 0.7614,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_72",
+    "input": [
+      0.8105,
+      0.5328,
+      0.6812,
+      12.84,
+      0.0,
+      0.7149
+    ],
+    "expected": {
+      "conviction": 0.8096,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_73",
+    "input": [
+      0.6439,
+      0.6204,
+      0.7269,
+      16.62,
+      0.0,
+      0.9598
+    ],
+    "expected": {
+      "conviction": 0.789,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_74",
+    "input": [
+      0.358,
+      0.519,
+      0.6159,
+      16.46,
+      2.0,
+      0.595
+    ],
+    "expected": {
+      "conviction": 0.5424,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_75",
+    "input": [
+      0.4636,
+      0.2559,
+      0.981,
+      18.07,
+      0.0,
+      0.7716
+    ],
+    "expected": {
+      "conviction": 0.6716,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_76",
+    "input": [
+      0.2481,
+      0.0637,
+      0.3803,
+      78.35,
+      3.0,
+      0.7766
+    ],
+    "expected": {
+      "conviction": 0.0663,
+      "regime": 3
+    }
+  },
+  {
+    "name": "random_77",
+    "input": [
+      0.261,
+      0.2501,
+      0.2835,
+      88.94,
+      3.0,
+      0.8821
+    ],
+    "expected": {
+      "conviction": 0.0722,
+      "regime": 3
+    }
+  },
+  {
+    "name": "random_78",
+    "input": [
+      0.7781,
+      0.5182,
+      0.5058,
+      19.18,
+      0.0,
+      0.0326
+    ],
+    "expected": {
+      "conviction": 0.732,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_79",
+    "input": [
+      0.4527,
+      0.5566,
+      0.7584,
+      15.76,
+      0.0,
+      0.5724
+    ],
+    "expected": {
+      "conviction": 0.7115,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_80",
+    "input": [
+      0.656,
+      0.6657,
+      0.8475,
+      13.25,
+      0.0,
+      0.2252
+    ],
+    "expected": {
+      "conviction": 0.8493,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_81",
+    "input": [
+      0.4119,
+      0.5349,
+      0.4736,
+      23.41,
+      2.0,
+      0.3485
+    ],
+    "expected": {
+      "conviction": 0.5174,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_82",
+    "input": [
+      0.3127,
+      0.3497,
+      0.6749,
+      19.9,
+      0.0,
+      0.2063
+    ],
+    "expected": {
+      "conviction": 0.5607,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_83",
+    "input": [
+      0.8062,
+      0.8197,
+      0.831,
+      12.26,
+      0.0,
+      0.1678
+    ],
+    "expected": {
+      "conviction": 0.9512,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_84",
+    "input": [
+      0.5532,
+      1.0,
+      0.8183,
+      24.2,
+      0.0,
+      0.0407
+    ],
+    "expected": {
+      "conviction": 0.9019,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_85",
+    "input": [
+      0.6872,
+      0.4285,
+      0.4957,
+      18.57,
+      2.0,
+      0.9059
+    ],
+    "expected": {
+      "conviction": 0.5808,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_86",
+    "input": [
+      0.3704,
+      0.4941,
+      0.4119,
+      20.63,
+      2.0,
+      0.3441
+    ],
+    "expected": {
+      "conviction": 0.4814,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_87",
+    "input": [
+      0.2207,
+      0.081,
+      0.3137,
+      74.49,
+      3.0,
+      0.1135
+    ],
+    "expected": {
+      "conviction": 0.0622,
+      "regime": 3
+    }
+  },
+  {
+    "name": "random_88",
+    "input": [
+      0.7405,
+      0.4257,
+      0.439,
+      16.5,
+      2.0,
+      0.2262
+    ],
+    "expected": {
+      "conviction": 0.5849,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_89",
+    "input": [
+      0.6397,
+      0.8553,
+      0.743,
+      19.19,
+      0.0,
+      0.3286
+    ],
+    "expected": {
+      "conviction": 0.8688,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_90",
+    "input": [
+      0.4231,
+      0.3895,
+      0.4507,
+      20.04,
+      2.0,
+      0.8975
+    ],
+    "expected": {
+      "conviction": 0.4764,
+      "regime": 2
+    }
+  },
+  {
+    "name": "random_91",
+    "input": [
+      0.8168,
+      0.6936,
+      0.6478,
+      12.07,
+      0.0,
+      0.4048
+    ],
+    "expected": {
+      "conviction": 0.859,
+      "regime": 0
+    }
+  },
+  {
+    "name": "random_92",
+    "input": [
+      0.2025,
+      0.362,
+      0.4186,
+      60.34,
+      1.0,
+      0.5544
+    ],
+    "expected": {
+      "conviction": 0.2334,
+      "regime": 1
+    }
+  },
+  {
+    "name": "random_93",
+    "input": [
+      0.2512,
+      0.0,
+      0.1114,
+      35.44,
+      1.0,
+      0.6951
+    ],
+    "expected": {
+      "conviction": 0.14,
+      "regime": 1
+    }
+  }
+]

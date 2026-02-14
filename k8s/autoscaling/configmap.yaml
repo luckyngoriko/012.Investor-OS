@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hrm-config
+  namespace: investor-os
+data:
+  # HRM Configuration
+  RUST_LOG: "info"
+  HRM_BACKEND: "auto"
+  HRM_MAX_REQUESTS: "1000"
+  HRM_TIMEOUT_MS: "5000"
+  
+  # Metrics Configuration
+  METRICS_ENABLED: "true"
+  METRICS_PORT: "9090"
+  
+  # Distributed Configuration
+  DISCOVERY_TYPE: "kubernetes"
+  LOAD_BALANCER_STRATEGY: "least-latency"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hrm-scaling-policies
+  namespace: investor-os
+data:
+  scale-up-threshold: "80"
+  scale-down-threshold: "30"
+  stabilization-window-up: "60"
+  stabilization-window-down: "300"

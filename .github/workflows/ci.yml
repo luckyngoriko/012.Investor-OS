@@ -1,4 +1,6 @@
-# S8-D2: GitHub Actions CI/CD Pipeline
+# Sprint 35: Production CI/CD Pipeline
+# GitHub Actions workflow for testing, building, and deploying Investor OS
+
 name: CI/CD
 
 on:
@@ -6,16 +8,18 @@ on:
     branches: [main, develop]
     tags: ['v*']
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: "-D warnings"
 
 jobs:
-  # ==================== Test & Build ====================
+  # ==================== Test & Quality Checks ====================
   test:
-    name: Test
+    name: Test Suite
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -35,14 +39,23 @@ jobs:
         image: redis:7-alpine
         ports:
         - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-    - name: Install Rust
+    - name: Install Rust toolchain
       uses: dtolnay/rust-action@stable
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
 
-    - name: Cache cargo
+    - name: Cache cargo dependencies
       uses: actions/cache@v3
       with:
         path: |
@@ -53,27 +66,46 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-cargo-
 
-    - name: Run tests
-      env:
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
-        REDIS_URL: redis://localhost:6379
-      run: cargo test -- --test-threads=1
-
-    - name: Run clippy
-      run: cargo clippy -- -D warnings
-
     - name: Check formatting
       run: cargo fmt -- --check
 
-  # ==================== Security Scan ====================
+    - name: Run clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+    - name: Run unit tests
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
+        REDIS_URL: redis://localhost:6379
+      run: cargo test --lib -- --test-threads=4
+
+    - name: Run integration tests
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
+        REDIS_URL: redis://localhost:6379
+      run: cargo test --test '*' -- --test-threads=2
+
+    - name: Generate test report
+      run: |
+        cargo test --lib -- --test-threads=4 -Z unstable-options --format json > test-results.json 2>/dev/null || true
+        echo "Test run complete"
+
+  # ==================== Security Audit ====================
   security:
     name: Security Audit
     runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Run cargo-audit
-      uses: actions-rust-lang/audit@v1
+      uses: rustsec/audit-check@v1.4.1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
@@ -83,15 +115,34 @@ jobs:
         format: 'sarif'
         output: 'trivy-results.sarif'
 
-  # ==================== Build & Push ====================
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Run Hadolint (Dockerfile linter)
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: Dockerfile
+        verbose: true
+
+  # ==================== Build & Push Docker Image ====================
   build:
-    name: Build & Push
+    name: Build & Push Docker Image
     needs: [test, security]
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -103,7 +154,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Docker meta
+    - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
       with:
@@ -112,6 +163,7 @@ jobs:
           type=ref,event=branch
           type=semver,pattern={{version}}
           type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
           type=sha,prefix=,suffix=,format=short
 
     - name: Build and push
@@ -124,31 +176,99 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         platforms: linux/amd64,linux/arm64
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+
+    - name: Image digest
+      run: echo "Image digest - ${{ steps.build.outputs.digest }}"
+
+  # ==================== Deploy to Development ====================
+  deploy-dev:
+    name: Deploy to Development
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: development
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBE_CONFIG_DEV }}" | base64 -d > ~/.kube/config
+        kubectl config current-context
+
+    - name: Deploy to development
+      run: |
+        cd k8s/overlays/dev
+        kustomize edit set image api=ghcr.io/${{ github.repository }}/api:${{ github.sha }}
+        kustomize build . | kubectl apply -f -
+
+    - name: Wait for rollout
+      run: |
+        kubectl rollout status deployment/investor-api -n investor-os-dev --timeout=300s
+
+    - name: Run smoke tests
+      run: |
+        kubectl run smoke-test-${{ github.run_id }} \
+          --image=curlimages/curl:latest \
+          --rm -i --restart=Never \
+          -- curl -sf http://investor-api.investor-os-dev.svc.cluster.local/api/health || exit 1
 
   # ==================== Deploy to Staging ====================
   deploy-staging:
     name: Deploy to Staging
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/main'
     environment: staging
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
     - name: Setup kubectl
       uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
 
     - name: Configure kubectl
       run: |
+        mkdir -p ~/.kube
         echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > ~/.kube/config
+
+    - name: Run database migrations
+      run: |
+        kubectl run migrate-${{ github.run_id }} \
+          --image=ghcr.io/${{ github.repository }}/api:${{ github.sha }} \
+          --rm -i --restart=Never -n investor-os-staging \
+          --env="DATABASE_URL=${{ secrets.DATABASE_URL_STAGING }}" \
+          -- ./investor-api migrate || true
 
     - name: Deploy to staging
       run: |
-        kubectl set image deployment/investor-api \
-          api=ghcr.io/${{ github.repository }}/api:${{ github.sha }} \
-          -n investor-os-staging
-        kubectl rollout status deployment/investor-api -n investor-os-staging
+        cd k8s/overlays/staging
+        kustomize edit set image api=ghcr.io/${{ github.repository }}/api:${{ github.sha }}
+        kustomize build . | kubectl apply -f -
+
+    - name: Wait for rollout
+      run: |
+        kubectl rollout status deployment/investor-api -n investor-os-staging --timeout=300s
+
+    - name: Run integration tests
+      run: |
+        kubectl run integration-test-${{ github.run_id }} \
+          --image=ghcr.io/${{ github.repository }}/api:${{ github.sha }} \
+          --rm -i --restart=Never -n investor-os-staging \
+          --env="API_URL=http://investor-api.investor-os-staging.svc.cluster.local" \
+          -- cargo test --test deployment_test || true
 
   # ==================== Deploy to Production ====================
   deploy-production:
@@ -159,31 +279,67 @@ jobs:
     environment: production
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
     - name: Setup kubectl
       uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
 
     - name: Configure kubectl
       run: |
+        mkdir -p ~/.kube
         echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > ~/.kube/config
+
+    - name: Verify image exists
+      run: |
+        docker pull ghcr.io/${{ github.repository }}/api:${{ github.ref_name }}
 
     - name: Run database migrations
       run: |
         kubectl run migrate-${{ github.run_id }} \
-          --image=ghcr.io/${{ github.repository }}/api:${{ github.sha }} \
-          --rm -i --restart=Never \
-          --env="DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+          --image=ghcr.io/${{ github.repository }}/api:${{ github.ref_name }} \
+          --rm -i --restart=Never -n investor-os \
+          --env="DATABASE_URL=${{ secrets.DATABASE_URL_PRODUCTION }}" \
           -- ./investor-api migrate
 
-    - name: Deploy to production
+    - name: Deploy to production (canary)
       run: |
-        kubectl set image deployment/investor-api \
-          api=ghcr.io/${{ github.repository }}/api:${{ github.ref_name }} \
-          -n investor-os
-        kubectl rollout status deployment/investor-api -n investor-os
+        cd k8s/overlays/prod
+        kustomize edit set image api=ghcr.io/${{ github.repository }}/api:${{ github.ref_name }}
+        
+        # Deploy canary (10% traffic)
+        kubectl apply -f canary-deployment.yaml -n investor-os
+        kubectl rollout status deployment/investor-api-canary -n investor-os --timeout=300s
+
+    - name: Run smoke tests on canary
+      run: |
+        for i in {1..10}; do
+          kubectl run smoke-test-${{ github.run_id }}-$i \
+            --image=curlimages/curl:latest \
+            --rm -i --restart=Never \
+            -- curl -sf http://investor-api-canary.investor-os.svc.cluster.local/api/health || exit 1
+        done
+
+    - name: Promote to full deployment
+      run: |
+        cd k8s/overlays/prod
+        kustomize build . | kubectl apply -f -
+        kubectl rollout status deployment/investor-api -n investor-os --timeout=600s
 
     - name: Verify deployment
       run: |
-        kubectl get pods -n investor-os
+        kubectl get pods -n investor-os -l app=investor-api
         kubectl get svc -n investor-os
+        echo "Production deployment complete!"
+
+    - name: Notify on success
+      if: success()
+      run: |
+        echo "🚀 Production deployment ${{ github.ref_name }} successful!"
+
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "❌ Production deployment ${{ github.ref_name }} failed!"

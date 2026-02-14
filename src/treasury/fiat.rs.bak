@@ -2,6 +2,8 @@
 
 use super::*;
 use async_trait::async_trait;
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
 /// Fiat payment gateway interface
 #[async_trait]
@@ -48,12 +50,15 @@ pub struct FiatGateway {
     // Bank API connections
     // SEPA provider
     // SWIFT provider
+    deposits: Arc<Mutex<HashMap<Uuid, Deposit>>>,
 }
 
 impl FiatGateway {
     pub async fn new() -> Result<Self> {
         // TODO: Initialize bank connections
-        Ok(Self {})
+        Ok(Self {
+            deposits: Arc::new(Mutex::new(HashMap::new())),
+        })
     }
 }
 
@@ -62,7 +67,7 @@ impl FiatGatewayTrait for FiatGateway {
     async fn initiate_deposit(&self, currency: Currency, amount: Decimal) -> Result<Deposit> {
         // TODO: Connect to bank API
         // For now, return mock deposit
-        Ok(Deposit {
+        let deposit = Deposit {
             id: Uuid::new_v4(),
             currency,
             amount,
@@ -74,25 +79,28 @@ impl FiatGatewayTrait for FiatGateway {
                 account_last4: "1234".to_string(),
             },
             reference: Some(format!("DEP-{}", Uuid::new_v4())),
-        })
+        };
+        
+        // Store deposit for later retrieval
+        if let Ok(mut deposits) = self.deposits.lock() {
+            deposits.insert(deposit.id, deposit.clone());
+        }
+        
+        Ok(deposit)
     }
     
     async fn confirm_deposit(&self, deposit_id: Uuid) -> Result<Deposit> {
         // TODO: Check bank API for confirmation
-        // Mock: always confirm for testing
-        Ok(Deposit {
-            id: deposit_id,
-            currency: Currency::USD,
-            amount: Decimal::from(10000),
-            status: TransactionStatus::Cleared,
-            created_at: Utc::now(),
-            cleared_at: Some(Utc::now()),
-            source: DepositSource::BankTransfer {
-                bank_name: "Mock Bank".to_string(),
-                account_last4: "1234".to_string(),
-            },
-            reference: Some("MOCK".to_string()),
-        })
+        // Mock: retrieve stored deposit and mark as cleared
+        if let Ok(mut deposits) = self.deposits.lock() {
+            if let Some(deposit) = deposits.get_mut(&deposit_id) {
+                deposit.status = TransactionStatus::Cleared;
+                deposit.cleared_at = Some(Utc::now());
+                return Ok(deposit.clone());
+            }
+        }
+        
+        Err(crate::treasury::TreasuryError::DepositNotFound(deposit_id))
     }
     
     async fn initiate_withdrawal(

@@ -1,0 +1,73 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hrm-hpa
+  namespace: investor-os
+  labels:
+    app: hrm-inference
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hrm-inference
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+  # CPU-based scaling
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  
+  # Memory-based scaling
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  
+  # Custom metric: Inference requests per second
+  - type: Pods
+    pods:
+      metric:
+        name: inference_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "1000"
+  
+  # Custom metric: Inference latency
+  - type: Pods
+    pods:
+      metric:
+        name: inference_latency_p99
+      target:
+        type: AverageValue
+        averageValue: "2m"  # 2 milliseconds
+  
+  behavior:
+    # Scale up quickly to handle load spikes
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      - type: Pods
+        value: 4
+        periodSeconds: 60
+      selectPolicy: Max
+    
+    # Scale down slowly to avoid thrashing
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      - type: Pods
+        value: 1
+        periodSeconds: 60
+      selectPolicy: Min
