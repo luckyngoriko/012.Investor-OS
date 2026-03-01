@@ -53,6 +53,6 @@
 
 ## Next Sprint Decision
 
-- Next sprint: none
-- Activation status: program closed at 100%
+- Next sprint: 83
+- Activation status: done
 - Preconditions met: yes

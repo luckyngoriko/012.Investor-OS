@@ -130,16 +130,10 @@ jobs:
         fi
     
     - name: Install cargo-audit
-      if: steps.depcheck.outputs.skip_rust_checks == 'false'
       run: cargo install cargo-audit --locked
 
     - name: G5 - Security audit (blocking)
-      if: steps.depcheck.outputs.skip_rust_checks == 'false'
       run: cargo audit
-
-    - name: Skip security audit when local dependency is unavailable
-      if: steps.depcheck.outputs.skip_rust_checks == 'true'
-      run: echo "Skipping cargo audit in CI because /mnt/nas-data/dev/neurocod-rag is unavailable."
 
   build-docker:
     name: Build Docker Image
