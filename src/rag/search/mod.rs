@@ -5,7 +5,8 @@
 
 use crate::rag::{DocumentChunk, DocumentType, Result, RagError, SearchQuery, SearchResult};
 use chrono::{DateTime, Utc};
-use sqlx::PgPool;
+use sqlx::postgres::PgRow;
+use sqlx::{FromRow, PgPool, Row};
 use uuid::Uuid;
 
 /// Document search using pgvector for similarity search
@@ -316,7 +317,6 @@ impl DocumentSearch {
 }
 
 /// Database row for document embeddings
-#[derive(sqlx::FromRow)]
 struct DocumentEmbeddingRow {
     id: Uuid,
     ticker: String,
@@ -327,12 +327,10 @@ struct DocumentEmbeddingRow {
     chunk_index: i32,
     total_chunks: i32,
     metadata: serde_json::Value,
-    #[sqlx(default)]
     distance: f32,
 }
 
 /// Database row for decisions
-#[derive(sqlx::FromRow)]
 struct DecisionRow {
     id: Uuid,
     portfolio_id: Uuid,
@@ -340,6 +338,42 @@ struct DecisionRow {
     action: String,
     journal_entry: Option<String>,
     created_at: DateTime<Utc>,
+}
+
+impl<'r> FromRow<'r, PgRow> for DocumentEmbeddingRow {
+    fn from_row(row: &'r PgRow) -> std::result::Result<Self, sqlx::Error> {
+        let distance = match row.try_get("distance") {
+            Ok(value) => value,
+            Err(sqlx::Error::ColumnNotFound(_)) => 0.0,
+            Err(err) => return Err(err),
+        };
+
+        Ok(Self {
+            id: row.try_get("id")?,
+            ticker: row.try_get("ticker")?,
+            document_type: row.try_get("document_type")?,
+            document_date: row.try_get("document_date")?,
+            source_url: row.try_get("source_url")?,
+            content_chunk: row.try_get("content_chunk")?,
+            chunk_index: row.try_get("chunk_index")?,
+            total_chunks: row.try_get("total_chunks")?,
+            metadata: row.try_get("metadata")?,
+            distance,
+        })
+    }
+}
+
+impl<'r> FromRow<'r, PgRow> for DecisionRow {
+    fn from_row(row: &'r PgRow) -> std::result::Result<Self, sqlx::Error> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            portfolio_id: row.try_get("portfolio_id")?,
+            ticker: row.try_get("ticker")?,
+            action: row.try_get("action")?,
+            journal_entry: row.try_get("journal_entry")?,
+            created_at: row.try_get("created_at")?,
+        })
+    }
 }
 
 fn parse_document_type(s: &str) -> DocumentType {

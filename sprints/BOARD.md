@@ -10,10 +10,10 @@ Single source board aligned with:
 
 - Program Scope: Sprint 63 to Sprint 82
 - Total Sprints: 20
-- Completed: 19
-- In Progress: 1
-- Overall Completion: 95%
-- Remaining to 100%: 5%
+- Completed: 20
+- In Progress: 0
+- Overall Completion: 100%
+- Remaining to 100%: 0%
 
 ## Planned Milestone Trajectory
 
@@ -61,7 +61,7 @@ Single source board aligned with:
 | 79 | Continuous Verification Expansion & CI Stability Hardening | done | G26 | `sprints/specs/SPRINT-079.md` | `sprints/reports/SPRINT-079.md` |
 | 80 | CI Dependency Determinism & Runtime Verification Unblocking | done | G27 | `sprints/specs/SPRINT-080.md` | `sprints/reports/SPRINT-080.md` |
 | 81 | Runtime Warning Budget Enforcement & Signal Hygiene | done | G28 | `sprints/specs/SPRINT-081.md` | `sprints/reports/SPRINT-081.md` |
-| 82 | Security Backlog Burn-down & PR Signal Hardening | in_progress | G29 | `sprints/specs/SPRINT-082.md` | `sprints/reports/SPRINT-082.md` |
+| 82 | Security Backlog Burn-down & PR Signal Hardening | done | G29 | `sprints/specs/SPRINT-082.md` | `sprints/reports/SPRINT-082.md` |
 
 ## Rule
 

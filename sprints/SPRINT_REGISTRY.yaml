@@ -10,12 +10,12 @@ program:
     total_sprints: 20
 
 progress:
-  completed_sprints: 19
-  in_progress_sprints: 1
+  completed_sprints: 20
+  in_progress_sprints: 0
   queued_sprints: 0
   blocked_sprints: 0
-  overall_completion_percent: 95
-  remaining_percent: 5
+  overall_completion_percent: 100
+  remaining_percent: 0
 
 active:
   sprint_id: 82
@@ -139,7 +139,7 @@ sprints:
     report: sprints/reports/SPRINT-081.md
   - id: 82
     title: Security Backlog Burn-down & PR Signal Hardening
-    status: in_progress
+    status: done
     gate: G29
     spec: sprints/specs/SPRINT-082.md
     report: sprints/reports/SPRINT-082.md
