@@ -58,6 +58,18 @@ top_chart_messages_json="$(jq '
   | .[:5]
 ' <<<"$combined_entries_json")"
 
+top_other_messages_json="$(jq '
+  [
+    .[].warnings[]?
+    | select(.category == "other")
+    | .text
+  ]
+  | group_by(.)
+  | map({ message: .[0], count: length })
+  | sort_by(-.count)
+  | .[:10]
+' <<<"$combined_entries_json")"
+
 mkdir -p "$(dirname "$OUTPUT_MD")"
 mkdir -p "$(dirname "$OUTPUT_JSON")"
 
@@ -118,6 +130,10 @@ echo "Warning summary: tests=${total_tests}, total=${total_warnings}, chart=${ch
 if [[ "$(jq 'length' <<<"$top_chart_messages_json")" -gt 0 ]]; then
   echo "Top chart warning messages:"
   jq -r '.[] | "- (\(.count)x) \(.message)"' <<<"$top_chart_messages_json"
+fi
+if [[ "$(jq 'length' <<<"$top_other_messages_json")" -gt 0 ]]; then
+  echo "Top other warning messages:"
+  jq -r '.[] | "- (\(.count)x) \(.message)"' <<<"$top_other_messages_json"
 fi
 
 if [[ "$verdict" != "pass" ]]; then
