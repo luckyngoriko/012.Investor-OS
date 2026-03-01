@@ -6,21 +6,21 @@ program:
     registry: sprints/SPRINT_REGISTRY.yaml
   scope:
     first_sprint: 63
-    last_sprint: 84
-    total_sprints: 22
+    last_sprint: 93
+    total_sprints: 31
 
 progress:
   completed_sprints: 22
-  in_progress_sprints: 0
-  queued_sprints: 0
+  in_progress_sprints: 1
+  queued_sprints: 8
   blocked_sprints: 0
-  overall_completion_percent: 100
-  remaining_percent: 0
+  overall_completion_percent: 71
+  remaining_percent: 29
 
 active:
-  sprint_id: 84
-  title: Security Gate Install Resilience & Remediation Retry
-  gate: G31
+  sprint_id: 85
+  title: Production Auth & Identity Integration
+  gate: G32
 
 sprints:
   - id: 63
@@ -155,3 +155,57 @@ sprints:
     gate: G31
     spec: sprints/specs/SPRINT-084.md
     report: sprints/reports/SPRINT-084.md
+  - id: 85
+    title: Production Auth & Identity Integration
+    status: in_progress
+    gate: G32
+    spec: sprints/specs/SPRINT-085.md
+    report: sprints/reports/SPRINT-085.md
+  - id: 86
+    title: Frontend De-Mock: Tax, Security, Portfolio Optimization
+    status: queued
+    gate: G33
+    spec: sprints/specs/SPRINT-086.md
+    report: sprints/reports/SPRINT-086.md
+  - id: 87
+    title: HRM Real Inference Model Integration
+    status: queued
+    gate: G34
+    spec: sprints/specs/SPRINT-087.md
+    report: sprints/reports/SPRINT-087.md
+  - id: 88
+    title: Analytics Real Market Data Backtesting
+    status: queued
+    gate: G35
+    spec: sprints/specs/SPRINT-088.md
+    report: sprints/reports/SPRINT-088.md
+  - id: 89
+    title: Data Source Service SQL Completion
+    status: queued
+    gate: G36
+    spec: sprints/specs/SPRINT-089.md
+    report: sprints/reports/SPRINT-089.md
+  - id: 90
+    title: Distributed Runtime: gRPC + Service Discovery
+    status: queued
+    gate: G37
+    spec: sprints/specs/SPRINT-090.md
+    report: sprints/reports/SPRINT-090.md
+  - id: 91
+    title: Treasury Production Integrations
+    status: queued
+    gate: G38
+    spec: sprints/specs/SPRINT-091.md
+    report: sprints/reports/SPRINT-091.md
+  - id: 92
+    title: Observability Metrics Production Wiring
+    status: queued
+    gate: G39
+    spec: sprints/specs/SPRINT-092.md
+    report: sprints/reports/SPRINT-092.md
+  - id: 93
+    title: Security Debt Closure & Final Product Readiness
+    status: queued
+    gate: G40
+    spec: sprints/specs/SPRINT-093.md
+    report: sprints/reports/SPRINT-093.md

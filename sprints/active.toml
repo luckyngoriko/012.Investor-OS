@@ -3,8 +3,8 @@
 
 [meta]
 phase = "enterprise-readiness-recovery"
-phase_range = "63-84"
-active_sprint = 84
+phase_range = "63-93"
+active_sprint = 85
 updated = "2026-03-01"
 
 [sprint.63]
@@ -226,3 +226,76 @@ tasks_total = 8
 tasks_done = 8
 gate = "G31"
 depends_on = [83]
+
+[sprint.85]
+title = "Production Auth & Identity Integration"
+status = "in_progress"
+started = "2026-03-01"
+tasks_total = 8
+tasks_done = 0
+gate = "G32"
+depends_on = [84]
+
+[sprint.86]
+title = "Frontend De-Mock: Tax, Security, Portfolio Optimization"
+status = "queued"
+tasks_total = 8
+tasks_done = 0
+gate = "G33"
+depends_on = [85]
+
+[sprint.87]
+title = "HRM Real Inference Model Integration"
+status = "queued"
+tasks_total = 8
+tasks_done = 0
+gate = "G34"
+depends_on = [85, 86]
+
+[sprint.88]
+title = "Analytics Real Market Data Backtesting"
+status = "queued"
+tasks_total = 8
+tasks_done = 0
+gate = "G35"
+depends_on = [86, 87]
+
+[sprint.89]
+title = "Data Source Service SQL Completion"
+status = "queued"
+tasks_total = 8
+tasks_done = 0
+gate = "G36"
+depends_on = [88]
+
+[sprint.90]
+title = "Distributed Runtime: gRPC + Service Discovery"
+status = "queued"
+tasks_total = 8
+tasks_done = 0
+gate = "G37"
+depends_on = [87, 89]
+
+[sprint.91]
+title = "Treasury Production Integrations"
+status = "queued"
+tasks_total = 8
+tasks_done = 0
+gate = "G38"
+depends_on = [89]
+
+[sprint.92]
+title = "Observability Metrics Production Wiring"
+status = "queued"
+tasks_total = 8
+tasks_done = 0
+gate = "G39"
+depends_on = [90, 91]
+
+[sprint.93]
+title = "Security Debt Closure & Final Product Readiness"
+status = "queued"
+tasks_total = 8
+tasks_done = 0
+gate = "G40"
+depends_on = [92]

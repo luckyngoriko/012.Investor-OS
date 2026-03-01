@@ -1,33 +1,33 @@
 # Current Sprint Status
 # Updated: 2026-03-01
 
-## Active Sprint: 84 - Security Gate Install Resilience & Remediation Retry
+## Active Sprint: 85 - Production Auth & Identity Integration
 
-### Status: DONE
-### Gate: G31 (PASSED)
-### Program Completion: 100%
-### Remaining to 100%: 0%
+### Status: IN_PROGRESS
+### Gate: G32 (PENDING)
+### Program Completion: 71%
+### Remaining to 100%: 29%
 
-## Sprint 84 Focus (Closed)
+## Sprint 85 Focus
 
-- [x] 84.1: Add retry + diagnostics wrapper for `cargo-audit` installation in PR checks.
-- [x] 84.2: Re-run `RUSTSEC-2024-0437` remediation attempt (`prometheus` path) in current environment.
-- [x] 84.3: Capture blocker evidence when crates.io DNS flaps and offline cache is insufficient.
-- [x] 84.4: Refresh PM governance artifacts and close G31 with explicit risk posture continuity.
+- [ ] 85.1: Replace frontend mock auth (`MOCK_USERS` / `demo123`) with backend-issued identity session flow.
+- [ ] 85.2: Add token validation middleware and role checks for protected routes.
+- [ ] 85.3: Wire login/logout/refresh and session persistence for dashboard runtime.
+- [ ] 85.4: Add unit + E2E coverage for auth success/failure/expiry paths.
 
-## Program State
+## Upcoming Product-Completion Pipeline
 
-- [x] Enterprise Recovery Program gates G10-G24 closed
-- [x] Sprint 78 guardrail extension gate G25 passed
-- [x] Sprint 79 maintenance hardening gate G26 passed
-- [x] Sprint 80 CI/runtimes unblock gate G27 passed
-- [x] Sprint 81 warning-budget signal hygiene gate G28 passed
-- [x] Sprint 82 security backlog burn-down gate G29 passed
-- [x] Sprint 83 always-on security audit gate and remediation tracking gate G30 passed
-- [x] Sprint 84 security gate install resilience and remediation retry gate G31 passed
+- [ ] Sprint 86: De-mock tax/security/portfolio optimization frontend pages.
+- [ ] Sprint 87: Replace HRM placeholder inference with real model inference path.
+- [ ] Sprint 88: Replace analytics mock historical data with real source integration.
+- [ ] Sprint 89: Complete data source SQL service paths (list/get/free/pricing).
+- [ ] Sprint 90: Complete distributed runtime gRPC + service discovery production path.
+- [ ] Sprint 91: Complete treasury production custody/yield integrations.
+- [ ] Sprint 92: Replace placeholder metrics endpoint with real Prometheus registry export.
+- [ ] Sprint 93: Close security debt (`RUSTSEC`) and run final production-readiness gate.
 
 ## Transition Notes
 
-- [x] PR security audit remains always-on and now has bounded retry/diagnostics behavior for install-time network failures.
-- [x] `prometheus` upgrade remediation remains blocked by intermittent crates.io DNS resolution and missing offline cache for new transitive packages.
-- [x] Program scope 63-84 is synchronized and closed at 100% completion.
+- [x] Sprints 63-84 remain closed and preserved.
+- [x] Product-completion work is now explicitly tracked as sprints 85-93.
+- [ ] Next action: execute Sprint 85 implementation and validation evidence.
