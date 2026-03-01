@@ -3,8 +3,8 @@
 
 [meta]
 phase = "enterprise-readiness-recovery"
-phase_range = "63-81"
-active_sprint = 81
+phase_range = "63-82"
+active_sprint = 82
 updated = "2026-03-01"
 
 [sprint.63]
@@ -196,3 +196,13 @@ tasks_total = 8
 tasks_done = 8
 gate = "G28"
 depends_on = [80]
+
+[sprint.82]
+title = "Security Backlog Burn-down & PR Signal Hardening"
+status = "done"
+started = "2026-03-01"
+completed = "2026-03-01"
+tasks_total = 8
+tasks_done = 8
+gate = "G29"
+depends_on = [81]

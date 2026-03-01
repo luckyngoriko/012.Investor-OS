@@ -1,18 +1,19 @@
 # Current Sprint Status
 # Updated: 2026-03-01
 
-## Active Sprint: 81 - Runtime Warning Budget Enforcement & Signal Hygiene
+## Active Sprint: 82 - Security Backlog Burn-down & PR Signal Hardening
 
 ### Status: DONE
-### Gate: G28 (PASSED)
+### Gate: G29 (PASSED)
 ### Program Completion: 100%
 ### Remaining to 100%: 0%
 
-## Sprint 81 Focus (Completed)
+## Sprint 82 Focus (Closed)
 
-- [x] 81.1: Eliminate recurring frontend runtime warnings in browser matrix runs
-- [x] 81.2: Add CI warning-budget signal for Playwright stable suite execution
-- [x] 81.3: Capture warning-free evidence bundle for G28 close-out
+- [x] 82.1: Enforce warning-budget gate in PR smoke checks
+- [x] 82.2: Define and approve Rust security debt remediation policy (`cargo audit` backlog)
+- [x] 82.3: Remediate or risk-accept high-priority advisories with evidence
+- [x] 82.4: Capture G29 verification evidence bundle and close-out report
 
 ## Program State
 
@@ -21,11 +22,12 @@
 - [x] Sprint 79 maintenance hardening gate G26 passed
 - [x] Sprint 80 CI/runtimes unblock gate G27 passed
 - [x] Sprint 81 warning-budget signal hygiene gate G28 passed
+- [x] Sprint 82 security backlog burn-down gate G29 passed
 
 ## Transition Notes
 
-- [x] Sprint 81 closed with passing verification evidence:
-  - Full E2E Matrix: `22546170751` (success)
-  - Nightly Runtime Contract: `22546258694` (success)
-  - Release Evidence Bundle: `22546260722` (success)
-- [x] Enterprise Recovery Program scope (Sprint 63-81) completed at 100%
+- [x] Sprint 82 closed with governed security backlog and explicit risk acceptance:
+  - Security backlog register: `sprints/reports/SPRINT-082-SECURITY-BACKLOG.md`
+  - Audit allowlist: `.cargo/audit.toml`
+  - PR checks success run: `22547582874`
+- [x] Program scope 63-82 is now fully closed at 100% completion

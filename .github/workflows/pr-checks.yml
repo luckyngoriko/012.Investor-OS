@@ -75,12 +75,26 @@ jobs:
     - name: G4 (smoke) - Frontend critical E2E
       run: |
         cd frontend/investor-dashboard
+        rm -f warning-budget-pr-smoke-chromium.jsonl
         npx playwright install --with-deps chromium
+        PW_WARNING_BUDGET_LOG="warning-budget-pr-smoke-chromium.jsonl" \
         npx playwright test \
           tests/e2e/auth/login.spec.ts \
           tests/e2e/dashboard/dashboard.spec.ts \
           tests/e2e/runtime/runtime-contract.spec.ts \
           --project=chromium
+
+    - name: G4 (smoke) - Warning budget gate
+      run: |
+        PROJECT_NAME="pr-smoke-chromium" \
+        STABLE_WARNING_LOG="frontend/investor-dashboard/warning-budget-pr-smoke-chromium.jsonl" \
+        QUARANTINE_WARNING_LOG="frontend/investor-dashboard/warning-budget-pr-smoke-quarantine.jsonl" \
+        CHART_WARNING_BUDGET="0" \
+        OTHER_WARNING_BUDGET="0" \
+        OUTPUT_MD="frontend/investor-dashboard/warning-budget-pr-smoke-chromium.md" \
+        OUTPUT_JSON="frontend/investor-dashboard/warning-budget-pr-smoke-chromium.json" \
+        ./scripts/warning_budget_report.sh
+        cat frontend/investor-dashboard/warning-budget-pr-smoke-chromium.md >> "$GITHUB_STEP_SUMMARY"
 
     - name: G4 (smoke) - Runtime contract curl checks (best effort)
       run: ./scripts/runtime_contract_smoke.sh
