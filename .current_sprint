@@ -3,16 +3,16 @@
 
 ## Active Sprint: 81 - Runtime Warning Budget Enforcement & Signal Hygiene
 
-### Status: IN PROGRESS
-### Gate: G28 (PENDING)
-### Program Completion: 95%
-### Remaining to 100%: 5%
+### Status: DONE
+### Gate: G28 (PASSED)
+### Program Completion: 100%
+### Remaining to 100%: 0%
 
-## Sprint 81 Focus (In Progress)
+## Sprint 81 Focus (Completed)
 
 - [x] 81.1: Eliminate recurring frontend runtime warnings in browser matrix runs
 - [x] 81.2: Add CI warning-budget signal for Playwright stable suite execution
-- [ ] 81.3: Capture warning-free evidence bundle for G28 close-out
+- [x] 81.3: Capture warning-free evidence bundle for G28 close-out
 
 ## Program State
 
@@ -20,12 +20,12 @@
 - [x] Sprint 78 guardrail extension gate G25 passed
 - [x] Sprint 79 maintenance hardening gate G26 passed
 - [x] Sprint 80 CI/runtimes unblock gate G27 passed
-- [ ] Sprint 81 warning-budget signal hygiene gate G28 pending
+- [x] Sprint 81 warning-budget signal hygiene gate G28 passed
 
 ## Transition Notes
 
-- [x] Sprint 80 closed with passing verification evidence:
-  - Full E2E Matrix: `22545176963` (success)
-  - Nightly Runtime Contract: `22545289397` (success)
-  - Release Evidence Bundle: `22545338709` (success)
-- [x] Sprint 81 activated for runtime warning-budget enforcement and signal hygiene
+- [x] Sprint 81 closed with passing verification evidence:
+  - Full E2E Matrix: `22546170751` (success)
+  - Nightly Runtime Contract: `22546258694` (success)
+  - Release Evidence Bundle: `22546260722` (success)
+- [x] Enterprise Recovery Program scope (Sprint 63-81) completed at 100%

@@ -2,53 +2,61 @@
 
 ## Sprint Result
 
-- Status: in_progress
-- Gate: pending (G28)
-- Planned scope completion: 67%
+- Status: done
+- Gate: passed (G28)
+- Planned scope completion: 100%
 
 ## Delivered
 
-1. Implemented chart/container runtime warning mitigation with `SafeResponsiveContainer` and replaced critical dashboard chart usages:
+1. Implemented root-cause remediation for recurrent Recharts runtime warnings by replacing `ResponsiveContainer` runtime sizing with measured numeric chart dimensions in `SafeResponsiveContainer`.
+2. Applied chart-container hardening to critical surfaces:
    - `frontend/investor-dashboard/components/trading-chart.tsx`
    - `frontend/investor-dashboard/app/page.tsx`
    - `frontend/investor-dashboard/app/positions/page.tsx`
    - `frontend/investor-dashboard/components/ai-training/metrics-dashboard.tsx`
-2. Added centralized Playwright warning capture fixture and wired all E2E specs to use it:
+3. Added centralized Playwright warning telemetry:
    - `frontend/investor-dashboard/tests/e2e/fixtures/warning-budget.ts`
-3. Added CI warning-budget policy and artifacts:
+   - All E2E specs now consume the warning-budget fixture for per-test warning capture.
+4. Added CI warning-budget policy and governance evidence pipeline:
    - `scripts/warning_budget_report.sh`
-   - `.github/workflows/full-e2e-matrix.yml` updated to:
-     - collect per-suite warning logs (`stable` + `quarantine`)
-     - enforce chart warning budget (`CHART_WARNING_BUDGET=0`)
-     - publish warning-budget markdown/json artifacts
-     - include warning-budget section in governance summary
-4. Sprint activation/governance context remained synchronized for active Sprint 81 execution.
+   - `.github/workflows/full-e2e-matrix.yml`:
+     - warning log collection for stable and quarantine suites
+     - strict chart warning budget enforcement (`CHART_WARNING_BUDGET=0`)
+     - warning-budget artifacts upload (`jsonl/md/json`)
+     - governance summary integration (`Warning Budget Signals`)
+5. Fixed warning classification and reporting fidelity:
+   - narrowed chart-warning regex to the concrete Recharts width/height signature
+   - added runtime summary emission in warning-budget step logs
 
 ## Not Delivered / Deferred
 
-1. WP-81C warning-clean evidence bundle and gate close-out run IDs: pending.
+1. None.
 
 ## Verification Summary
 
-- Local dependency validation attempted: `cd frontend/investor-dashboard && npm ci`.
-  - Result: blocked by network/DNS (`EAI_AGAIN registry.npmjs.org`, package `@swc/helpers@0.5.19`).
-- Because dependencies could not be installed in this environment, local `vitest/playwright` execution remains pending.
-- CI policy wiring completed; warning-budget evidence will be produced on next matrix run.
+- Local dependency install from this environment remained unreliable (`EAI_AGAIN` against npm registry), so final validation was performed through CI workflow evidence.
+- `Full E2E Matrix` run `22546170751`: success
+  - `Warning Budget Signals`: `chart=0/0` on all matrix projects
+  - Example summaries:
+    - chromium: `tests=26, total=20, chart=0, other=20, budget=0`
+    - firefox: `chart=0/0, other=21, total=21`
+- `Nightly Runtime Contract` run `22546258694`: success
+- `Release Evidence Bundle` run `22546260722`: success
+- Governance artifacts synchronized to sprint close-out state.
 
 ## Program Progress
 
 - Total sprints in program: 19
-- Completed sprints: 18
-- Overall completion: 95%
-- Remaining to 100%: 5%
+- Completed sprints: 19
+- Overall completion: 100%
+- Remaining to 100%: 0%
 
 ## Open Risks
 
-1. Recurring runtime warning noise can desensitize CI failure triage if not budgeted.
-2. Local verification remains blocked until npm registry access is available (or CI run provides evidence).
+1. Non-chart console warnings (`other`) remain informational and should be periodically triaged to prevent future signal drift.
 
 ## Next Sprint Decision
 
-- Next sprint: 81
-- Activation status: in_progress
+- Next sprint: none (program scope 63-81 complete)
+- Activation status: not applicable
 - Preconditions met: yes

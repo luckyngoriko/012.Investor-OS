@@ -10,12 +10,12 @@ program:
     total_sprints: 19
 
 progress:
-  completed_sprints: 18
-  in_progress_sprints: 1
+  completed_sprints: 19
+  in_progress_sprints: 0
   queued_sprints: 0
   blocked_sprints: 0
-  overall_completion_percent: 95
-  remaining_percent: 5
+  overall_completion_percent: 100
+  remaining_percent: 0
 
 active:
   sprint_id: 81
@@ -133,7 +133,7 @@ sprints:
     report: sprints/reports/SPRINT-080.md
   - id: 81
     title: Runtime Warning Budget Enforcement & Signal Hygiene
-    status: in_progress
+    status: done
     gate: G28
     spec: sprints/specs/SPRINT-081.md
     report: sprints/reports/SPRINT-081.md

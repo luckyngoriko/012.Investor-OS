@@ -189,10 +189,10 @@ depends_on = [79]
 
 [sprint.81]
 title = "Runtime Warning Budget Enforcement & Signal Hygiene"
-status = "in_progress"
+status = "done"
 started = "2026-03-01"
-completed = ""
+completed = "2026-03-01"
 tasks_total = 8
-tasks_done = 5
+tasks_done = 8
 gate = "G28"
 depends_on = [80]
