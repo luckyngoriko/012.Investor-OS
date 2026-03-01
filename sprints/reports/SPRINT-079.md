@@ -4,7 +4,7 @@
 
 - Status: in_progress
 - Gate: pending (G26)
-- Planned scope completion: 38%
+- Planned scope completion: 50%
 
 ## Delivered
 
@@ -28,16 +28,22 @@
      - split execution into stable (blocking) and quarantined (non-blocking) suites
      - generated per-project flaky triage markdown/json artifacts
      - governance summary now includes flaky quarantine signals across matrix projects
+7. Implemented WP-79D release evidence bundle automation:
+   - bundle generator script: `scripts/generate_release_evidence_bundle.sh`
+   - workflow automation: `.github/workflows/release-evidence-bundle.yml`
+   - supports manual dispatch and tag-driven generation for close-out release evidence packages
 
 ## Not Delivered / Deferred
 
-1. WP-79D is pending implementation.
+1. Remaining sprint backlog items beyond WP-79D are pending.
 
 ## Verification Summary
 
 - `.github/workflows/full-e2e-matrix.yml` added and validated for policy alignment with artifact-based governance evidence.
 - `.github/workflows/nightly-runtime-contract.yml` added with strict runtime smoke execution path and deterministic teardown.
 - `scripts/flaky_triage_report.sh` validated against real Playwright JSON reporter output (sample run), producing markdown/json triage evidence.
+- `scripts/generate_release_evidence_bundle.sh` validated (`bash -n`) and executed successfully against a local test tag/output path.
+- `.github/workflows/release-evidence-bundle.yml` added for dispatch/tag-triggered evidence generation and artifact publishing.
 - Manual PM sync check: pass (`PM_SYNC_OK total=17 done=16 in_progress=1 completion=94% remaining=6%`).
 - `scripts/verify_pm_sync.sh` / `scripts/verify_pm_boundaries.sh` are not present in the current repository baseline, so equivalent PM sync validation was executed via inline governance check.
 

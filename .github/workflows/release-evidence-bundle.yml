@@ -1,0 +1,140 @@
+name: Release Evidence Bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v3.1-g26-closed)"
+        required: true
+        type: string
+      gate:
+        description: "Gate ID (e.g. G26). Optional."
+        required: false
+        type: string
+      scope:
+        description: "Release scope summary."
+        required: false
+        type: string
+      status:
+        description: "Release status."
+        required: false
+        default: "closed"
+        type: string
+      sprint_report:
+        description: "Sprint report source path."
+        required: false
+        type: string
+      progress_snapshot:
+        description: "Progress snapshot source path."
+        required: false
+        type: string
+      commit_range:
+        description: "Optional commit range (e.g. v3.0..HEAD)."
+        required: false
+        type: string
+      output_dir:
+        description: "Optional output directory."
+        required: false
+        type: string
+  push:
+    tags:
+      - "v*"
+      - "*-closed"
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  generate:
+    name: Generate Release Evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve input parameters
+        id: params
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag_input="${{ github.event.inputs.tag }}"
+          if [[ -z "$tag_input" ]]; then
+            tag_input="${GITHUB_REF_NAME}"
+          fi
+
+          gate_input="${{ github.event.inputs.gate }}"
+          scope_input="${{ github.event.inputs.scope }}"
+          status_input="${{ github.event.inputs.status }}"
+          sprint_report_input="${{ github.event.inputs.sprint_report }}"
+          progress_snapshot_input="${{ github.event.inputs.progress_snapshot }}"
+          commit_range_input="${{ github.event.inputs.commit_range }}"
+          output_dir_input="${{ github.event.inputs.output_dir }}"
+
+          if [[ -z "$status_input" ]]; then
+            status_input="closed"
+          fi
+          if [[ -z "$output_dir_input" ]]; then
+            output_dir_input="sprints/reports/releases/${tag_input}"
+          fi
+
+          echo "tag=${tag_input}" >> "$GITHUB_OUTPUT"
+          echo "gate=${gate_input}" >> "$GITHUB_OUTPUT"
+          echo "scope=${scope_input}" >> "$GITHUB_OUTPUT"
+          echo "status=${status_input}" >> "$GITHUB_OUTPUT"
+          echo "sprint_report=${sprint_report_input}" >> "$GITHUB_OUTPUT"
+          echo "progress_snapshot=${progress_snapshot_input}" >> "$GITHUB_OUTPUT"
+          echo "commit_range=${commit_range_input}" >> "$GITHUB_OUTPUT"
+          echo "output_dir=${output_dir_input}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate bundle files
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--tag "${{ steps.params.outputs.tag }}" --status "${{ steps.params.outputs.status }}" --output-dir "${{ steps.params.outputs.output_dir }}")
+
+          if [[ -n "${{ steps.params.outputs.gate }}" ]]; then
+            args+=(--gate "${{ steps.params.outputs.gate }}")
+          fi
+          if [[ -n "${{ steps.params.outputs.scope }}" ]]; then
+            args+=(--scope "${{ steps.params.outputs.scope }}")
+          fi
+          if [[ -n "${{ steps.params.outputs.sprint_report }}" ]]; then
+            args+=(--sprint-report "${{ steps.params.outputs.sprint_report }}")
+          fi
+          if [[ -n "${{ steps.params.outputs.progress_snapshot }}" ]]; then
+            args+=(--progress-snapshot "${{ steps.params.outputs.progress_snapshot }}")
+          fi
+          if [[ -n "${{ steps.params.outputs.commit_range }}" ]]; then
+            args+=(--commit-range "${{ steps.params.outputs.commit_range }}")
+          fi
+
+          ./scripts/generate_release_evidence_bundle.sh "${args[@]}"
+
+      - name: Publish run summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          out_dir="${{ steps.params.outputs.output_dir }}"
+          {
+            echo "## Release Evidence Bundle"
+            echo
+            echo "- Tag: \`${{ steps.params.outputs.tag }}\`"
+            echo "- Output directory: \`${out_dir}\`"
+            echo
+            echo "### Files"
+            echo "- \`${out_dir}/RELEASE_NOTES.md\`"
+            echo "- \`${out_dir}/EVIDENCE_BUNDLE.md\`"
+            echo "- \`${out_dir}/MANIFEST.yaml\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-${{ steps.params.outputs.tag }}
+          path: ${{ steps.params.outputs.output_dir }}
+          retention-days: 14
