@@ -8,9 +8,9 @@ Single source board aligned with:
 
 ## Program Snapshot
 
-- Program Scope: Sprint 63 to Sprint 83
-- Total Sprints: 21
-- Completed: 21
+- Program Scope: Sprint 63 to Sprint 84
+- Total Sprints: 22
+- Completed: 22
 - In Progress: 0
 - Overall Completion: 100%
 - Remaining to 100%: 0%
@@ -37,7 +37,8 @@ Single source board aligned with:
 - After Sprint 80 close-out: 90% complete, 10% remaining
 - After Sprint 81 close-out: 95% complete, 5% remaining
 - After Sprint 82 close-out: 95% complete, 5% remaining
-- After Sprint 83 close-out: 100% complete, 0% remaining
+- After Sprint 83 close-out: 95% complete, 5% remaining
+- After Sprint 84 close-out: 100% complete, 0% remaining
 
 ## Sprint Table
 
@@ -64,6 +65,7 @@ Single source board aligned with:
 | 81 | Runtime Warning Budget Enforcement & Signal Hygiene | done | G28 | `sprints/specs/SPRINT-081.md` | `sprints/reports/SPRINT-081.md` |
 | 82 | Security Backlog Burn-down & PR Signal Hardening | done | G29 | `sprints/specs/SPRINT-082.md` | `sprints/reports/SPRINT-082.md` |
 | 83 | Always-On Security Audit Gate & Advisory Remediation Track | done | G30 | `sprints/specs/SPRINT-083.md` | `sprints/reports/SPRINT-083.md` |
+| 84 | Security Gate Install Resilience & Remediation Retry | done | G31 | `sprints/specs/SPRINT-084.md` | `sprints/reports/SPRINT-084.md` |
 
 ## Rule
 

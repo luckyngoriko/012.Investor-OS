@@ -1,19 +1,19 @@
 # Current Sprint Status
 # Updated: 2026-03-01
 
-## Active Sprint: 83 - Always-On Security Audit Gate & Advisory Remediation Track
+## Active Sprint: 84 - Security Gate Install Resilience & Remediation Retry
 
 ### Status: DONE
-### Gate: G30 (PASSED)
+### Gate: G31 (PASSED)
 ### Program Completion: 100%
 ### Remaining to 100%: 0%
 
-## Sprint 83 Focus (Closed)
+## Sprint 84 Focus (Closed)
 
-- [x] 83.1: Make PR security audit gate always-on (never skipped by optional local dependency checks)
-- [x] 83.2: Attempt dependency remediation for `RUSTSEC-2024-0437` (`prometheus/protobuf` path)
-- [x] 83.3: Record remediation blocker and bounded risk handling with explicit follow-up
-- [x] 83.4: Capture G30 verification evidence and close-out report
+- [x] 84.1: Add retry + diagnostics wrapper for `cargo-audit` installation in PR checks.
+- [x] 84.2: Re-run `RUSTSEC-2024-0437` remediation attempt (`prometheus` path) in current environment.
+- [x] 84.3: Capture blocker evidence when crates.io DNS flaps and offline cache is insufficient.
+- [x] 84.4: Refresh PM governance artifacts and close G31 with explicit risk posture continuity.
 
 ## Program State
 
@@ -24,9 +24,10 @@
 - [x] Sprint 81 warning-budget signal hygiene gate G28 passed
 - [x] Sprint 82 security backlog burn-down gate G29 passed
 - [x] Sprint 83 always-on security audit gate and remediation tracking gate G30 passed
+- [x] Sprint 84 security gate install resilience and remediation retry gate G31 passed
 
 ## Transition Notes
 
-- [x] Security audit in PR checks is now always executed (blocking) independent of optional local dependency detection.
-- [x] `prometheus` remediation attempt to `0.14` is blocked in current environment by crates.io DNS resolution; risk remains governed via `.cargo/audit.toml` and Sprint 83 backlog/report evidence.
-- [x] Program scope 63-83 is fully closed at 100% completion.
+- [x] PR security audit remains always-on and now has bounded retry/diagnostics behavior for install-time network failures.
+- [x] `prometheus` upgrade remediation remains blocked by intermittent crates.io DNS resolution and missing offline cache for new transitive packages.
+- [x] Program scope 63-84 is synchronized and closed at 100% completion.
