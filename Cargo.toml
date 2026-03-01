@@ -8,7 +8,7 @@ license = "LGPL-2.1"
 
 [dependencies]
 # RAG Intelligence (shared L1-L35)
-neurocod-rag = { path = "/mnt/nas-data/dev/neurocod-rag" }
+neurocod-rag = { path = "vendor/neurocod-rag" }
 
 # Async runtime
 tokio = { version = "1.48", features = ["rt-multi-thread", "macros", "signal"] }

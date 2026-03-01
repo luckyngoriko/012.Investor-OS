@@ -45,33 +45,10 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Detect optional local dependency
-        id: depcheck
-        shell: bash
-        run: |
-          if [ -d "/mnt/nas-data/dev/neurocod-rag" ]; then
-            echo "skip_runtime_start=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip_runtime_start=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Skip strict runtime startup when local dependency is unavailable
-        if: steps.depcheck.outputs.skip_runtime_start == 'true'
-        shell: bash
-        run: |
-          {
-            echo "## Nightly Runtime Contract"
-            echo
-            echo "- Status: skipped"
-            echo "- Reason: missing /mnt/nas-data/dev/neurocod-rag dependency required by Cargo path dependency"
-          } >> "$GITHUB_STEP_SUMMARY"
-
       - name: Build backend binary
-        if: steps.depcheck.outputs.skip_runtime_start == 'false'
         run: cargo build --bin investor-os
 
       - name: Start backend in controlled mode
-        if: steps.depcheck.outputs.skip_runtime_start == 'false'
         shell: bash
         run: |
           set -euo pipefail
@@ -80,7 +57,6 @@ jobs:
           echo "Started investor-os pid=$(cat /tmp/investor-os-nightly.pid)"
 
       - name: Wait for backend readiness
-        if: steps.depcheck.outputs.skip_runtime_start == 'false'
         shell: bash
         run: |
           set -euo pipefail
@@ -95,7 +71,6 @@ jobs:
           exit 1
 
       - name: Run strict runtime contract smoke
-        if: steps.depcheck.outputs.skip_runtime_start == 'false'
         shell: bash
         run: |
           BACKEND_BASE_URL="http://127.0.0.1:8080" \
@@ -112,13 +87,8 @@ jobs:
             echo
             echo "- Trigger: $GITHUB_EVENT_NAME"
             echo "- Commit: $GITHUB_SHA"
-            echo "- Dependency path available: ${{ steps.depcheck.outputs.skip_runtime_start == 'false' }}"
-            if [[ "${{ steps.depcheck.outputs.skip_runtime_start }}" == "false" ]]; then
-              echo "- Runtime smoke mode: strict backend"
-              echo "- Backend base URL: http://127.0.0.1:8080"
-            else
-              echo "- Runtime smoke mode: skipped"
-            fi
+            echo "- Runtime smoke mode: strict backend"
+            echo "- Backend base URL: http://127.0.0.1:8080"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload nightly runtime logs
@@ -142,4 +112,3 @@ jobs:
             sleep 1
             kill -9 "$(cat /tmp/investor-os-nightly.pid)" 2>/dev/null || true
           fi
-

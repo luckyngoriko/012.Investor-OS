@@ -1,0 +1,10 @@
+[package]
+name = "neurocod-rag"
+version = "0.1.0"
+edition = "2021"
+description = "Local CI-compatible fallback crate for neurocod-rag type contracts."
+license = "MIT"
+
+[lib]
+name = "neurocod_rag"
+path = "src/lib.rs"

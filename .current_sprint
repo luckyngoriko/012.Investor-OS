@@ -12,7 +12,7 @@
 
 - [x] 80.1: Fix frontend lockfile drift causing `npm ci` failure in full E2E matrix
 - [x] 80.2: Add deterministic dependency-integrity guard for Playwright CI pipelines
-- [ ] 80.3: Remove/replace nightly runtime hard dependency on unavailable local path
+- [x] 80.3: Remove/replace nightly runtime hard dependency on unavailable local path
 - [ ] 80.4: Re-run matrix + nightly verification with passing evidence for G27
 
 ## Program State
