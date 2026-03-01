@@ -130,7 +130,27 @@ jobs:
         fi
     
     - name: Install cargo-audit
-      run: cargo install cargo-audit --locked
+      shell: bash
+      run: |
+        set -euo pipefail
+        for attempt in 1 2 3; do
+          echo "cargo-audit install attempt ${attempt}/3"
+          if cargo install cargo-audit --locked; then
+            exit 0
+          fi
+
+          echo "Install attempt ${attempt} failed. Checking crates.io reachability..."
+          if curl -fsS https://index.crates.io/config.json >/dev/null; then
+            echo "crates.io is reachable; retrying cargo install."
+          else
+            echo "::warning::index.crates.io is unreachable from runner (DNS/network issue)."
+          fi
+
+          sleep 5
+        done
+
+        echo "::error::Failed to install cargo-audit after 3 attempts."
+        exit 1
 
     - name: G5 - Security audit (blocking)
       run: cargo audit

@@ -3,8 +3,8 @@
 
 [meta]
 phase = "enterprise-readiness-recovery"
-phase_range = "63-83"
-active_sprint = 83
+phase_range = "63-84"
+active_sprint = 84
 updated = "2026-03-01"
 
 [sprint.63]
@@ -216,3 +216,13 @@ tasks_total = 8
 tasks_done = 8
 gate = "G30"
 depends_on = [82]
+
+[sprint.84]
+title = "Security Gate Install Resilience & Remediation Retry"
+status = "done"
+started = "2026-03-01"
+completed = "2026-03-01"
+tasks_total = 8
+tasks_done = 8
+gate = "G31"
+depends_on = [83]
