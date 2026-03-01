@@ -21,7 +21,6 @@ interface WarningBudgetEntry {
 
 const CHART_CONTAINER_WARNING_PATTERNS: RegExp[] = [
   /the width\([^)]*\) and height\([^)]*\) of chart should be greater than 0/i,
-  /please check the style of container/i,
 ];
 
 function classifyWarning(text: string): WarningCategory {

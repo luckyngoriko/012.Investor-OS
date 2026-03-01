@@ -46,6 +46,18 @@ top_warning_tests_json="$(jq '
   | .[:20]
 ' <<<"$combined_entries_json")"
 
+top_chart_messages_json="$(jq '
+  [
+    .[].warnings[]?
+    | select(.category == "chart_container")
+    | .text
+  ]
+  | group_by(.)
+  | map({ message: .[0], count: length })
+  | sort_by(-.count)
+  | .[:5]
+' <<<"$combined_entries_json")"
+
 mkdir -p "$(dirname "$OUTPUT_MD")"
 mkdir -p "$(dirname "$OUTPUT_JSON")"
 
@@ -102,6 +114,11 @@ jq -n \
 echo "Warning budget report written:"
 echo "- $OUTPUT_MD"
 echo "- $OUTPUT_JSON"
+echo "Warning summary: tests=${total_tests}, total=${total_warnings}, chart=${chart_warnings}, other=${other_warnings}, budget=${CHART_WARNING_BUDGET}"
+if [[ "$(jq 'length' <<<"$top_chart_messages_json")" -gt 0 ]]; then
+  echo "Top chart warning messages:"
+  jq -r '.[] | "- (\(.count)x) \(.message)"' <<<"$top_chart_messages_json"
+fi
 
 if [[ "$verdict" != "pass" ]]; then
   echo "Chart warning budget exceeded: observed=${chart_warnings}, budget=${CHART_WARNING_BUDGET}"
