@@ -173,6 +173,6 @@ status = "in_progress"
 started = "2026-03-01"
 completed = ""
 tasks_total = 8
-tasks_done = 1
+tasks_done = 2
 gate = "G26"
 depends_on = [78]

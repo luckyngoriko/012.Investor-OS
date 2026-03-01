@@ -4,7 +4,7 @@
 
 - Status: in_progress
 - Gate: pending (G26)
-- Planned scope completion: 12%
+- Planned scope completion: 25%
 
 ## Delivered
 
@@ -16,14 +16,20 @@
    - schedule trigger (`0 3 * * *`) + manual dispatch
    - matrix projects: `chromium`, `firefox`, `webkit`, `mobile-chrome`, `mobile-safari`, `tablet-chrome`
    - per-project artifact upload and governance summary artifact generation
+5. Implemented WP-79B nightly strict runtime contract workflow:
+   - `.github/workflows/nightly-runtime-contract.yml`
+   - schedule trigger (`30 3 * * *`) + manual dispatch
+   - controlled backend lifecycle (`start -> readiness wait -> strict smoke -> teardown`)
+   - nightly runtime logs uploaded as workflow artifact for governance evidence
 
 ## Not Delivered / Deferred
 
-1. WP-79B through WP-79D are pending implementation.
+1. WP-79C through WP-79D are pending implementation.
 
 ## Verification Summary
 
 - `.github/workflows/full-e2e-matrix.yml` added and validated for policy alignment with artifact-based governance evidence.
+- `.github/workflows/nightly-runtime-contract.yml` added with strict runtime smoke execution path and deterministic teardown.
 - Manual PM sync check: pass (`PM_SYNC_OK total=17 done=16 in_progress=1 completion=94% remaining=6%`).
 - `scripts/verify_pm_sync.sh` / `scripts/verify_pm_boundaries.sh` are not present in the current repository baseline, so equivalent PM sync validation was executed via inline governance check.
 

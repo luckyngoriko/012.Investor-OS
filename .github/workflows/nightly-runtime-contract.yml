@@ -1,0 +1,145 @@
+name: Nightly Runtime Contract
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 3 * * *"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: nightly-runtime-contract-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  strict-runtime-contract:
+    name: Strict Runtime Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: investor_os_nightly
+        options: >-
+          --health-cmd "pg_isready -U postgres -d investor_os_nightly"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 6
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/investor_os_nightly
+      INVESTOR_ENV: development
+      SERVER_PORT: 8080
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Detect optional local dependency
+        id: depcheck
+        shell: bash
+        run: |
+          if [ -d "/mnt/nas-data/dev/neurocod-rag" ]; then
+            echo "skip_runtime_start=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip_runtime_start=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip strict runtime startup when local dependency is unavailable
+        if: steps.depcheck.outputs.skip_runtime_start == 'true'
+        shell: bash
+        run: |
+          {
+            echo "## Nightly Runtime Contract"
+            echo
+            echo "- Status: skipped"
+            echo "- Reason: missing /mnt/nas-data/dev/neurocod-rag dependency required by Cargo path dependency"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build backend binary
+        if: steps.depcheck.outputs.skip_runtime_start == 'false'
+        run: cargo build --bin investor-os
+
+      - name: Start backend in controlled mode
+        if: steps.depcheck.outputs.skip_runtime_start == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup cargo run --bin investor-os > /tmp/investor-os-nightly.log 2>&1 &
+          echo $! > /tmp/investor-os-nightly.pid
+          echo "Started investor-os pid=$(cat /tmp/investor-os-nightly.pid)"
+
+      - name: Wait for backend readiness
+        if: steps.depcheck.outputs.skip_runtime_start == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if curl -fsS -m 2 "http://127.0.0.1:8080/api/health" >/dev/null; then
+              echo "Backend became ready on attempt $attempt"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend readiness timed out"
+          exit 1
+
+      - name: Run strict runtime contract smoke
+        if: steps.depcheck.outputs.skip_runtime_start == 'false'
+        shell: bash
+        run: |
+          BACKEND_BASE_URL="http://127.0.0.1:8080" \
+          REQUIRE_BACKEND=1 \
+          REQUIRE_FRONTEND=0 \
+          ./scripts/runtime_contract_smoke.sh
+
+      - name: Publish run summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Nightly Runtime Contract"
+            echo
+            echo "- Trigger: $GITHUB_EVENT_NAME"
+            echo "- Commit: $GITHUB_SHA"
+            echo "- Dependency path available: ${{ steps.depcheck.outputs.skip_runtime_start == 'false' }}"
+            if [[ "${{ steps.depcheck.outputs.skip_runtime_start }}" == "false" ]]; then
+              echo "- Runtime smoke mode: strict backend"
+              echo "- Backend base URL: http://127.0.0.1:8080"
+            else
+              echo "- Runtime smoke mode: skipped"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload nightly runtime logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-runtime-contract-logs
+          path: |
+            /tmp/investor-os-nightly.log
+            /tmp/investor-os-nightly.pid
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Stop backend
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [[ -f /tmp/investor-os-nightly.pid ]]; then
+            kill "$(cat /tmp/investor-os-nightly.pid)" 2>/dev/null || true
+            sleep 1
+            kill -9 "$(cat /tmp/investor-os-nightly.pid)" 2>/dev/null || true
+          fi
+
