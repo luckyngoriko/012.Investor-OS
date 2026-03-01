@@ -37,7 +37,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
   PieChart as RePieChart,
   Pie,
   Cell,
@@ -62,6 +61,7 @@ import { TradingFlowDiagram } from "@/components/trading-flow";
 import { TradingChart } from "@/components/trading-chart";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
+import { SafeResponsiveContainer } from "@/components/ui/safe-responsive-container";
 
 // ============================================
 // DASHBOARD DATA
@@ -583,7 +583,7 @@ export default function DashboardPage() {
             >
               <h3 className="text-lg font-semibold text-white mb-6">Sector Allocation</h3>
               <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
+                <SafeResponsiveContainer>
                   <RePieChart>
                     <Pie
                       data={sectorData}
@@ -603,7 +603,7 @@ export default function DashboardPage() {
                       formatter={(value) => [`${Number(value)}%`, "Allocation"]}
                     />
                   </RePieChart>
-                </ResponsiveContainer>
+                </SafeResponsiveContainer>
               </div>
               <div className="mt-4 space-y-2">
                 {sectorData.map((sector) => (

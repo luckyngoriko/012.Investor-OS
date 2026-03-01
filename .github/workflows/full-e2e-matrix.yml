@@ -56,6 +56,10 @@ jobs:
           set -euo pipefail
           cd frontend/investor-dashboard
 
+          STABLE_WARNING_LOG="warning-budget-stable-${{ matrix.project }}.jsonl"
+          QUARANTINE_WARNING_LOG="warning-budget-quarantine-${{ matrix.project }}.jsonl"
+          rm -f "$STABLE_WARNING_LOG" "$QUARANTINE_WARNING_LOG"
+
           QUARANTINE_FILE="tests/e2e/flaky-quarantine.json"
           if [[ ! -f "$QUARANTINE_FILE" ]]; then
             echo "Missing quarantine manifest: $QUARANTINE_FILE"
@@ -86,6 +90,7 @@ jobs:
           stable_exit=0
           if (( ${#stable_specs[@]} > 0 )); then
             set +e
+            PW_WARNING_BUDGET_LOG="$STABLE_WARNING_LOG" \
             npx playwright test --project=${{ matrix.project }} "${stable_specs[@]}"
             stable_exit=$?
             set -e
@@ -95,6 +100,7 @@ jobs:
           quarantine_exit=0
           if (( ${#quarantined_specs[@]} > 0 )); then
             set +e
+            PW_WARNING_BUDGET_LOG="$QUARANTINE_WARNING_LOG" \
             npx playwright test --project=${{ matrix.project }} "${quarantined_specs[@]}"
             quarantine_exit=$?
             set -e
@@ -119,6 +125,18 @@ jobs:
           OUTPUT_JSON="frontend/investor-dashboard/flaky-triage-${{ matrix.project }}.json" \
           ./scripts/flaky_triage_report.sh
 
+      - name: Evaluate warning budget
+        if: always()
+        shell: bash
+        run: |
+          PROJECT_NAME="${{ matrix.project }}" \
+          STABLE_WARNING_LOG="frontend/investor-dashboard/warning-budget-stable-${{ matrix.project }}.jsonl" \
+          QUARANTINE_WARNING_LOG="frontend/investor-dashboard/warning-budget-quarantine-${{ matrix.project }}.jsonl" \
+          CHART_WARNING_BUDGET="0" \
+          OUTPUT_MD="frontend/investor-dashboard/warning-budget-${{ matrix.project }}.md" \
+          OUTPUT_JSON="frontend/investor-dashboard/warning-budget-${{ matrix.project }}.json" \
+          ./scripts/warning_budget_report.sh
+
       - name: Upload Playwright evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -132,6 +150,10 @@ jobs:
             frontend/investor-dashboard/test-results-quarantine-${{ matrix.project }}.json
             frontend/investor-dashboard/flaky-triage-${{ matrix.project }}.md
             frontend/investor-dashboard/flaky-triage-${{ matrix.project }}.json
+            frontend/investor-dashboard/warning-budget-stable-${{ matrix.project }}.jsonl
+            frontend/investor-dashboard/warning-budget-quarantine-${{ matrix.project }}.jsonl
+            frontend/investor-dashboard/warning-budget-${{ matrix.project }}.md
+            frontend/investor-dashboard/warning-budget-${{ matrix.project }}.json
             frontend/investor-dashboard/tests/e2e/flaky-quarantine.json
           retention-days: 14
 
@@ -187,6 +209,25 @@ jobs:
               done <<< "$triage_files"
             fi
           } | tee governance/FULL_E2E_MATRIX_SUMMARY.md
+          {
+            echo
+            echo "## Warning Budget Signals"
+            warning_files="$(find artifacts -type f -name 'warning-budget-*.json' | sort || true)"
+            if [[ -z "${warning_files}" ]]; then
+              echo "- No warning budget artifacts found."
+            else
+              while IFS= read -r warning_file; do
+                [[ -z "$warning_file" ]] && continue
+                project="$(jq -r '.project // "unknown"' "$warning_file")"
+                verdict="$(jq -r '.verdict // "unknown"' "$warning_file")"
+                chart_budget="$(jq -r '.chart_warning_budget // 0' "$warning_file")"
+                chart_warnings="$(jq -r '.stats.chart_container_warnings // 0' "$warning_file")"
+                other_warnings="$(jq -r '.stats.other_warnings // 0' "$warning_file")"
+                total_warnings="$(jq -r '.stats.total_warnings // 0' "$warning_file")"
+                echo "- ${project}: verdict=${verdict}, chart=${chart_warnings}/${chart_budget}, other=${other_warnings}, total=${total_warnings}"
+              done <<< "$warning_files"
+            fi
+          } | tee -a governance/FULL_E2E_MATRIX_SUMMARY.md
           cat governance/FULL_E2E_MATRIX_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload governance summary

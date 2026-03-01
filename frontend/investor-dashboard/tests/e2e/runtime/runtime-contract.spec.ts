@@ -1,4 +1,5 @@
-import { APIRequestContext, expect, test } from "@playwright/test";
+import type { APIRequestContext } from "@playwright/test";
+import { expect, test } from "../fixtures/warning-budget";
 import { loginAsDemo } from "../utils/auth";
 
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL ?? "http://127.0.0.1:8080";

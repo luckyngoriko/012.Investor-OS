@@ -9,7 +9,6 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
   ReferenceLine,
   ReferenceArea,
   CartesianGrid,
@@ -44,6 +43,7 @@ import {
 } from "lucide-react";
 import type { TradingMode } from "./trading-mode";
 import { TRADING_MODES } from "./trading-mode";
+import { SafeResponsiveContainer } from "@/components/ui/safe-responsive-container";
 
 // ============================================
 // TYPES
@@ -551,7 +551,7 @@ export function TradingChart({
         )}
 
         {/* Chart */}
-        <ResponsiveContainer width="100%" height="100%">
+        <SafeResponsiveContainer>
           <ComposedChart
             data={data}
             onMouseMove={(e: any) => {
@@ -727,7 +727,7 @@ export function TradingChart({
               />
             )}
           </ComposedChart>
-        </ResponsiveContainer>
+        </SafeResponsiveContainer>
       </div>
 
       {/* Footer Info */}

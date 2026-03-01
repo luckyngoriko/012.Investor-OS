@@ -9,7 +9,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
   Legend,
   AreaChart,
   Area,
@@ -24,6 +23,7 @@ import {
   Clock,
 } from "lucide-react";
 import type { TrainingMetrics } from "./ai-training-mode";
+import { SafeResponsiveContainer } from "@/components/ui/safe-responsive-container";
 
 interface MetricsDashboardProps {
   metrics: TrainingMetrics[];
@@ -109,7 +109,7 @@ export function MetricsDashboard({ metrics }: MetricsDashboardProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Confidence Chart */}
         <ChartCard title="Confidence Progress" icon={Target}>
-          <ResponsiveContainer width="100%" height={250}>
+          <SafeResponsiveContainer height={250}>
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="confidenceGradient" x1="0" y1="0" x2="0" y2="1">
@@ -136,12 +136,12 @@ export function MetricsDashboard({ metrics }: MetricsDashboardProps) {
                 strokeWidth={2}
               />
             </AreaChart>
-          </ResponsiveContainer>
+          </SafeResponsiveContainer>
         </ChartCard>
 
         {/* Loss Chart */}
         <ChartCard title="Loss Curves" icon={Activity}>
-          <ResponsiveContainer width="100%" height={250}>
+          <SafeResponsiveContainer height={250}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis dataKey="epoch" stroke="#9ca3af" fontSize={12} />
@@ -171,12 +171,12 @@ export function MetricsDashboard({ metrics }: MetricsDashboardProps) {
                 dot={false}
               />
             </LineChart>
-          </ResponsiveContainer>
+          </SafeResponsiveContainer>
         </ChartCard>
 
         {/* Accuracy Chart */}
         <ChartCard title="Accuracy Comparison" icon={BarChart3}>
-          <ResponsiveContainer width="100%" height={250}>
+          <SafeResponsiveContainer height={250}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis dataKey="epoch" stroke="#9ca3af" fontSize={12} />
@@ -206,12 +206,12 @@ export function MetricsDashboard({ metrics }: MetricsDashboardProps) {
                 dot={false}
               />
             </LineChart>
-          </ResponsiveContainer>
+          </SafeResponsiveContainer>
         </ChartCard>
 
         {/* Learning Rate */}
         <ChartCard title="Learning Rate Schedule" icon={PieChart}>
-          <ResponsiveContainer width="100%" height={250}>
+          <SafeResponsiveContainer height={250}>
             <AreaChart data={chartData.map((d, i) => ({ ...d, lr: metrics[i]?.learningRate || 0 }))}>
               <defs>
                 <linearGradient id="lrGradient" x1="0" y1="0" x2="0" y2="1">
@@ -239,7 +239,7 @@ export function MetricsDashboard({ metrics }: MetricsDashboardProps) {
                 strokeWidth={2}
               />
             </AreaChart>
-          </ResponsiveContainer>
+          </SafeResponsiveContainer>
         </ChartCard>
       </div>
 

@@ -23,9 +23,9 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
   Cell,
 } from "recharts";
+import { SafeResponsiveContainer } from "@/components/ui/safe-responsive-container";
 
 interface Position {
   id: string;
@@ -321,7 +321,7 @@ export default function PositionsPage() {
         >
           <h3 className="text-lg font-semibold text-white mb-6">Sector Performance</h3>
           <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <SafeResponsiveContainer>
               <BarChart data={sectorData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" horizontal={false} />
                 <XAxis type="number" stroke="#4b5563" fontSize={12} />
@@ -343,7 +343,7 @@ export default function PositionsPage() {
                   ))}
                 </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </SafeResponsiveContainer>
           </div>
         </motion.div>
 

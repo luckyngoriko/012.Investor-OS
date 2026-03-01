@@ -4,25 +4,36 @@
 
 - Status: in_progress
 - Gate: pending (G28)
-- Planned scope completion: 0%
+- Planned scope completion: 67%
 
 ## Delivered
 
-1. Sprint 81 activated and synchronized across PM governance artifacts.
-2. Scope, work packages, acceptance criteria, and evidence requirements defined in `sprints/specs/SPRINT-081.md`.
+1. Implemented chart/container runtime warning mitigation with `SafeResponsiveContainer` and replaced critical dashboard chart usages:
+   - `frontend/investor-dashboard/components/trading-chart.tsx`
+   - `frontend/investor-dashboard/app/page.tsx`
+   - `frontend/investor-dashboard/app/positions/page.tsx`
+   - `frontend/investor-dashboard/components/ai-training/metrics-dashboard.tsx`
+2. Added centralized Playwright warning capture fixture and wired all E2E specs to use it:
+   - `frontend/investor-dashboard/tests/e2e/fixtures/warning-budget.ts`
+3. Added CI warning-budget policy and artifacts:
+   - `scripts/warning_budget_report.sh`
+   - `.github/workflows/full-e2e-matrix.yml` updated to:
+     - collect per-suite warning logs (`stable` + `quarantine`)
+     - enforce chart warning budget (`CHART_WARNING_BUDGET=0`)
+     - publish warning-budget markdown/json artifacts
+     - include warning-budget section in governance summary
+4. Sprint activation/governance context remained synchronized for active Sprint 81 execution.
 
 ## Not Delivered / Deferred
 
-1. WP-81A warning elimination implementation: pending.
-2. WP-81B warning-budget CI enforcement: pending.
-3. WP-81C warning-clean evidence bundle: pending.
+1. WP-81C warning-clean evidence bundle and gate close-out run IDs: pending.
 
 ## Verification Summary
 
-- `Full E2E Matrix` run `22545176963`: success baseline inherited from Sprint 80 close-out.
-- `Nightly Runtime Contract` run `22545289397`: success baseline inherited from Sprint 80 close-out.
-- `Release Evidence Bundle` run `22545338709`: success baseline inherited from Sprint 80 close-out.
-- PM state synchronized for active sprint transition (`80 -> 81`).
+- Local dependency validation attempted: `cd frontend/investor-dashboard && npm ci`.
+  - Result: blocked by network/DNS (`EAI_AGAIN registry.npmjs.org`, package `@swc/helpers@0.5.19`).
+- Because dependencies could not be installed in this environment, local `vitest/playwright` execution remains pending.
+- CI policy wiring completed; warning-budget evidence will be produced on next matrix run.
 
 ## Program Progress
 
@@ -34,7 +45,7 @@
 ## Open Risks
 
 1. Recurring runtime warning noise can desensitize CI failure triage if not budgeted.
-2. Warning-budget policy must avoid masking legitimate regressions.
+2. Local verification remains blocked until npm registry access is available (or CI run provides evidence).
 
 ## Next Sprint Decision
 
