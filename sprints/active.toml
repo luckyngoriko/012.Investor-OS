@@ -3,8 +3,8 @@
 
 [meta]
 phase = "enterprise-readiness-recovery"
-phase_range = "63-78"
-active_sprint = 78
+phase_range = "63-79"
+active_sprint = 79
 updated = "2026-03-01"
 
 [sprint.63]
@@ -166,3 +166,13 @@ tasks_total = 8
 tasks_done = 8
 gate = "G25"
 depends_on = [77]
+
+[sprint.79]
+title = "Continuous Verification Expansion & CI Stability Hardening"
+status = "in_progress"
+started = "2026-03-01"
+completed = ""
+tasks_total = 8
+tasks_done = 0
+gate = "G26"
+depends_on = [78]

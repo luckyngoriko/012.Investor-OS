@@ -6,21 +6,21 @@ program:
     registry: sprints/SPRINT_REGISTRY.yaml
   scope:
     first_sprint: 63
-    last_sprint: 78
-    total_sprints: 16
+    last_sprint: 79
+    total_sprints: 17
 
 progress:
   completed_sprints: 16
-  in_progress_sprints: 0
+  in_progress_sprints: 1
   queued_sprints: 0
   blocked_sprints: 0
-  overall_completion_percent: 100
-  remaining_percent: 0
+  overall_completion_percent: 94
+  remaining_percent: 6
 
 active:
-  sprint_id: 78
-  title: Post-Certification Reliability Guardrails & Drift Prevention
-  gate: G25
+  sprint_id: 79
+  title: Continuous Verification Expansion & CI Stability Hardening
+  gate: G26
 
 sprints:
   - id: 63
@@ -119,3 +119,9 @@ sprints:
     gate: G25
     spec: sprints/specs/SPRINT-078.md
     report: sprints/reports/SPRINT-078.md
+  - id: 79
+    title: Continuous Verification Expansion & CI Stability Hardening
+    status: in_progress
+    gate: G26
+    spec: sprints/specs/SPRINT-079.md
+    report: sprints/reports/SPRINT-079.md

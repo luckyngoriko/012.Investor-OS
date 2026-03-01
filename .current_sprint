@@ -1,27 +1,27 @@
 # Current Sprint Status
 # Updated: 2026-03-01
 
-## Active Sprint: 78 - Post-Certification Reliability Guardrails & Drift Prevention
+## Active Sprint: 79 - Continuous Verification Expansion & CI Stability Hardening
 
-### Status: DONE
-### Gate: G25 (PASSED)
-### Program Completion: 100%
-### Remaining to 100%: 0%
+### Status: IN PROGRESS
+### Gate: G26 (PENDING)
+### Program Completion: 94%
+### Remaining to 100%: 6%
 
-## Sprint 78 Focus (In Progress)
+## Sprint 79 Focus (In Progress)
 
-- [x] 78.1: Promote migration portability checks into repeatable CI-safe validation path
-- [x] 78.2: Add regression guardrails for seed-data schema drift and conflict handling
-- [x] 78.3: Stabilize cross-environment health/runtime contract assertions
-- [x] 78.4: Consolidate post-certification reliability evidence for G25 close-out
+- [ ] 79.1: Expand automated verification from smoke-only to scheduled multi-browser matrix
+- [ ] 79.2: Add nightly strict runtime contract job with controlled backend startup
+- [ ] 79.3: Introduce flaky-test quarantine + triage evidence generation
+- [ ] 79.4: Automate release evidence bundle generation for future close-out tags
 
 ## Program State
 
 - [x] Enterprise Recovery Program gates G10-G24 closed
-- [x] Sprint 77 program-closure baseline completed
 - [x] Sprint 78 guardrail extension gate G25 passed
+- [ ] Sprint 79 maintenance hardening gate G26 pending
 
 ## Transition Notes
 
-- [x] Program closure achieved in Sprint 77
-- [x] Post-closure reliability extension completed as Sprint 78
+- [x] Sprint 78 closed with release tag close-out package prepared
+- [ ] Sprint 79 activated for continuous reliability and CI hardening
