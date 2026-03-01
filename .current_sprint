@@ -1,28 +1,27 @@
 # Current Sprint Status
 # Updated: 2026-03-01
 
-## Active Sprint: 72 - Release Governance & Controlled Go-Live
+## Active Sprint: 78 - Post-Certification Reliability Guardrails & Drift Prevention
 
-### Status: DONE
-### Gate: G19 (PASSED)
-### Program Completion: 100%
-### Remaining to 100%: 0%
+### Status: IN PROGRESS
+### Gate: G25 (PENDING)
+### Program Completion: 93%
+### Remaining to 100%: 7%
 
-## Sprint 71 Close-Out (Done)
+## Sprint 78 Focus (In Progress)
 
-- [x] 71.1: Expanded and stabilized E2E matrix for auth/dashboard/trading/resilience
-- [x] 71.2: Executed performance baseline suite with enforced thresholds
-- [x] 71.3: Validated graceful degradation for dashboard/monitoring/settings failures
-- [x] 71.4: Published operational QA evidence and closure report
-
-## Sprint 72 Close-Out (Done)
-
-- [x] 72.1: Final go-live gate checklist completed
-- [x] 72.2: Canary and rollback playbook evidence validated
-- [x] 72.3: Security/compliance final review sign-off captured
-- [x] 72.4: Executive readiness package published with risk disposition
+- [ ] 78.1: Promote migration portability checks into repeatable CI-safe validation path
+- [ ] 78.2: Add regression guardrails for seed-data schema drift and conflict handling
+- [ ] 78.3: Stabilize cross-environment health/runtime contract assertions
+- [ ] 78.4: Consolidate post-certification reliability evidence for G25 close-out
 
 ## Program State
 
-- [x] Enterprise Recovery Program complete (Sprint 63-72)
-- [x] All gates G10-G19 closed
+- [x] Enterprise Recovery Program gates G10-G24 closed
+- [x] Sprint 77 program-closure baseline completed
+- [ ] Sprint 78 guardrail extension gate G25 pending
+
+## Transition Notes
+
+- [x] Program closure achieved in Sprint 77
+- [ ] Post-closure reliability extension activated as Sprint 78

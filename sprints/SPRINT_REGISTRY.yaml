@@ -6,21 +6,21 @@ program:
     registry: sprints/SPRINT_REGISTRY.yaml
   scope:
     first_sprint: 63
-    last_sprint: 72
-    total_sprints: 10
+    last_sprint: 78
+    total_sprints: 16
 
 progress:
-  completed_sprints: 10
-  in_progress_sprints: 0
+  completed_sprints: 15
+  in_progress_sprints: 1
   queued_sprints: 0
   blocked_sprints: 0
-  overall_completion_percent: 100
-  remaining_percent: 0
+  overall_completion_percent: 93
+  remaining_percent: 7
 
 active:
-  sprint_id: 72
-  title: Release Governance & Controlled Go-Live
-  gate: G19
+  sprint_id: 78
+  title: Post-Certification Reliability Guardrails & Drift Prevention
+  gate: G25
 
 sprints:
   - id: 63
@@ -83,3 +83,39 @@ sprints:
     gate: G19
     spec: sprints/specs/SPRINT-072.md
     report: sprints/reports/SPRINT-072.md
+  - id: 73
+    title: Post-Go-Live Stabilization & SLO Enforcement
+    status: done
+    gate: G20
+    spec: sprints/specs/SPRINT-073.md
+    report: sprints/reports/SPRINT-073.md
+  - id: 74
+    title: Reliability Regression Elimination & CI Hardening
+    status: done
+    gate: G21
+    spec: sprints/specs/SPRINT-074.md
+    report: sprints/reports/SPRINT-074.md
+  - id: 75
+    title: Operational Cost Control & Observability Signal Tuning
+    status: done
+    gate: G22
+    spec: sprints/specs/SPRINT-075.md
+    report: sprints/reports/SPRINT-075.md
+  - id: 76
+    title: Runbook Automation & On-Call Readiness
+    status: done
+    gate: G23
+    spec: sprints/specs/SPRINT-076.md
+    report: sprints/reports/SPRINT-076.md
+  - id: 77
+    title: Final Enterprise Readiness Certification & Program Closure
+    status: done
+    gate: G24
+    spec: sprints/specs/SPRINT-077.md
+    report: sprints/reports/SPRINT-077.md
+  - id: 78
+    title: Post-Certification Reliability Guardrails & Drift Prevention
+    status: in_progress
+    gate: G25
+    spec: sprints/specs/SPRINT-078.md
+    report: sprints/reports/SPRINT-078.md
