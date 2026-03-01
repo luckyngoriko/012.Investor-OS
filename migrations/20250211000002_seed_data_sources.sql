@@ -38,11 +38,13 @@ INSERT INTO data_source_endpoints (source_id, name, method, path, description, r
 ('11111111-1111-1111-1111-111111111111', 'Time Series Daily', 'GET', '/query', 'Daily time series data', '["function", "symbol"]'::jsonb),
 ('11111111-1111-1111-1111-111111111111', 'Quote Endpoint', 'GET', '/query', 'Global quote for equity', '["function", "symbol"]'::jsonb),
 ('11111111-1111-1111-1111-111111111111', 'Search', 'GET', '/query', 'Symbol search', '["function", "keywords"]'::jsonb),
-('11111111-1111-1111-1111-111111111111', 'Fundamentals Overview', 'GET', '/query', 'Company overview', '["function", "symbol"]'::jsonb);
+('11111111-1111-1111-1111-111111111111', 'Fundamentals Overview', 'GET', '/query', 'Company overview', '["function", "symbol"]'::jsonb)
+ON CONFLICT DO NOTHING;
 
 INSERT INTO data_source_pricing (source_id, tier_name, tier_level, price_monthly_usd, price_yearly_usd, requests_per_day, requests_per_minute, features) VALUES
 ('11111111-1111-1111-1111-111111111111', 'Free', 1, 0, 0, 25, 5, '["historical", "intraday"]'::jsonb),
-('11111111-1111-1111-1111-111111111111', 'Premium', 2, 49.99, 599.88, NULL, 75, '["realtime", "fundamentals", "options"]'::jsonb);
+('11111111-1111-1111-1111-111111111111', 'Premium', 2, 49.99, 599.88, NULL, 75, '["realtime", "fundamentals", "options"]'::jsonb)
+ON CONFLICT DO NOTHING;
 
 -- 2. YAHOO FINANCE (Free)
 INSERT INTO data_sources (
@@ -71,7 +73,8 @@ INSERT INTO data_source_endpoints (source_id, name, method, path, description) V
 ('11111111-1111-1111-1111-111111111112', 'Historical Data', 'GET', '/history', 'Historical OHLCV data'),
 ('11111111-1111-1111-1111-111111111112', 'Ticker Info', 'GET', '/info', 'Company information and fundamentals'),
 ('11111111-1111-1111-1111-111111111112', 'Financials', 'GET', '/financials', 'Financial statements'),
-('11111111-1111-1111-1111-111111111112', 'Options Chain', 'GET', '/options', 'Options chain data');
+('11111111-1111-1111-1111-111111111112', 'Options Chain', 'GET', '/options', 'Options chain data')
+ON CONFLICT DO NOTHING;
 
 -- 3. FRED (Free - St. Louis Fed)
 INSERT INTO data_sources (
@@ -103,7 +106,8 @@ INSERT INTO data_source_endpoints (source_id, name, method, path, description) V
 ('11111111-1111-1111-1111-111111111113', 'Series Info', 'GET', '/fred/series', 'Get series information'),
 ('11111111-1111-1111-1111-111111111113', 'Category', 'GET', '/fred/category', 'Get category information'),
 ('11111111-1111-1111-1111-111111111113', 'Release', 'GET', '/fred/release', 'Get release information'),
-('11111111-1111-1111-1111-111111111113', 'Search', 'GET', '/fred/series/search', 'Search for series');
+('11111111-1111-1111-1111-111111111113', 'Search', 'GET', '/fred/series/search', 'Search for series')
+ON CONFLICT DO NOTHING;
 
 -- 4. WORLD BANK OPEN DATA (Free)
 INSERT INTO data_sources (
@@ -132,7 +136,8 @@ INSERT INTO data_source_endpoints (source_id, name, method, path, description) V
 ('11111111-1111-1111-1111-111111111114', 'Country Indicator', 'GET', '/country/{country}/indicator/{indicator}', 'Get indicator data for country'),
 ('11111111-1111-1111-1111-111111111114', 'Countries', 'GET', '/country', 'List all countries'),
 ('11111111-1111-1111-1111-111111111114', 'Indicators', 'GET', '/indicator', 'List all indicators'),
-('11111111-1111-1111-1111-111111111114', 'Income Levels', 'GET', '/incomeLevel', 'List income levels');
+('11111111-1111-1111-1111-111111111114', 'Income Levels', 'GET', '/incomeLevel', 'List income levels')
+ON CONFLICT DO NOTHING;
 
 -- 5. EUROSTAT (Free)
 INSERT INTO data_sources (
@@ -159,7 +164,8 @@ INSERT INTO data_sources (
 
 INSERT INTO data_source_endpoints (source_id, name, method, path, description) VALUES
 ('11111111-1111-1111-1111-111111111115', 'Statistics', 'GET', '/statistics/1.0/data/{datasetCode}', 'Get dataset data'),
-('11111111-1111-1111-1111-111111111115', 'Datasets', 'GET', '/catalogue/1.0/datasets', 'List available datasets');
+('11111111-1111-1111-1111-111111111115', 'Datasets', 'GET', '/catalogue/1.0/datasets', 'List available datasets')
+ON CONFLICT DO NOTHING;
 
 -- 6. COINGECKO (Free/Freemium)
 INSERT INTO data_sources (
@@ -193,12 +199,14 @@ INSERT INTO data_source_endpoints (source_id, name, method, path, description) V
 ('11111111-1111-1111-1111-111111111116', 'Coin Markets', 'GET', '/coins/markets', 'Coin prices and market data'),
 ('11111111-1111-1111-1111-111111111116', 'Coin History', 'GET', '/coins/{id}/history', 'Historical data for coin'),
 ('11111111-1111-1111-1111-111111111116', 'Exchanges', 'GET', '/exchanges', 'List all exchanges'),
-('11111111-1111-1111-1111-111111111116', 'Trending', 'GET', '/search/trending', 'Top 7 trending coins');
+('11111111-1111-1111-1111-111111111116', 'Trending', 'GET', '/search/trending', 'Top 7 trending coins')
+ON CONFLICT DO NOTHING;
 
 INSERT INTO data_source_pricing (source_id, tier_name, tier_level, price_monthly_usd, price_yearly_usd, requests_per_minute, features) VALUES
 ('11111111-1111-1111-1111-111111111116', 'Free', 1, 0, 0, 30, '["public", "pro_plan_limited"]'::jsonb),
 ('11111111-1111-1111-1111-111111111116', 'Analyst', 2, 129, 1290, 500, '["all_endpoints", "priority_support"]'::jsonb),
-('11111111-1111-1111-1111-111111111116', 'Enterprise', 3, 599, 5990, NULL, '["unlimited", "dedicated_support"]'::jsonb);
+('11111111-1111-1111-1111-111111111116', 'Enterprise', 3, 599, 5990, NULL, '["unlimited", "dedicated_support"]'::jsonb)
+ON CONFLICT DO NOTHING;
 
 -- 7. NEWSAPI (Free/Freemium)
 INSERT INTO data_sources (
@@ -231,11 +239,13 @@ INSERT INTO data_sources (
 INSERT INTO data_source_endpoints (source_id, name, method, path, description) VALUES
 ('11111111-1111-1111-1111-111111111117', 'Top Headlines', 'GET', '/v2/top-headlines', 'Top headlines'),
 ('11111111-1111-1111-1111-111111111117', 'Everything', 'GET', '/v2/everything', 'Search all articles'),
-('11111111-1111-1111-1111-111111111117', 'Sources', 'GET', '/v2/sources', 'News sources list');
+('11111111-1111-1111-1111-111111111117', 'Sources', 'GET', '/v2/sources', 'News sources list')
+ON CONFLICT DO NOTHING;
 
 INSERT INTO data_source_pricing (source_id, tier_name, tier_level, price_monthly_usd, price_yearly_usd, requests_per_day, features) VALUES
 ('11111111-1111-1111-1111-111111111117', 'Developer', 1, 0, 0, 100, '["news", "blog"]'::jsonb),
-('11111111-1111-1111-1111-111111111117', 'Business', 2, 449, 4490, NULL, '["historical", "sentiment", "priority"]'::jsonb);
+('11111111-1111-1111-1111-111111111117', 'Business', 2, 449, 4490, NULL, '["historical", "sentiment", "priority"]'::jsonb)
+ON CONFLICT DO NOTHING;
 
 -- 8. OPENWEATHERMAP (Free/Freemium)
 INSERT INTO data_sources (
@@ -268,7 +278,8 @@ INSERT INTO data_sources (
 INSERT INTO data_source_endpoints (source_id, name, method, path, description) VALUES
 ('11111111-1111-1111-1111-111111111118', 'Current Weather', 'GET', '/data/2.5/weather', 'Current weather data'),
 ('11111111-1111-1111-1111-111111111118', 'Forecast', 'GET', '/data/2.5/forecast', '5 day forecast'),
-('11111111-1111-1111-1111-111111111118', 'Air Pollution', 'GET', '/data/2.5/air_pollution', 'Air quality index');
+('11111111-1111-1111-1111-111111111118', 'Air Pollution', 'GET', '/data/2.5/air_pollution', 'Air quality index')
+ON CONFLICT DO NOTHING;
 
 -- 9. EIA OPEN DATA (Free)
 INSERT INTO data_sources (
@@ -298,7 +309,8 @@ INSERT INTO data_sources (
 INSERT INTO data_source_endpoints (source_id, name, method, path, description) VALUES
 ('11111111-1111-1111-1111-111111111119', 'Series', 'GET', '/v2/series', 'Get data series'),
 ('11111111-1111-1111-1111-111111111119', 'Facets', 'GET', '/v2/facets', 'Get available facets'),
-('11111111-1111-1111-1111-111111111119', 'Geoset', 'GET', '/v2/geoset', 'Geographic data sets');
+('11111111-1111-1111-1111-111111111119', 'Geoset', 'GET', '/v2/geoset', 'Geographic data sets')
+ON CONFLICT DO NOTHING;
 
 -- 10. DBNOMICS (Free)
 INSERT INTO data_sources (
@@ -354,7 +366,8 @@ INSERT INTO data_sources (
 INSERT INTO data_source_pricing (source_id, tier_name, tier_level, price_monthly_usd, price_yearly_usd, features) VALUES
 ('21111111-1111-1111-1111-111111111111', 'Stocks Starter', 2, 199, 1990, '["realtime", "us_equities", "options"]'::jsonb),
 ('21111111-1111-1111-1111-111111111111', 'Stocks Advanced', 3, 399, 3990, '["advanced_options", "tick_data"]'::jsonb),
-('21111111-1111-1111-1111-111111111111', 'All Asset Classes', 4, 799, 7990, '["forex", "crypto", "global"]'::jsonb);
+('21111111-1111-1111-1111-111111111111', 'All Asset Classes', 4, 799, 7990, '["forex", "crypto", "global"]'::jsonb)
+ON CONFLICT DO NOTHING;
 
 -- 12. IEX CLOUD
 INSERT INTO data_sources (
@@ -380,10 +393,11 @@ INSERT INTO data_sources (
     '{}'::jsonb
 ) ON CONFLICT DO NOTHING;
 
-INSERT INTO data_source_pricing (source_id, tier_name, tier_level, price_monthly_usd, price_yearly_usd, requests_per_month, features) VALUES
-('21111111-1111-1111-1111-111111111112', 'Launch', 1, 0, 0, 50000, '["core_data", "stock_prices"]'::jsonb),
-('21111111-1111-1111-1111-111111111112', 'Grow', 2, 199, 1990, 5000000, '["intraday", "fundamentals"]'::jsonb),
-('21111111-1111-1111-1111-111111111112', 'Scale', 3, 599, 5990, NULL, '["everything", "priority"]'::jsonb);
+INSERT INTO data_source_pricing (source_id, tier_name, tier_level, price_monthly_usd, price_yearly_usd, requests_per_day, features) VALUES
+('21111111-1111-1111-1111-111111111112', 'Launch', 1, 0, 0, 1666, '["core_data", "stock_prices"]'::jsonb),
+('21111111-1111-1111-1111-111111111112', 'Grow', 2, 199, 1990, 166666, '["intraday", "fundamentals"]'::jsonb),
+('21111111-1111-1111-1111-111111111112', 'Scale', 3, 599, 5990, NULL, '["everything", "priority"]'::jsonb)
+ON CONFLICT DO NOTHING;
 
 -- 13. FINANCIAL MODELING PREP
 INSERT INTO data_sources (
@@ -412,7 +426,8 @@ INSERT INTO data_sources (
 INSERT INTO data_source_pricing (source_id, tier_name, tier_level, price_monthly_usd, price_yearly_usd, requests_per_day, features) VALUES
 ('21111111-1111-1111-1111-111111111113', 'Free', 1, 0, 0, 250, '["limited_endpoints"]'::jsonb),
 ('21111111-1111-1111-1111-111111111113', 'Starter', 2, 228, 2280, NULL, '["all_data", "websocket"]'::jsonb),
-('21111111-1111-1111-1111-111111111113', 'Professional', 3, 828, 8280, NULL, '["premium", "institutional"]'::jsonb);
+('21111111-1111-1111-1111-111111111113', 'Professional', 3, 828, 8280, NULL, '["premium", "institutional"]'::jsonb)
+ON CONFLICT DO NOTHING;
 
 -- 14. BLOOMBERG TERMINAL
 INSERT INTO data_sources (
@@ -439,7 +454,8 @@ INSERT INTO data_sources (
 
 INSERT INTO data_source_pricing (source_id, tier_name, tier_level, price_yearly_usd, features) VALUES
 ('21111111-1111-1111-1111-111111111114', 'Terminal', 5, 24000, '["everything", "realtime", "news", "analytics", "messaging"]'::jsonb),
-('21111111-1111-1111-1111-111111111114', 'API Only', 4, 2400, '["data_feed", "no_terminal"]'::jsonb);
+('21111111-1111-1111-1111-111111111114', 'API Only', 4, 2400, '["data_feed", "no_terminal"]'::jsonb)
+ON CONFLICT DO NOTHING;
 
 -- 15. REFINITIV EIKON
 INSERT INTO data_sources (
@@ -467,7 +483,8 @@ INSERT INTO data_sources (
 INSERT INTO data_source_pricing (source_id, tier_name, tier_level, price_yearly_usd, features) VALUES
 ('21111111-1111-1111-1111-111111111115', 'Entry', 2, 3600, '["delayed", "basics"]'::jsonb),
 ('21111111-1111-1111-1111-111111111115', 'Professional', 3, 12000, '["realtime", "news", "analytics"]'::jsonb),
-('21111111-1111-1111-1111-111111111115', 'Enterprise', 4, 22000, '["everything", "api_access"]'::jsonb);
+('21111111-1111-1111-1111-111111111115', 'Enterprise', 4, 22000, '["everything", "api_access"]'::jsonb)
+ON CONFLICT DO NOTHING;
 
 -- 16. FACTSET
 INSERT INTO data_sources (
@@ -494,7 +511,8 @@ INSERT INTO data_sources (
 
 INSERT INTO data_source_pricing (source_id, tier_name, tier_level, price_yearly_usd, features) VALUES
 ('21111111-1111-1111-1111-111111111116', 'Standard', 3, 12000, '["analytics", "screening"]'::jsonb),
-('21111111-1111-1111-1111-111111111116', 'Enterprise', 4, 25000, '["full_suite", "api"]'::jsonb);
+('21111111-1111-1111-1111-111111111116', 'Enterprise', 4, 25000, '["full_suite", "api"]'::jsonb)
+ON CONFLICT DO NOTHING;
 
 -- 17. TIINGO
 INSERT INTO data_sources (
@@ -523,7 +541,8 @@ INSERT INTO data_sources (
 INSERT INTO data_source_pricing (source_id, tier_name, tier_level, price_monthly_usd, price_yearly_usd, requests_per_day, features) VALUES
 ('21111111-1111-1111-1111-111111111117', 'Free', 1, 0, 0, 500, '["end_of_day", "news"]'::jsonb),
 ('21111111-1111-1111-1111-111111111117', 'Power', 2, 348, 3480, 50000, '["intraday", "fundamentals", "crypto"]'::jsonb),
-('21111111-1111-1111-1111-111111111117', 'Commercial', 3, 1000, 10000, 100000, '["websocket", "support"]'::jsonb);
+('21111111-1111-1111-1111-111111111117', 'Commercial', 3, 1000, 10000, 100000, '["websocket", "support"]'::jsonb)
+ON CONFLICT DO NOTHING;
 
 -- 18. EODHD
 INSERT INTO data_sources (
@@ -553,7 +572,8 @@ INSERT INTO data_source_pricing (source_id, tier_name, tier_level, price_monthly
 ('21111111-1111-1111-1111-111111111118', 'Free', 1, 0, 0, 20, '["limited_symbols"]'::jsonb),
 ('21111111-1111-1111-1111-111111111118', 'Starter', 2, 19, 190, 100000, '["all_symbols", "fundamentals"]'::jsonb),
 ('21111111-1111-1111-1111-111111111118', 'Pro', 3, 49, 490, 1000000, '["intraday", "options"]'::jsonb),
-('21111111-1111-1111-1111-111111111118', 'Enterprise', 4, 199, 1990, NULL, '["unlimited", "api"]'::jsonb);
+('21111111-1111-1111-1111-111111111118', 'Enterprise', 4, 199, 1990, NULL, '["unlimited", "api"]'::jsonb)
+ON CONFLICT DO NOTHING;
 
 -- 19. RAVENPACK
 INSERT INTO data_sources (
@@ -579,7 +599,8 @@ INSERT INTO data_sources (
 ) ON CONFLICT DO NOTHING;
 
 INSERT INTO data_source_pricing (source_id, tier_name, tier_level, price_yearly_usd, features) VALUES
-('21111111-1111-1111-1111-111111111119', 'Data License', 4, NULL, '["historical", "realtime", "analytics"]'::jsonb);
+('21111111-1111-1111-1111-111111111119', 'Data License', 4, NULL, '["historical", "realtime", "analytics"]'::jsonb)
+ON CONFLICT DO NOTHING;
 
 -- 20. DEFILLAMA (Free)
 INSERT INTO data_sources (
@@ -607,7 +628,8 @@ INSERT INTO data_sources (
 INSERT INTO data_source_endpoints (source_id, name, method, path, description) VALUES
 ('11111111-1111-1111-1111-11111111111b', 'Protocols', 'GET', '/protocols', 'List all protocols'),
 ('11111111-1111-1111-1111-11111111111b', 'TVL', 'GET', '/tvl/{protocol}', 'Get TVL for protocol'),
-('11111111-1111-1111-1111-11111111111b', 'Chains', 'GET', '/chains', 'List all chains');
+('11111111-1111-1111-1111-11111111111b', 'Chains', 'GET', '/chains', 'List all chains')
+ON CONFLICT DO NOTHING;
 
 -- ============================================
 -- WEB SCRAPER SOURCE (Firecrawl)
@@ -640,7 +662,8 @@ INSERT INTO data_source_endpoints (source_id, name, method, path, description) V
 ('31111111-1111-1111-1111-111111111111', 'Scrape', 'POST', '/v1/scrape', 'Scrape single URL'),
 ('31111111-1111-1111-1111-111111111111', 'Crawl', 'POST', '/v1/crawl', 'Crawl entire website'),
 ('31111111-1111-1111-1111-111111111111', 'Map', 'POST', '/v1/map', 'Map all URLs on website'),
-('31111111-1111-1111-1111-111111111111', 'Search', 'POST', '/v1/search', 'Search and scrape');
+('31111111-1111-1111-1111-111111111111', 'Search', 'POST', '/v1/search', 'Search and scrape')
+ON CONFLICT DO NOTHING;
 
 -- Update the updated_at column
 UPDATE data_sources SET updated_at = NOW();
