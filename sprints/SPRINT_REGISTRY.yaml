@@ -6,21 +6,21 @@ program:
     registry: sprints/SPRINT_REGISTRY.yaml
   scope:
     first_sprint: 63
-    last_sprint: 80
-    total_sprints: 18
+    last_sprint: 81
+    total_sprints: 19
 
 progress:
-  completed_sprints: 17
+  completed_sprints: 18
   in_progress_sprints: 1
   queued_sprints: 0
   blocked_sprints: 0
-  overall_completion_percent: 94
-  remaining_percent: 6
+  overall_completion_percent: 95
+  remaining_percent: 5
 
 active:
-  sprint_id: 80
-  title: CI Dependency Determinism & Runtime Verification Unblocking
-  gate: G27
+  sprint_id: 81
+  title: Runtime Warning Budget Enforcement & Signal Hygiene
+  gate: G28
 
 sprints:
   - id: 63
@@ -127,7 +127,13 @@ sprints:
     report: sprints/reports/SPRINT-079.md
   - id: 80
     title: CI Dependency Determinism & Runtime Verification Unblocking
-    status: in_progress
+    status: done
     gate: G27
     spec: sprints/specs/SPRINT-080.md
     report: sprints/reports/SPRINT-080.md
+  - id: 81
+    title: Runtime Warning Budget Enforcement & Signal Hygiene
+    status: in_progress
+    gate: G28
+    spec: sprints/specs/SPRINT-081.md
+    report: sprints/reports/SPRINT-081.md

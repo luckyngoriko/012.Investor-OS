@@ -1,29 +1,31 @@
 # Current Sprint Status
 # Updated: 2026-03-01
 
-## Active Sprint: 80 - CI Dependency Determinism & Runtime Verification Unblocking
+## Active Sprint: 81 - Runtime Warning Budget Enforcement & Signal Hygiene
 
 ### Status: IN PROGRESS
-### Gate: G27 (PENDING)
-### Program Completion: 94%
-### Remaining to 100%: 6%
+### Gate: G28 (PENDING)
+### Program Completion: 95%
+### Remaining to 100%: 5%
 
-## Sprint 80 Focus (In Progress)
+## Sprint 81 Focus (In Progress)
 
-- [x] 80.1: Fix frontend lockfile drift causing `npm ci` failure in full E2E matrix
-- [x] 80.2: Add deterministic dependency-integrity guard for Playwright CI pipelines
-- [x] 80.3: Remove/replace nightly runtime hard dependency on unavailable local path
-- [ ] 80.4: Re-run matrix + nightly verification with passing evidence for G27
+- [ ] 81.1: Eliminate recurring frontend runtime warnings in browser matrix runs
+- [ ] 81.2: Add CI warning-budget signal for Playwright stable suite execution
+- [ ] 81.3: Capture warning-free evidence bundle for G28 close-out
 
 ## Program State
 
 - [x] Enterprise Recovery Program gates G10-G24 closed
 - [x] Sprint 78 guardrail extension gate G25 passed
 - [x] Sprint 79 maintenance hardening gate G26 passed
-- [ ] Sprint 80 CI/runtimes unblock gate G27 pending
+- [x] Sprint 80 CI/runtimes unblock gate G27 passed
+- [ ] Sprint 81 warning-budget signal hygiene gate G28 pending
 
 ## Transition Notes
 
-- [x] Sprint 79 closed with G26 release evidence package generated
-- [x] Post-release verification reruns triggered for matrix/nightly/release-evidence workflows
-- [x] Sprint 80 activated to remediate CI dependency determinism and runtime-verification blockers
+- [x] Sprint 80 closed with passing verification evidence:
+  - Full E2E Matrix: `22545176963` (success)
+  - Nightly Runtime Contract: `22545289397` (success)
+  - Release Evidence Bundle: `22545338709` (success)
+- [x] Sprint 81 activated for runtime warning-budget enforcement and signal hygiene
