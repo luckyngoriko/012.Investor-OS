@@ -1,32 +1,29 @@
 # Current Sprint Status
 # Updated: 2026-03-01
 
-## Active Sprint: 79 - Continuous Verification Expansion & CI Stability Hardening
+## Active Sprint: 80 - CI Dependency Determinism & Runtime Verification Unblocking
 
-### Status: DONE
-### Gate: G26 (PASSED)
-### Program Completion: 100%
-### Remaining to 100%: 0%
+### Status: IN PROGRESS
+### Gate: G27 (PENDING)
+### Program Completion: 94%
+### Remaining to 100%: 6%
 
-## Sprint 79 Focus (Completed)
+## Sprint 80 Focus (In Progress)
 
-- [x] 79.1: Expand automated verification from smoke-only to scheduled multi-browser matrix
-- [x] 79.2: Add nightly strict runtime contract job with controlled backend startup
-- [x] 79.3: Introduce flaky-test quarantine + triage evidence generation
-- [x] 79.4: Automate release evidence bundle generation for future close-out tags
-- [x] 79.5: Validate release bundle generator and workflow execution paths
-- [x] 79.6: Generate formal G26 release evidence bundle artifacts
-- [x] 79.7: Synchronize PM governance artifacts to final 100% completion state
-- [x] 79.8: Finalize sprint close-out and release-tag readiness package
+- [ ] 80.1: Fix frontend lockfile drift causing `npm ci` failure in full E2E matrix
+- [ ] 80.2: Add deterministic dependency-integrity guard for Playwright CI pipelines
+- [ ] 80.3: Remove/replace nightly runtime hard dependency on unavailable local path
+- [ ] 80.4: Re-run matrix + nightly verification with passing evidence for G27
 
 ## Program State
 
 - [x] Enterprise Recovery Program gates G10-G24 closed
 - [x] Sprint 78 guardrail extension gate G25 passed
 - [x] Sprint 79 maintenance hardening gate G26 passed
+- [ ] Sprint 80 CI/runtimes unblock gate G27 pending
 
 ## Transition Notes
 
-- [x] Sprint 78 closed with release tag close-out package prepared
-- [x] Sprint 79 activated for continuous reliability and CI hardening
 - [x] Sprint 79 closed with G26 release evidence package generated
+- [x] Post-release verification reruns triggered for matrix/nightly/release-evidence workflows
+- [x] Sprint 80 activated to remediate CI dependency determinism and runtime-verification blockers

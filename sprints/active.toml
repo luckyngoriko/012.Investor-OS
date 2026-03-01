@@ -3,8 +3,8 @@
 
 [meta]
 phase = "enterprise-readiness-recovery"
-phase_range = "63-79"
-active_sprint = 79
+phase_range = "63-80"
+active_sprint = 80
 updated = "2026-03-01"
 
 [sprint.63]
@@ -176,3 +176,13 @@ tasks_total = 8
 tasks_done = 8
 gate = "G26"
 depends_on = [78]
+
+[sprint.80]
+title = "CI Dependency Determinism & Runtime Verification Unblocking"
+status = "in_progress"
+started = "2026-03-01"
+completed = ""
+tasks_total = 8
+tasks_done = 0
+gate = "G27"
+depends_on = [79]

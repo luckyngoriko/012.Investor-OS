@@ -6,21 +6,21 @@ program:
     registry: sprints/SPRINT_REGISTRY.yaml
   scope:
     first_sprint: 63
-    last_sprint: 79
-    total_sprints: 17
+    last_sprint: 80
+    total_sprints: 18
 
 progress:
   completed_sprints: 17
-  in_progress_sprints: 0
+  in_progress_sprints: 1
   queued_sprints: 0
   blocked_sprints: 0
-  overall_completion_percent: 100
-  remaining_percent: 0
+  overall_completion_percent: 94
+  remaining_percent: 6
 
 active:
-  sprint_id: 79
-  title: Continuous Verification Expansion & CI Stability Hardening
-  gate: G26
+  sprint_id: 80
+  title: CI Dependency Determinism & Runtime Verification Unblocking
+  gate: G27
 
 sprints:
   - id: 63
@@ -125,3 +125,9 @@ sprints:
     gate: G26
     spec: sprints/specs/SPRINT-079.md
     report: sprints/reports/SPRINT-079.md
+  - id: 80
+    title: CI Dependency Determinism & Runtime Verification Unblocking
+    status: in_progress
+    gate: G27
+    spec: sprints/specs/SPRINT-080.md
+    report: sprints/reports/SPRINT-080.md

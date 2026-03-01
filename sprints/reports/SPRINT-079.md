@@ -74,6 +74,6 @@
 
 ## Next Sprint Decision
 
-- Next sprint: none (program scope completed)
-- Activation status: n/a
+- Next sprint: 80
+- Activation status: in_progress
 - Preconditions met: yes

@@ -32,6 +32,7 @@ logs/
 # Playwright
 test-results/
 playwright-report/
+frontend/investor-dashboard/test-results*.json
 
 # Firebase
 .firebase/
