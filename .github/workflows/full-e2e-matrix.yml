@@ -133,6 +133,7 @@ jobs:
           STABLE_WARNING_LOG="frontend/investor-dashboard/warning-budget-stable-${{ matrix.project }}.jsonl" \
           QUARANTINE_WARNING_LOG="frontend/investor-dashboard/warning-budget-quarantine-${{ matrix.project }}.jsonl" \
           CHART_WARNING_BUDGET="0" \
+          OTHER_WARNING_BUDGET="0" \
           OUTPUT_MD="frontend/investor-dashboard/warning-budget-${{ matrix.project }}.md" \
           OUTPUT_JSON="frontend/investor-dashboard/warning-budget-${{ matrix.project }}.json" \
           ./scripts/warning_budget_report.sh
@@ -221,10 +222,11 @@ jobs:
                 project="$(jq -r '.project // "unknown"' "$warning_file")"
                 verdict="$(jq -r '.verdict // "unknown"' "$warning_file")"
                 chart_budget="$(jq -r '.chart_warning_budget // 0' "$warning_file")"
+                other_budget="$(jq -r '.other_warning_budget // 0' "$warning_file")"
                 chart_warnings="$(jq -r '.stats.chart_container_warnings // 0' "$warning_file")"
                 other_warnings="$(jq -r '.stats.other_warnings // 0' "$warning_file")"
                 total_warnings="$(jq -r '.stats.total_warnings // 0' "$warning_file")"
-                echo "- ${project}: verdict=${verdict}, chart=${chart_warnings}/${chart_budget}, other=${other_warnings}, total=${total_warnings}"
+                echo "- ${project}: verdict=${verdict}, chart=${chart_warnings}/${chart_budget}, other=${other_warnings}/${other_budget}, total=${total_warnings}"
               done <<< "$warning_files"
             fi
           } | tee -a governance/FULL_E2E_MATRIX_SUMMARY.md

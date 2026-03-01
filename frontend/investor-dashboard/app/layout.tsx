@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="bg" className="dark" suppressHydrationWarning>
+    <html lang="bg" className="dark" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="antialiased">
         <ErrorBoundary>
           <ThemeProvider>

@@ -5,6 +5,7 @@ PROJECT_NAME="${PROJECT_NAME:-unknown}"
 STABLE_WARNING_LOG="${STABLE_WARNING_LOG:-frontend/investor-dashboard/warning-budget-stable-${PROJECT_NAME}.jsonl}"
 QUARANTINE_WARNING_LOG="${QUARANTINE_WARNING_LOG:-frontend/investor-dashboard/warning-budget-quarantine-${PROJECT_NAME}.jsonl}"
 CHART_WARNING_BUDGET="${CHART_WARNING_BUDGET:-0}"
+OTHER_WARNING_BUDGET="${OTHER_WARNING_BUDGET:-0}"
 OUTPUT_MD="${OUTPUT_MD:-frontend/investor-dashboard/warning-budget-${PROJECT_NAME}.md}"
 OUTPUT_JSON="${OUTPUT_JSON:-frontend/investor-dashboard/warning-budget-${PROJECT_NAME}.json}"
 
@@ -28,6 +29,9 @@ other_warnings="$(jq '[.[].category_counts.other // 0] | add // 0' <<<"$combined
 
 verdict="pass"
 if (( chart_warnings > CHART_WARNING_BUDGET )); then
+  verdict="fail"
+fi
+if (( other_warnings > OTHER_WARNING_BUDGET )); then
   verdict="fail"
 fi
 
@@ -79,6 +83,7 @@ mkdir -p "$(dirname "$OUTPUT_JSON")"
   echo "- Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
   echo "- Verdict: \`${verdict}\`"
   echo "- Chart warning budget: \`${CHART_WARNING_BUDGET}\`"
+  echo "- Other warning budget: \`${OTHER_WARNING_BUDGET}\`"
   echo "- Chart warnings observed: \`${chart_warnings}\`"
   echo "- Other warnings observed: \`${other_warnings}\`"
   echo "- Total warnings observed: \`${total_warnings}\`"
@@ -99,6 +104,7 @@ jq -n \
   --arg project "$PROJECT_NAME" \
   --arg verdict "$verdict" \
   --argjson chart_budget "$CHART_WARNING_BUDGET" \
+  --argjson other_budget "$OTHER_WARNING_BUDGET" \
   --argjson chart_warnings "$chart_warnings" \
   --argjson other_warnings "$other_warnings" \
   --argjson total_warnings "$total_warnings" \
@@ -110,6 +116,7 @@ jq -n \
       project: $project,
       verdict: $verdict,
       chart_warning_budget: $chart_budget,
+      other_warning_budget: $other_budget,
       stats: {
         total_tests: $total_tests,
         total_warnings: $total_warnings,
@@ -126,7 +133,7 @@ jq -n \
 echo "Warning budget report written:"
 echo "- $OUTPUT_MD"
 echo "- $OUTPUT_JSON"
-echo "Warning summary: tests=${total_tests}, total=${total_warnings}, chart=${chart_warnings}, other=${other_warnings}, budget=${CHART_WARNING_BUDGET}"
+echo "Warning summary: tests=${total_tests}, total=${total_warnings}, chart=${chart_warnings}/${CHART_WARNING_BUDGET}, other=${other_warnings}/${OTHER_WARNING_BUDGET}"
 if [[ "$(jq 'length' <<<"$top_chart_messages_json")" -gt 0 ]]; then
   echo "Top chart warning messages:"
   jq -r '.[] | "- (\(.count)x) \(.message)"' <<<"$top_chart_messages_json"
@@ -137,6 +144,11 @@ if [[ "$(jq 'length' <<<"$top_other_messages_json")" -gt 0 ]]; then
 fi
 
 if [[ "$verdict" != "pass" ]]; then
-  echo "Chart warning budget exceeded: observed=${chart_warnings}, budget=${CHART_WARNING_BUDGET}"
+  if (( chart_warnings > CHART_WARNING_BUDGET )); then
+    echo "Chart warning budget exceeded: observed=${chart_warnings}, budget=${CHART_WARNING_BUDGET}"
+  fi
+  if (( other_warnings > OTHER_WARNING_BUDGET )); then
+    echo "Other warning budget exceeded: observed=${other_warnings}, budget=${OTHER_WARNING_BUDGET}"
+  fi
   exit 1
 fi
