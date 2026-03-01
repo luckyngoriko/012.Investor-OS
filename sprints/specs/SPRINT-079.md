@@ -3,7 +3,7 @@
 ## Metadata
 
 - Sprint ID: 79
-- Status: in_progress
+- Status: done
 - Gate: G26
 - Owner: Platform + QA + DevEx
 - Dependencies: 78
@@ -64,4 +64,3 @@ G26 passes when scheduled verification, strict runtime automation, flaky triage 
 
 1. CI runtime cost can grow with matrix coverage; mitigate with schedule partitioning and scoped critical-path suites.
 2. Flaky quarantine can hide true regressions; mitigate with expiry windows and mandatory triage ownership.
-

@@ -169,10 +169,10 @@ depends_on = [77]
 
 [sprint.79]
 title = "Continuous Verification Expansion & CI Stability Hardening"
-status = "in_progress"
+status = "done"
 started = "2026-03-01"
-completed = ""
+completed = "2026-03-01"
 tasks_total = 8
-tasks_done = 4
+tasks_done = 8
 gate = "G26"
 depends_on = [78]

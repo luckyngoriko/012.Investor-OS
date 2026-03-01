@@ -1,0 +1,19 @@
+release:
+  tag: v3.1-g26-closed
+  date: "2026-03-01"
+  gate: G26
+  status: closed
+  generated_at: "2026-03-01T13:20:57Z"
+
+commits:
+  - 5fb27c0
+  - 84dbfa7
+  - 913cb22
+  - c779994
+  - 6e6b36d
+
+evidence:
+  - sprints/reports/releases/v3.1-g26-closed/RELEASE_NOTES.md
+  - sprints/reports/releases/v3.1-g26-closed/EVIDENCE_BUNDLE.md
+  - sprints/reports/SPRINT-079.md
+  - sprints/reports/PROGRESS_SNAPSHOT.md

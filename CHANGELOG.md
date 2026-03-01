@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented in this file.
 
+## [v3.1-g26-closed] - 2026-03-01
+
+### Added
+
+- Release evidence bundle automation script:
+  - `scripts/generate_release_evidence_bundle.sh`
+- Automated release evidence workflow for manual/tag-triggered generation:
+  - `.github/workflows/release-evidence-bundle.yml`
+- Formal release evidence bundle for gate `G26`:
+  - `sprints/reports/releases/v3.1-g26-closed/`
+
+### Changed
+
+- Sprint 79 close-out governance state finalized at 100% completion:
+  - `.current_sprint`
+  - `sprints/active.toml`
+  - `sprints/SPRINT_REGISTRY.yaml`
+  - `sprints/BOARD.md`
+  - `sprints/specs/SPRINT-079.md`
+  - `sprints/reports/SPRINT-079.md`
+  - `sprints/reports/PROGRESS_SNAPSHOT.md`
+
 ## [v3.0-g25-closed] - 2026-03-01
 
 ### Added

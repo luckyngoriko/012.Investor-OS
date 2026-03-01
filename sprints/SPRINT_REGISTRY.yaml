@@ -10,12 +10,12 @@ program:
     total_sprints: 17
 
 progress:
-  completed_sprints: 16
-  in_progress_sprints: 1
+  completed_sprints: 17
+  in_progress_sprints: 0
   queued_sprints: 0
   blocked_sprints: 0
-  overall_completion_percent: 94
-  remaining_percent: 6
+  overall_completion_percent: 100
+  remaining_percent: 0
 
 active:
   sprint_id: 79
@@ -121,7 +121,7 @@ sprints:
     report: sprints/reports/SPRINT-078.md
   - id: 79
     title: Continuous Verification Expansion & CI Stability Hardening
-    status: in_progress
+    status: done
     gate: G26
     spec: sprints/specs/SPRINT-079.md
     report: sprints/reports/SPRINT-079.md
