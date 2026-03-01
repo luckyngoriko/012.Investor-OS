@@ -26,26 +26,23 @@ export function SafeResponsiveContainer({
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
 
-    const updateDimensions = () => {
-      const rect = wrapper.getBoundingClientRect();
-      setDimensions({
-        width: Math.floor(rect.width),
-        height: Math.floor(rect.height),
-      });
-    };
-
-    updateDimensions();
-
-    const observer = new ResizeObserver(() => updateDimensions());
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const nextWidth = Math.floor(entry.contentRect.width);
+      const nextHeight = Math.floor(entry.contentRect.height);
+      setDimensions((current) =>
+        current.width === nextWidth && current.height === nextHeight
+          ? current
+          : { width: nextWidth, height: nextHeight },
+      );
+    });
     observer.observe(wrapper);
 
-    const raf = requestAnimationFrame(updateDimensions);
-
     return () => {
-      cancelAnimationFrame(raf);
       observer.disconnect();
     };
-  }, [minReadyHeight, minReadyWidth]);
+  }, []);
 
   const resolvedWidth = typeof width === "number" ? width : dimensions.width;
   const resolvedHeight = typeof height === "number" ? height : dimensions.height;
