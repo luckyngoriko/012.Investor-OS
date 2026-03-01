@@ -12,7 +12,7 @@
 
 - [x] 78.1: Promote migration portability checks into repeatable CI-safe validation path
 - [x] 78.2: Add regression guardrails for seed-data schema drift and conflict handling
-- [ ] 78.3: Stabilize cross-environment health/runtime contract assertions
+- [x] 78.3: Stabilize cross-environment health/runtime contract assertions
 - [ ] 78.4: Consolidate post-certification reliability evidence for G25 close-out
 
 ## Program State

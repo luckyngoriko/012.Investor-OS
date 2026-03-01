@@ -9,7 +9,7 @@ env:
 
 jobs:
   check:
-    name: Code Quality
+    name: Test Gate Profile (PR)
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -40,25 +40,71 @@ jobs:
       if: steps.depcheck.outputs.skip_rust_checks == 'true'
       run: echo "Skipping Rust checks in CI because /mnt/nas-data/dev/neurocod-rag is unavailable."
 
-    - name: Check compilation
+    - name: G1/G2 - Rust compilation
       if: steps.depcheck.outputs.skip_rust_checks == 'false'
       run: cargo check --all-features
     
-    - name: Run tests
+    - name: G2 - Rust unit tests
       if: steps.depcheck.outputs.skip_rust_checks == 'false'
       run: cargo test --lib --all-features
     
-    - name: Run clippy
+    - name: G1 - Rust clippy
       if: steps.depcheck.outputs.skip_rust_checks == 'false'
       run: cargo clippy --all-features -- -W clippy::all
     
-    - name: Check formatting
+    - name: G1 - Rust formatting
       if: steps.depcheck.outputs.skip_rust_checks == 'false'
       run: cargo fmt -- --check
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/investor-dashboard/package-lock.json
+
+    - name: Install frontend dependencies
+      run: cd frontend/investor-dashboard && npm ci
+
+    - name: G3 - Frontend unit tests
+      run: cd frontend/investor-dashboard && npm test
+
+    - name: G3 - Frontend build
+      run: cd frontend/investor-dashboard && npm run build
+
+    - name: G4 (smoke) - Frontend critical E2E
+      run: |
+        cd frontend/investor-dashboard
+        npx playwright install --with-deps chromium
+        npx playwright test \
+          tests/e2e/auth/login.spec.ts \
+          tests/e2e/dashboard/dashboard.spec.ts \
+          tests/e2e/runtime/runtime-contract.spec.ts \
+          --project=chromium
+
+    - name: G4 (smoke) - Runtime contract curl checks (best effort)
+      run: ./scripts/runtime_contract_smoke.sh
+
+    - name: G6 - PM governance sync
+      run: ./scripts/verify_pm_sync.sh
+
+    - name: G6 - PM governance boundaries
+      run: ./scripts/verify_pm_boundaries.sh
+
+    - name: G7 - Skills catalog audit (if available)
+      shell: bash
+      run: |
+        if [[ -d "$HOME/.agents/skills" ]]; then
+          make skills-audit
+        else
+          echo "Skipping skills audit: \$HOME/.agents/skills not available in runner."
+        fi
     
-    - name: Run security audit
+    - name: Install cargo-audit
+      run: cargo install cargo-audit --locked
+
+    - name: G5 - Security audit (blocking)
       run: cargo audit
-      continue-on-error: true
 
   build-docker:
     name: Build Docker Image

@@ -4,7 +4,7 @@
 
 - Status: in_progress
 - Gate: pending (G25)
-- Planned scope completion: 25%
+- Planned scope completion: 38%
 
 ## Delivered
 
@@ -21,16 +21,27 @@
    - creates fresh temp DB from `DATABASE_URL`
    - applies full migration chain twice (reapply/idempotency check)
    - verifies key migration versions marked successful in `_sqlx_migrations`
+7. Added runtime contract E2E assertion:
+   - `frontend/investor-dashboard/tests/e2e/runtime/runtime-contract.spec.ts`
+   - validates `/api/health`, `/api/runtime/config`, `/api/hrm/status`, and `/metrics` contract shape/availability
+8. Added runtime smoke probe script:
+   - `scripts/runtime_contract_smoke.sh`
+   - validates backend runtime endpoints and optional frontend `/login` + `/monitoring`
+   - supports strict mode via `REQUIRE_BACKEND=1` / `REQUIRE_FRONTEND=1`
+9. Wired runtime guardrails into CI path:
+   - added runtime E2E spec to Playwright smoke suite in `.github/workflows/pr-checks.yml`
+   - added best-effort curl runtime smoke step to PR checks
 
 ## Not Delivered / Deferred
 
-1. G25 close-out evidence pending execution of all work packages.
+1. G25 close-out evidence pending final Sprint 78.4 consolidation.
 
 ## Verification Summary
 
 - `cargo test --test sprint78_migration_guardrails_test -- --nocapture`: pass (5/5).
 - `DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55432/postgres cargo test --test sprint78_migration_guardrails_test -- --nocapture`: pass (5/5), including dynamic fresh-DB migration run.
-- PM synchronization checks pending for next progress update cycle.
+- `cd frontend/investor-dashboard && npx playwright test tests/e2e/runtime/runtime-contract.spec.ts --project=chromium`: pass (spec skipped when backend unavailable).
+- `REQUIRE_BACKEND=1 BACKEND_BASE_URL=http://127.0.0.1:8080 ./scripts/runtime_contract_smoke.sh`: pass for backend runtime contract checks.
 
 ## Program Progress
 
