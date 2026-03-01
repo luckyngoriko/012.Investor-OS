@@ -40,6 +40,9 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/investor-dashboard/package-lock.json
 
+      - name: Verify lockfile integrity
+        run: cd frontend/investor-dashboard && npm ci --dry-run
+
       - name: Install frontend dependencies
         run: cd frontend/investor-dashboard && npm ci
 

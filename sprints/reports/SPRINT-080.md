@@ -4,7 +4,7 @@
 
 - Status: in_progress
 - Gate: pending (G27)
-- Planned scope completion: 12%
+- Planned scope completion: 25%
 
 ## Delivered
 
@@ -18,6 +18,10 @@
 4. Repository hygiene update:
    - removed local artifact `frontend/investor-dashboard/test-results.json`
    - added ignore pattern `frontend/investor-dashboard/test-results*.json`
+5. Implemented WP-80A lockfile remediation for CI determinism:
+   - updated `frontend/investor-dashboard/package-lock.json` to align `@swc/helpers` with current `next@16.1.6` expectations (`0.5.19`)
+6. Implemented WP-80B dependency-integrity guardrail in E2E matrix workflow:
+   - added `Verify lockfile integrity` (`npm ci --dry-run`) before install phase in `.github/workflows/full-e2e-matrix.yml`
 
 ## Not Delivered / Deferred
 
@@ -30,6 +34,7 @@
 - `gh run view 22544364233 --job 65304270429 --log-failed`: captured `npm ci` lockfile mismatch details.
 - `gh run view 22544365372 --json status,conclusion,jobs`: nightly workflow completed successfully with skip-path summary.
 - `gh run view 22544364820 --json status,conclusion,jobs`: release evidence workflow completed successfully.
+- `docker run --rm -v \"$PWD/frontend/investor-dashboard\":/src:ro,Z node:20 bash -lc 'mkdir -p /work && cp /src/package.json /src/package-lock.json /work/ && cd /work && npm ci'`: pass (Node 20 CI-equivalent lockfile validation).
 - Manual PM sync target for active program scope updated to 18 sprints (`17 done`, `1 in_progress`).
 
 ## Program Progress
