@@ -1,0 +1,85 @@
+program:
+  name: Investor OS Enterprise Readiness Recovery Program
+  system_version: enterprise-v2
+  source_of_truth:
+    status: sprints/active.toml
+    registry: sprints/SPRINT_REGISTRY.yaml
+  scope:
+    first_sprint: 63
+    last_sprint: 72
+    total_sprints: 10
+
+progress:
+  completed_sprints: 10
+  in_progress_sprints: 0
+  queued_sprints: 0
+  blocked_sprints: 0
+  overall_completion_percent: 100
+  remaining_percent: 0
+
+active:
+  sprint_id: 72
+  title: Release Governance & Controlled Go-Live
+  gate: G19
+
+sprints:
+  - id: 63
+    title: Security Baseline & Auth Hardening
+    status: done
+    gate: G10
+    spec: sprints/specs/SPRINT-063.md
+    report: sprints/reports/SPRINT-063.md
+  - id: 64
+    title: Runtime & Configuration Reliability
+    status: done
+    gate: G11
+    spec: sprints/specs/SPRINT-064.md
+    report: sprints/reports/SPRINT-064.md
+  - id: 65
+    title: Real-Time HRM & WebSocket Integration
+    status: done
+    gate: G12
+    spec: sprints/specs/SPRINT-065.md
+    report: sprints/reports/SPRINT-065.md
+  - id: 66
+    title: Execution Safety & Kill-Switch Enforcement
+    status: done
+    gate: G13
+    spec: sprints/specs/SPRINT-066.md
+    report: sprints/reports/SPRINT-066.md
+  - id: 67
+    title: Market Data & Analytics De-Mock
+    status: done
+    gate: G14
+    spec: sprints/specs/SPRINT-067.md
+    report: sprints/reports/SPRINT-067.md
+  - id: 68
+    title: Data Source Service Completion
+    status: done
+    gate: G15
+    spec: sprints/specs/SPRINT-068.md
+    report: sprints/reports/SPRINT-068.md
+  - id: 69
+    title: Treasury & Custody Production Path
+    status: done
+    gate: G16
+    spec: sprints/specs/SPRINT-069.md
+    report: sprints/reports/SPRINT-069.md
+  - id: 70
+    title: Frontend De-Mock & Enterprise UX Consistency
+    status: done
+    gate: G17
+    spec: sprints/specs/SPRINT-070.md
+    report: sprints/reports/SPRINT-070.md
+  - id: 71
+    title: End-to-End, Performance & Resilience QA
+    status: done
+    gate: G18
+    spec: sprints/specs/SPRINT-071.md
+    report: sprints/reports/SPRINT-071.md
+  - id: 72
+    title: Release Governance & Controlled Go-Live
+    status: done
+    gate: G19
+    spec: sprints/specs/SPRINT-072.md
+    report: sprints/reports/SPRINT-072.md

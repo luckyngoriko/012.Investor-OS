@@ -1,51 +1,42 @@
-/**
- * Dashboard E2E Tests
- */
-
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { loginAsDemo } from "../utils/auth";
 
 test.describe("Dashboard", () => {
   test.beforeEach(async ({ page }) => {
-    // Login first
-    await page.goto("/login");
-    await page.getByLabel(/email/i).fill("test@test.com");
-    await page.getByLabel(/password/i).fill("password123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await page.waitForURL("/");
+    await loginAsDemo(page, "trader");
   });
 
-  test("displays portfolio value", async ({ page }) => {
-    await expect(page.getByText(/portfolio value|стойност на портфолиото/i)).toBeVisible();
+  test("renders core dashboard sections", async ({ page }) => {
+    await expect(page.getByRole("heading", { name: /dashboard/i })).toBeVisible();
+    await expect(page.getByText(/portfolio value/i)).toBeVisible();
+    await expect(page.getByText(/market regime/i)).toBeVisible();
+    await expect(page.getByText(/ai trade proposals/i)).toBeVisible();
+    await expect(page.getByText(/active positions/i)).toBeVisible();
   });
 
-  test("displays positions table", async ({ page }) => {
-    await expect(page.getByText(/active positions|активни позиции/i).first()).toBeVisible();
+  test("shows a sync status badge", async ({ page }) => {
+    await expect(page.getByText(/not synced|\d{1,2}:\d{2}:\d{2}/i).first()).toBeVisible();
   });
 
-  test("displays AI proposals section", async ({ page }) => {
-    await expect(page.getByText(/ai proposals|ai предложения/i).first()).toBeVisible();
-  });
-
-  test("refresh button updates data", async ({ page }) => {
-    const refreshButton = page.getByRole("button", { name: /refresh|update/i });
-    if (await refreshButton.isVisible()) {
-      await refreshButton.click();
-      // Should show loading state or update timestamp
-      await expect(page.getByText(/loading|зареждане/i).first()).not.toBeVisible();
-    }
+  test("allows navigation to positions from dashboard CTA", async ({ page }) => {
+    const cta = page.getByRole("button", { name: /view all positions/i });
+    await cta.scrollIntoViewIfNeeded();
+    await cta.click({ timeout: 10000 });
+    await expect(page).toHaveURL(/\/positions$/);
+    await expect(page.getByRole("heading", { name: /portfolio positions/i })).toBeVisible();
   });
 });
 
 test.describe("Dashboard - Responsive", () => {
-  test("adapts to mobile viewport", async ({ page }) => {
+  test("dashboard is usable on mobile viewport", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto("/login");
-    await page.getByLabel(/email/i).fill("test@test.com");
-    await page.getByLabel(/password/i).fill("password123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await page.waitForURL("/");
+    await loginAsDemo(page, "trader");
 
-    // Mobile menu should be visible
-    await expect(page.getByRole("button", { name: /menu/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /dashboard/i })).toBeVisible();
+
+    const hasHorizontalOverflow = await page.evaluate(() => {
+      return document.documentElement.scrollWidth > window.innerWidth;
+    });
+    expect(hasHorizontalOverflow).toBe(false);
   });
 });

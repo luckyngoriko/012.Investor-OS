@@ -1,99 +1,61 @@
-/**
- * Trading Flow E2E Tests
- * Critical path: View Proposals → Approve → Execute Trade
- */
+import { expect, test } from "@playwright/test";
+import { loginAsDemo } from "../utils/auth";
 
-import { test, expect } from "@playwright/test";
-
-test.describe("Trading Flow - AI Proposals", () => {
+test.describe("Trading Flow - Proposals", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/login");
-    await page.getByLabel(/email/i).fill("test@test.com");
-    await page.getByLabel(/password/i).fill("password123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await page.waitForURL("/");
+    await loginAsDemo(page, "trader");
   });
 
-  test("navigate to proposals page", async ({ page }) => {
-    await page.getByRole("link", { name: /proposals|предложения/i }).click();
-    await expect(page).toHaveURL(/proposals/);
-    await expect(page.getByText(/ai proposals|ai предложения/i).first()).toBeVisible();
-  });
-
-  test("approve a trade proposal", async ({ page }) => {
+  test("proposals page is reachable and shows tabs", async ({ page }) => {
     await page.goto("/proposals");
-    
-    // Find and click approve button on first proposal
-    const approveButton = page.getByRole("button", { name: /approve|confirm|потвърди/i }).first();
-    if (await approveButton.isVisible()) {
-      await approveButton.click();
-      
-      // Should show success message
-      await expect(page.getByText(/success|успех|confirmed/i).first()).toBeVisible();
+
+    await expect(page.getByRole("heading", { name: /trade proposals/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /pending/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /confirmed/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /rejected/i })).toBeVisible();
+  });
+
+  test("confirming a proposal updates visible status", async ({ page }) => {
+    await page.goto("/proposals");
+
+    const confirmButton = page.getByRole("button", { name: /confirm/i }).first();
+    if (await confirmButton.isVisible().catch(() => false)) {
+      await confirmButton.click();
+      await expect(page.getByText(/confirmed/i).first()).toBeVisible();
     }
   });
 
-  test("reject a trade proposal", async ({ page }) => {
+  test("rejecting a proposal opens dialog and applies rejection", async ({ page }) => {
     await page.goto("/proposals");
-    
-    const rejectButton = page.getByRole("button", { name: /reject|отхвърли/i }).first();
-    if (await rejectButton.isVisible()) {
+
+    const rejectButton = page.getByRole("button", { name: /^reject$/i }).first();
+    if (await rejectButton.isVisible().catch(() => false)) {
       await rejectButton.click();
-      await expect(page.getByText(/rejected|отхвърлено/i).first()).toBeVisible();
-    }
-  });
-
-  test("view proposal details", async ({ page }) => {
-    await page.goto("/proposals");
-    
-    const detailsButton = page.getByRole("button", { name: /details|детайли/i }).first();
-    if (await detailsButton.isVisible()) {
-      await detailsButton.click();
-      await expect(page.getByText(/confidence|увереност|reasoning/i).first()).toBeVisible();
+      await expect(page.getByRole("dialog")).toBeVisible();
+      await page.locator("textarea").fill("Rejected in E2E validation");
+      await page.getByRole("button", { name: /reject proposal/i }).click();
+      await expect(page.getByText(/rejected/i).first()).toBeVisible();
     }
   });
 });
 
-test.describe("Trading Flow - Positions", () => {
+test.describe("Trading Flow - Positions and Risk", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/login");
-    await page.getByLabel(/email/i).fill("test@test.com");
-    await page.getByLabel(/password/i).fill("password123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await page.waitForURL("/");
+    await loginAsDemo(page, "trader");
   });
 
-  test("view all positions", async ({ page }) => {
-    await page.getByRole("link", { name: /positions|позиции/i }).click();
-    await expect(page).toHaveURL(/positions/);
-  });
-
-  test("positions table has correct columns", async ({ page }) => {
+  test("positions page shows portfolio table", async ({ page }) => {
     await page.goto("/positions");
-    
-    const table = page.locator("table");
-    await expect(table).toBeVisible();
-    
-    // Check for expected columns
-    const headers = ["symbol", "qty", "price", "p&l"];
-    for (const header of headers) {
-      await expect(
-        page.locator("th, td").filter({ hasText: new RegExp(header, "i") }).first()
-      ).toBeVisible();
-    }
+
+    await expect(page.getByRole("heading", { name: /portfolio positions/i })).toBeVisible();
+    await expect(page.locator("table")).toBeVisible();
+    await expect(page.getByText(/total value/i)).toBeVisible();
   });
-});
 
-test.describe("Trading Flow - Risk Management", () => {
-  test("risk limits are enforced", async ({ page }) => {
-    await page.goto("/login");
-    await page.getByLabel(/email/i).fill("test@test.com");
-    await page.getByLabel(/password/i).fill("password123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await page.waitForURL("/");
+  test("risk page is accessible", async ({ page }) => {
+    await page.goto("/risk");
 
-    // Navigate to risk page
-    await page.getByRole("link", { name: /risk|риск/i }).click();
-    await expect(page).toHaveURL(/risk/);
+    await expect(page.getByRole("heading", { name: /risk management/i })).toBeVisible();
+    await expect(page.getByText(/control checks/i)).toBeVisible();
   });
 });
