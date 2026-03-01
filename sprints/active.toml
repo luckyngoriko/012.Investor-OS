@@ -1,0 +1,108 @@
+# Sprint Management — Machine-Readable State
+# Updated by: make sprint-next | make sprint-done
+
+[meta]
+phase = "enterprise-readiness-recovery"
+phase_range = "63-72"
+active_sprint = 72
+updated = "2026-03-01"
+
+[sprint.63]
+title = "Security Baseline & Auth Hardening"
+status = "done"
+started = "2026-02-28"
+completed = "2026-02-28"
+tasks_total = 8
+tasks_done = 8
+gate = "G10"
+depends_on = []
+
+[sprint.64]
+title = "Runtime & Configuration Reliability"
+status = "done"
+started = "2026-02-28"
+completed = "2026-02-28"
+tasks_total = 7
+tasks_done = 7
+gate = "G11"
+depends_on = [63]
+
+[sprint.65]
+title = "Real-Time HRM & WebSocket Integration"
+status = "done"
+started = "2026-02-28"
+completed = "2026-02-28"
+tasks_total = 8
+tasks_done = 8
+gate = "G12"
+depends_on = [63, 64]
+
+[sprint.66]
+title = "Execution Safety & Kill-Switch Enforcement"
+status = "done"
+started = "2026-02-28"
+completed = "2026-02-28"
+tasks_total = 7
+tasks_done = 7
+gate = "G13"
+depends_on = [63, 64, 65]
+
+[sprint.67]
+title = "Market Data & Analytics De-Mock"
+status = "done"
+started = "2026-02-28"
+completed = "2026-03-01"
+tasks_total = 9
+tasks_done = 9
+gate = "G14"
+depends_on = [64]
+
+[sprint.68]
+title = "Data Source Service Completion"
+status = "done"
+started = "2026-03-01"
+completed = "2026-03-01"
+tasks_total = 7
+tasks_done = 7
+gate = "G15"
+depends_on = [64, 67]
+
+[sprint.69]
+title = "Treasury & Custody Production Path"
+status = "done"
+started = "2026-03-01"
+completed = "2026-03-01"
+tasks_total = 7
+tasks_done = 7
+gate = "G16"
+depends_on = [63, 64, 68]
+
+[sprint.70]
+title = "Frontend De-Mock & Enterprise UX Consistency"
+status = "done"
+started = "2026-03-01"
+completed = "2026-03-01"
+tasks_total = 8
+tasks_done = 8
+gate = "G17"
+depends_on = [63, 65, 67]
+
+[sprint.71]
+title = "End-to-End, Performance & Resilience QA"
+status = "done"
+started = "2026-03-01"
+completed = "2026-03-01"
+tasks_total = 8
+tasks_done = 8
+gate = "G18"
+depends_on = [65, 66, 67, 68, 69, 70]
+
+[sprint.72]
+title = "Release Governance & Controlled Go-Live"
+status = "done"
+started = "2026-03-01"
+completed = "2026-03-01"
+tasks_total = 6
+tasks_done = 6
+gate = "G19"
+depends_on = [71]
