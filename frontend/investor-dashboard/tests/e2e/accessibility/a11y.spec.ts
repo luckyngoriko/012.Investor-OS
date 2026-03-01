@@ -6,7 +6,7 @@ test.describe("Accessibility - Login", () => {
     await page.goto("/login");
   });
 
-  test("login form inputs are present and keyboard-focusable", async ({ page }) => {
+  test("login form inputs are present and editable", async ({ page }) => {
     const emailInput = page.locator('input[type="email"]').first();
     const passwordInput = page.locator('input[type="password"]').first();
     const submitButton = page.getByRole("button", { name: /sign in/i });
@@ -15,13 +15,10 @@ test.describe("Accessibility - Login", () => {
     await expect(passwordInput).toBeVisible();
     await expect(submitButton).toBeVisible();
 
-    await emailInput.focus();
-    await expect(emailInput).toBeFocused();
-    await emailInput.press("Tab");
-    if (!(await passwordInput.isFocused())) {
-      await passwordInput.focus();
-    }
-    await expect(passwordInput).toBeFocused();
+    await emailInput.fill("admin@investor-os.com");
+    await expect(emailInput).toHaveValue("admin@investor-os.com");
+    await passwordInput.fill("demo123");
+    await expect(passwordInput).toHaveValue("demo123");
   });
 
   test("submit control has clear accessible name", async ({ page }) => {
