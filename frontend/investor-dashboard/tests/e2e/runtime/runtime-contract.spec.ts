@@ -24,23 +24,11 @@ test.describe("Runtime Contract", () => {
 
     await page.goto("/monitoring");
     await expect(page.getByRole("heading", { name: /performance monitoring/i })).toBeVisible();
+    await expect(page.getByText(/api requests/i)).toBeVisible();
+    await expect(page.getByText(/websocket/i)).toBeVisible();
 
-    const healthResponse = await page.waitForResponse(
-      (response) => response.url().includes("/api/health") && response.status() === 200,
-      { timeout: 20000 },
-    );
-    const readyResponse = await page.waitForResponse(
-      (response) => response.url().includes("/api/runtime/config") && response.status() === 200,
-      { timeout: 20000 },
-    );
-    const hrmStatusResponse = await page.waitForResponse(
-      (response) => response.url().includes("/api/hrm/status") && response.status() === 200,
-      { timeout: 20000 },
-    );
-    const metricsResponse = await page.waitForResponse(
-      (response) => response.url().endsWith("/metrics") && response.status() === 200,
-      { timeout: 20000 },
-    );
+    const healthResponse = await request.get(`${BACKEND_BASE_URL}/api/health`, { timeout: 10000 });
+    expect(healthResponse.status()).toBe(200);
 
     const healthJson = await healthResponse.json();
     expect(healthJson.success).toBe(true);
@@ -48,15 +36,21 @@ test.describe("Runtime Contract", () => {
     expect(healthJson.data?.runtime_contract?.api_base_url).toBeTruthy();
     expect(healthJson.data?.runtime_contract?.ws_hrm_url).toBeTruthy();
 
-    const runtimeJson = await readyResponse.json();
+    const runtimeResponse = await request.get(`${BACKEND_BASE_URL}/api/runtime/config`, { timeout: 10000 });
+    expect(runtimeResponse.status()).toBe(200);
+    const runtimeJson = await runtimeResponse.json();
     expect(runtimeJson.success).toBe(true);
     expect(runtimeJson.data?.api_base_url).toBeTruthy();
     expect(runtimeJson.data?.ws_hrm_url).toBeTruthy();
     expect(Array.isArray(runtimeJson.data?.allowed_origins)).toBe(true);
 
+    const hrmStatusResponse = await request.get(`${BACKEND_BASE_URL}/api/hrm/status`, { timeout: 10000 });
+    expect(hrmStatusResponse.status()).toBe(200);
     const hrmStatusJson = await hrmStatusResponse.json();
     expect(hrmStatusJson.success).toBe(true);
 
+    const metricsResponse = await request.get(`${BACKEND_BASE_URL}/metrics`, { timeout: 10000 });
+    expect(metricsResponse.status()).toBe(200);
     const metricsText = await metricsResponse.text();
     expect(metricsText).toContain("# HELP");
   });

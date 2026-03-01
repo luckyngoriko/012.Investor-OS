@@ -159,10 +159,10 @@ depends_on = [76]
 
 [sprint.78]
 title = "Post-Certification Reliability Guardrails & Drift Prevention"
-status = "in_progress"
+status = "done"
 started = "2026-03-01"
-completed = ""
+completed = "2026-03-01"
 tasks_total = 8
-tasks_done = 3
+tasks_done = 8
 gate = "G25"
 depends_on = [77]

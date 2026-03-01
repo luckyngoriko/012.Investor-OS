@@ -2,9 +2,9 @@
 
 ## Sprint Result
 
-- Status: in_progress
-- Gate: pending (G25)
-- Planned scope completion: 38%
+- Status: done
+- Gate: passed (G25)
+- Planned scope completion: 100%
 
 ## Delivered
 
@@ -34,30 +34,31 @@
 
 ## Not Delivered / Deferred
 
-1. G25 close-out evidence pending final Sprint 78.4 consolidation.
+1. No deferred items within Sprint 78 scope.
 
 ## Verification Summary
 
 - `cargo test --test sprint78_migration_guardrails_test -- --nocapture`: pass (5/5).
 - `DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55432/postgres cargo test --test sprint78_migration_guardrails_test -- --nocapture`: pass (5/5), including dynamic fresh-DB migration run.
-- `cd frontend/investor-dashboard && npx playwright test tests/e2e/runtime/runtime-contract.spec.ts --project=chromium`: pass (spec skipped when backend unavailable).
 - `REQUIRE_BACKEND=1 BACKEND_BASE_URL=http://127.0.0.1:8080 ./scripts/runtime_contract_smoke.sh`: pass for backend runtime contract checks.
+- `cd frontend/investor-dashboard && BACKEND_BASE_URL=http://127.0.0.1:8080 npx playwright test tests/e2e/auth/login.spec.ts tests/e2e/dashboard/dashboard.spec.ts tests/e2e/runtime/runtime-contract.spec.ts --project=chromium`: pass (8/8).
+- `./scripts/verify_pm_sync.sh`: pass.
+- `./scripts/verify_pm_boundaries.sh`: pass (`No PM boundary candidates to validate.`).
 
 ## Program Progress
 
 - Total sprints in program: 16
-- Completed sprints: 15
-- Overall completion: 93%
-- Remaining to 100%: 7%
+- Completed sprints: 16
+- Overall completion: 100%
+- Remaining to 100%: 0%
 
 ## Open Risks
 
-1. Cross-environment migration compatibility can regress without continuous guardrails.
-2. Seed/schema drift may reoccur if table definitions change without synchronized seed updates.
-3. Frontend runtime assumptions may diverge from backend contract under future changes.
+1. No release-blocking open risks remain for G25.
+2. Residual drift risk is controlled via new CI/runtime guardrails and should be monitored in subsequent maintenance cycles.
 
 ## Next Sprint Decision
 
-- Next sprint: 78
-- Activation status: in_progress
+- Next sprint: none (program scope 63-78 complete)
+- Activation status: closed
 - Preconditions met: yes

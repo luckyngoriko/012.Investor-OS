@@ -3,7 +3,7 @@
 ## Metadata
 
 - Sprint ID: 78
-- Status: in_progress
+- Status: done
 - Gate: G25
 - Owner: Platform + Backend + QA
 - Dependencies: 77

@@ -10,12 +10,12 @@ program:
     total_sprints: 16
 
 progress:
-  completed_sprints: 15
-  in_progress_sprints: 1
+  completed_sprints: 16
+  in_progress_sprints: 0
   queued_sprints: 0
   blocked_sprints: 0
-  overall_completion_percent: 93
-  remaining_percent: 7
+  overall_completion_percent: 100
+  remaining_percent: 0
 
 active:
   sprint_id: 78
@@ -115,7 +115,7 @@ sprints:
     report: sprints/reports/SPRINT-077.md
   - id: 78
     title: Post-Certification Reliability Guardrails & Drift Prevention
-    status: in_progress
+    status: done
     gate: G25
     spec: sprints/specs/SPRINT-078.md
     report: sprints/reports/SPRINT-078.md

@@ -3,25 +3,25 @@
 
 ## Active Sprint: 78 - Post-Certification Reliability Guardrails & Drift Prevention
 
-### Status: IN PROGRESS
-### Gate: G25 (PENDING)
-### Program Completion: 93%
-### Remaining to 100%: 7%
+### Status: DONE
+### Gate: G25 (PASSED)
+### Program Completion: 100%
+### Remaining to 100%: 0%
 
 ## Sprint 78 Focus (In Progress)
 
 - [x] 78.1: Promote migration portability checks into repeatable CI-safe validation path
 - [x] 78.2: Add regression guardrails for seed-data schema drift and conflict handling
 - [x] 78.3: Stabilize cross-environment health/runtime contract assertions
-- [ ] 78.4: Consolidate post-certification reliability evidence for G25 close-out
+- [x] 78.4: Consolidate post-certification reliability evidence for G25 close-out
 
 ## Program State
 
 - [x] Enterprise Recovery Program gates G10-G24 closed
 - [x] Sprint 77 program-closure baseline completed
-- [ ] Sprint 78 guardrail extension gate G25 pending
+- [x] Sprint 78 guardrail extension gate G25 passed
 
 ## Transition Notes
 
 - [x] Program closure achieved in Sprint 77
-- [ ] Post-closure reliability extension activated as Sprint 78
+- [x] Post-closure reliability extension completed as Sprint 78
