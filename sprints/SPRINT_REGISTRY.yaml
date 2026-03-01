@@ -6,11 +6,11 @@ program:
     registry: sprints/SPRINT_REGISTRY.yaml
   scope:
     first_sprint: 63
-    last_sprint: 82
-    total_sprints: 20
+    last_sprint: 83
+    total_sprints: 21
 
 progress:
-  completed_sprints: 20
+  completed_sprints: 21
   in_progress_sprints: 0
   queued_sprints: 0
   blocked_sprints: 0
@@ -18,9 +18,9 @@ progress:
   remaining_percent: 0
 
 active:
-  sprint_id: 82
-  title: Security Backlog Burn-down & PR Signal Hardening
-  gate: G29
+  sprint_id: 83
+  title: Always-On Security Audit Gate & Advisory Remediation Track
+  gate: G30
 
 sprints:
   - id: 63
@@ -143,3 +143,9 @@ sprints:
     gate: G29
     spec: sprints/specs/SPRINT-082.md
     report: sprints/reports/SPRINT-082.md
+  - id: 83
+    title: Always-On Security Audit Gate & Advisory Remediation Track
+    status: done
+    gate: G30
+    spec: sprints/specs/SPRINT-083.md
+    report: sprints/reports/SPRINT-083.md
