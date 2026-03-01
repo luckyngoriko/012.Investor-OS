@@ -1,0 +1,28 @@
+release:
+  tag: v3.2-g28-closed
+  date: "2026-03-01"
+  gate: G28
+  status: closed
+  generated_at: "2026-03-01T15:41:23Z"
+
+commits:
+  - d421662
+  - 8492ab5
+  - 1451cb1
+  - 9217b49
+  - 7fc383e
+  - 81d7418
+  - aba80da
+  - 1d94891
+  - 2d25d5a
+  - 18023b5
+  - 41799b8
+  - e846e11
+  - 5e226f7
+  - 26a4a4f
+
+evidence:
+  - sprints/reports/releases/v3.2-g28-closed/RELEASE_NOTES.md
+  - sprints/reports/releases/v3.2-g28-closed/EVIDENCE_BUNDLE.md
+  - sprints/reports/SPRINT-081.md
+  - sprints/reports/PROGRESS_SNAPSHOT.md
