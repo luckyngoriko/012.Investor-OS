@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [v3.2-g28-closed] - 2026-03-01
+
+### Added
+
+- Formal release evidence bundle for gate `G28`:
+  - `sprints/reports/releases/v3.2-g28-closed/`
+
+### Changed
+
+- Warning-budget governance now enforces both chart and non-chart browser warnings in CI:
+  - `scripts/warning_budget_report.sh`
+  - `.github/workflows/full-e2e-matrix.yml`
+- Root layout now opts in to smooth-scroll metadata to prevent Next.js runtime warning noise:
+  - `frontend/investor-dashboard/app/layout.tsx`
+- Chart container sizing now uses `ResizeObserver` entry dimensions to avoid Firefox forced-layout warnings during early page load:
+  - `frontend/investor-dashboard/components/ui/safe-responsive-container.tsx`
+
 ## [v3.1-g26-closed] - 2026-03-01
 
 ### Added
