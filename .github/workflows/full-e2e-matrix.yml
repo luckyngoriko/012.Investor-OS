@@ -1,0 +1,106 @@
+name: Full E2E Matrix
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: full-e2e-matrix-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  e2e-matrix:
+    name: E2E - ${{ matrix.project }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - chromium
+          - firefox
+          - webkit
+          - mobile-chrome
+          - mobile-safari
+          - tablet-chrome
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/investor-dashboard/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd frontend/investor-dashboard && npm ci
+
+      - name: Install Playwright browsers
+        run: cd frontend/investor-dashboard && npx playwright install --with-deps chromium firefox webkit
+
+      - name: Run Playwright tests
+        run: cd frontend/investor-dashboard && npx playwright test --project=${{ matrix.project }}
+
+      - name: Upload Playwright evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-evidence-${{ matrix.project }}
+          path: |
+            frontend/investor-dashboard/playwright-report
+            frontend/investor-dashboard/test-results
+            frontend/investor-dashboard/test-results.json
+          retention-days: 14
+
+  governance-summary:
+    name: Governance Summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [e2e-matrix]
+    steps:
+      - name: Download matrix artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: playwright-evidence-*
+          merge-multiple: false
+
+      - name: Build governance summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p governance
+          {
+            echo "# Full E2E Matrix Governance Summary"
+            echo
+            echo "- Workflow run: $GITHUB_RUN_ID"
+            echo "- Trigger: $GITHUB_EVENT_NAME"
+            echo "- Commit: $GITHUB_SHA"
+            echo
+            echo "## Collected Artifacts"
+            if compgen -G "artifacts/*" > /dev/null; then
+              for dir in artifacts/*; do
+                name="$(basename "$dir")"
+                echo "- $name"
+              done
+            else
+              echo "- No artifacts found."
+            fi
+          } | tee governance/FULL_E2E_MATRIX_SUMMARY.md
+          cat governance/FULL_E2E_MATRIX_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload governance summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-e2e-matrix-governance-summary
+          path: governance/FULL_E2E_MATRIX_SUMMARY.md
+          retention-days: 14
+

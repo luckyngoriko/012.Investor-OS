@@ -10,7 +10,7 @@
 
 ## Sprint 79 Focus (In Progress)
 
-- [ ] 79.1: Expand automated verification from smoke-only to scheduled multi-browser matrix
+- [x] 79.1: Expand automated verification from smoke-only to scheduled multi-browser matrix
 - [ ] 79.2: Add nightly strict runtime contract job with controlled backend startup
 - [ ] 79.3: Introduce flaky-test quarantine + triage evidence generation
 - [ ] 79.4: Automate release evidence bundle generation for future close-out tags
@@ -24,4 +24,4 @@
 ## Transition Notes
 
 - [x] Sprint 78 closed with release tag close-out package prepared
-- [ ] Sprint 79 activated for continuous reliability and CI hardening
+- [x] Sprint 79 activated for continuous reliability and CI hardening
