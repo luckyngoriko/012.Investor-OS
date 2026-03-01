@@ -9,6 +9,7 @@ use axum::{
     routing::{get, post, delete},
     Router, Json,
     extract::{State, Path},
+    http::StatusCode,
 };
 use serde_json::json;
 use chrono::Utc;
@@ -26,6 +27,14 @@ struct AppState {
     version: String,
     request_count: Arc<Mutex<u64>>,
     broker: Arc<Mutex<PaperBroker>>,
+    runtime_contract: RuntimeContract,
+}
+
+#[derive(Clone)]
+struct RuntimeContract {
+    api_base_url: String,
+    ws_hrm_url: String,
+    allowed_origins: Vec<String>,
 }
 
 #[tokio::main]
@@ -40,6 +49,34 @@ async fn main() {
     info!("🚀 Стартиране на Investor OS v3.0");
     info!("═══════════════════════════════════════════════════════════════");
     
+    let bind_host = std::env::var("SERVER_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let bind_port = std::env::var("SERVER_PORT")
+        .ok()
+        .and_then(|value| value.parse::<u16>().ok())
+        .unwrap_or(8080);
+    let addr: SocketAddr = format!("{bind_host}:{bind_port}")
+        .parse()
+        .unwrap_or_else(|_| {
+            warn!(
+                "Invalid bind address from SERVER_HOST/SERVER_PORT, falling back to 127.0.0.1:8080"
+            );
+            SocketAddr::from(([127, 0, 0, 1], 8080))
+        });
+
+    let runtime_contract = RuntimeContract {
+        api_base_url: std::env::var("PUBLIC_API_BASE_URL")
+            .unwrap_or_else(|_| format!("http://127.0.0.1:{bind_port}/api")),
+        ws_hrm_url: std::env::var("PUBLIC_WS_HRM_URL")
+            .unwrap_or_else(|_| format!("ws://127.0.0.1:{bind_port}/ws/hrm")),
+        allowed_origins: std::env::var("ALLOWED_ORIGINS")
+            .unwrap_or_else(|_| "http://127.0.0.1:3000,http://localhost:3000".to_string())
+            .split(',')
+            .map(str::trim)
+            .filter(|origin| !origin.is_empty())
+            .map(ToString::to_string)
+            .collect(),
+    };
+
     // Създаване на paper broker
     let broker_config = BrokerConfig {
         broker_type: BrokerType::InteractiveBrokers,
@@ -60,12 +97,12 @@ async fn main() {
         version: "3.0.0".to_string(),
         request_count: Arc::new(Mutex::new(0)),
         broker: Arc::new(Mutex::new(broker)),
+        runtime_contract,
     };
     
     // Създаване на router
     let app = create_router(state);
     
-    let addr = SocketAddr::from(([127, 0, 0, 1], 5001));
     info!("📡 API сървър стартира на: http://{}", addr);
     info!("");
     info!("📖 Документация:     http://{}/api/docs", addr);
@@ -90,6 +127,10 @@ fn create_router(state: AppState) -> Router {
         // Основни endpoints
         .route("/", get(root_handler))
         .route("/api/health", get(health_handler))
+        .route("/api/ready", get(readiness_handler))
+        .route("/api/runtime/config", get(runtime_config_handler))
+        .route("/api/hrm/status", get(hrm_status_handler))
+        .route("/metrics", get(metrics_prometheus_handler))
         .route("/api/docs", get(docs_handler))
         
         // Security endpoints
@@ -174,20 +215,66 @@ async fn health_handler(State(state): State<AppState>) -> Json<serde_json::Value
     let count = *state.request_count.lock().await;
     
     Json(json!({
-        "status": "healthy",
-        "version": state.version,
-        "uptime_seconds": uptime.num_seconds(),
-        "total_requests": count,
-        "timestamp": Utc::now().to_rfc3339(),
-        "environment": "development",
-        "checks": {
-            "api": "pass",
-            "database": "pass (simulated)",
-            "redis": "pass (simulated)",
-            "ml_engine": "pass",
-            "risk_engine": "pass"
+        "success": true,
+        "data": {
+            "status": "healthy",
+            "version": state.version,
+            "uptime_seconds": uptime.num_seconds(),
+            "total_requests": count,
+            "timestamp": Utc::now().to_rfc3339(),
+            "environment": "development",
+            "checks": {
+                "api": "pass",
+                "database": "pass (simulated)",
+                "redis": "pass (simulated)",
+                "ml_engine": "pass",
+                "risk_engine": "pass"
+            },
+            "runtime_contract": {
+                "api_base_url": state.runtime_contract.api_base_url.clone(),
+                "ws_hrm_url": state.runtime_contract.ws_hrm_url.clone(),
+                "allowed_origins": state.runtime_contract.allowed_origins.clone()
+            }
         }
     }))
+}
+
+async fn readiness_handler() -> Json<serde_json::Value> {
+    Json(json!({
+        "success": true,
+        "data": {
+            "status": "ready"
+        }
+    }))
+}
+
+async fn runtime_config_handler(State(state): State<AppState>) -> Json<serde_json::Value> {
+    Json(json!({
+        "success": true,
+        "data": {
+            "api_base_url": state.runtime_contract.api_base_url.clone(),
+            "ws_hrm_url": state.runtime_contract.ws_hrm_url.clone(),
+            "allowed_origins": state.runtime_contract.allowed_origins.clone()
+        }
+    }))
+}
+
+async fn hrm_status_handler() -> Json<serde_json::Value> {
+    Json(json!({
+        "success": true,
+        "data": {
+            "status": "ready",
+            "model": "hrm-demo",
+            "mode": "paper"
+        }
+    }))
+}
+
+async fn metrics_prometheus_handler() -> (StatusCode, String) {
+    (
+        StatusCode::OK,
+        "# HELP investor_os_up Investor OS process health\n# TYPE investor_os_up gauge\ninvestor_os_up 1\n".to_string(),
+    )
 }
 
 async fn docs_handler() -> Json<serde_json::Value> {

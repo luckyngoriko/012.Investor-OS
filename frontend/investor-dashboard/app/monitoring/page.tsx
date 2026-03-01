@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +12,46 @@ import { Activity, BarChart3, Globe, Zap, Server } from "lucide-react";
  */
 export default function MonitoringPage() {
   const [activeTab, setActiveTab] = useState("grafana");
+  const [monitoringWarning, setMonitoringWarning] = useState<string | null>(null);
   
   // Grafana embed URL (configured for anonymous access)
   const grafanaUrl = process.env.NEXT_PUBLIC_GRAFANA_URL || "http://localhost:3000";
   const dashboardUid = "investor-os-hrm";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadHealth = async () => {
+      try {
+        const response = await fetch("/api/health", { cache: "no-store" });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null);
+          const message =
+            typeof payload?.error === "string" && payload.error.trim().length > 0
+              ? payload.error
+              : "Failed to load monitoring data";
+          if (!cancelled) {
+            setMonitoringWarning(message);
+          }
+          return;
+        }
+
+        if (!cancelled) {
+          setMonitoringWarning(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setMonitoringWarning("Failed to load monitoring data");
+        }
+      }
+    };
+
+    void loadHealth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -35,6 +71,14 @@ export default function MonitoringPage() {
           <Badge variant="secondary">Sprint 46</Badge>
         </div>
       </div>
+
+      {monitoringWarning && (
+        <Card className="border-amber-500/40 bg-amber-500/10">
+          <CardContent className="py-3">
+            <p className="text-sm font-medium text-amber-200">{monitoringWarning}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

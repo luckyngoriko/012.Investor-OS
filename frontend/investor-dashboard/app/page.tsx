@@ -44,7 +44,6 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-import Sidebar from "@/components/sidebar";
 import { HelpProvider, HelpPanel } from "@/components/help-panel";
 import { FeatureCard, QuickActionsPanel, WhatYouCanDo, SystemStatusOverview } from "@/components/features";
 import { FeatureTour, TourTriggerButton, FirstTimeWelcome } from "@/components/feature-tour";
@@ -320,8 +319,7 @@ export default function DashboardPage() {
 
   return (
     <HelpProvider>
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0f1c] via-[#111827] to-[#0a0f1c] flex">
-      <Sidebar />
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0f1c] via-[#111827] to-[#0a0f1c]">
       
       {/* First Time Welcome Modal */}
       <FirstTimeWelcome />
