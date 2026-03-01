@@ -56,6 +56,6 @@ test.describe("Trading Flow - Positions and Risk", () => {
     await page.goto("/risk");
 
     await expect(page.getByRole("heading", { name: /risk management/i })).toBeVisible();
-    await expect(page.getByText(/control checks/i)).toBeVisible();
+    await expect(page.getByText("Control Checks", { exact: true })).toBeVisible();
   });
 });

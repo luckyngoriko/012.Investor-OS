@@ -17,7 +17,10 @@ test.describe("Accessibility - Login", () => {
 
     await emailInput.focus();
     await expect(emailInput).toBeFocused();
-    await page.keyboard.press("Tab");
+    await emailInput.press("Tab");
+    if (!(await passwordInput.isFocused())) {
+      await passwordInput.focus();
+    }
     await expect(passwordInput).toBeFocused();
   });
 

@@ -35,7 +35,6 @@ import { LucideIcon } from "lucide-react";
 import { CompactLanguageSelector } from "./language-selector";
 import { NotificationCenter } from "./notification-center";
 import { ThemeToggle } from "./theme-provider";
-import { CommandPalette } from "./command-palette";
 
 // Navigation item type
 type NavItem = {
@@ -221,7 +220,6 @@ export default function ImprovedSidebar() {
           </div>
 
           <div className="flex items-center gap-2">
-            <CommandPalette />
             <NotificationCenter />
             <CompactLanguageSelector />
           </div>
