@@ -15,22 +15,13 @@ import {
   Activity,
   Zap,
   AlertCircle,
-  User,
-  UserCog,
-  Crown,
 } from "lucide-react";
-import { useAuth, type UserRole } from "@/lib/auth-context";
-
-const DEMO_ACCOUNTS = [
-  { email: "admin@investor-os.com", role: "admin" as UserRole, label: "Administrator", icon: Crown, color: "purple" },
-  { email: "trader@investor-os.com", role: "trader" as UserRole, label: "Trader", icon: UserCog, color: "blue" },
-  { email: "viewer@investor-os.com", role: "viewer" as UserRole, label: "Viewer", icon: User, color: "gray" },
-];
+import { useAuth } from "@/lib/auth-context";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [email, setEmail] = useState("admin@investor-os.com");
+  const [email, setEmail] = useState("trader@investor-os.com");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,17 +36,11 @@ export default function LoginPage() {
     try {
       await login(email, password);
       router.push("/");
-    } catch (err) {
-      setError("Invalid credentials. Try password: demo123");
+    } catch {
+      setError("Invalid credentials. Please verify your email and password.");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const selectDemoAccount = (accountEmail: string) => {
-    setEmail(accountEmail);
-    setPassword("demo123");
-    setError(null);
   };
 
   const features = [
@@ -166,7 +151,7 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </motion.div>
-              <p className="text-xs text-gray-500">Парола по подразбиране: demo123</p>
+              <p className="text-xs text-gray-500">Използвайте паролата, конфигурирана за вашия акаунт.</p>
             </div>
 
             {/* Remember & Forgot */}
@@ -210,43 +195,6 @@ export default function LoginPage() {
               <p className="text-sm text-rose-200">{error}</p>
             </motion.div>
           )}
-
-          {/* Demo Accounts */}
-          <div className="mt-8">
-            <p className="text-sm text-gray-500 mb-3">Quick login with demo account:</p>
-            <div className="space-y-2">
-              {DEMO_ACCOUNTS.map((account) => {
-                const Icon = account.icon;
-                const isSelected = email === account.email;
-                return (
-                  <button
-                    key={account.email}
-                    type="button"
-                    onClick={() => selectDemoAccount(account.email)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all
-                      ${isSelected 
-                        ? `bg-${account.color}-500/10 border-${account.color}-500/50` 
-                        : "bg-gray-800/30 border-gray-700/50 hover:border-gray-600"}`}
-                  >
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center
-                      ${isSelected ? `bg-${account.color}-500/20` : "bg-gray-700"}`}>
-                      <Icon className={`w-5 h-5 ${isSelected ? `text-${account.color}-400` : "text-gray-400"}`} />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className={`font-medium ${isSelected ? "text-white" : "text-gray-300"}`}>
-                        {account.label}
-                      </p>
-                      <p className="text-xs text-gray-500">{account.email}</p>
-                    </div>
-                    {isSelected && (
-                      <div className={`w-2 h-2 rounded-full bg-${account.color}-400`} />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-xs text-gray-600 mt-2 text-center">Password for all: demo123</p>
-          </div>
         </motion.div>
       </div>
 

@@ -1,6 +1,6 @@
 import type { APIRequestContext } from "@playwright/test";
 import { expect, test } from "../fixtures/warning-budget";
-import { loginAsDemo } from "../utils/auth";
+import { loginAsUser } from "../utils/auth";
 
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL ?? "http://127.0.0.1:8080";
 
@@ -21,7 +21,7 @@ test.describe("Runtime Contract", () => {
       `Backend runtime contract unavailable at ${BACKEND_BASE_URL} (set BACKEND_BASE_URL to enable this assertion)`,
     );
 
-    await loginAsDemo(page, "trader");
+    await loginAsUser(page, "trader");
 
     await page.goto("/monitoring");
     await expect(page.getByRole("heading", { name: /performance monitoring/i })).toBeVisible();

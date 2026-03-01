@@ -1,5 +1,7 @@
 import { expect, test } from "../fixtures/warning-budget";
-import { loginAsDemo } from "../utils/auth";
+import { loginAsUser } from "../utils/auth";
+
+const ADMIN_PASSWORD = process.env.E2E_AUTH_PASSWORD_ADMIN ?? "Admin#2026!";
 
 test.describe("Accessibility - Login", () => {
   test.beforeEach(async ({ page }) => {
@@ -17,8 +19,8 @@ test.describe("Accessibility - Login", () => {
 
     await emailInput.fill("admin@investor-os.com");
     await expect(emailInput).toHaveValue("admin@investor-os.com");
-    await passwordInput.fill("demo123");
-    await expect(passwordInput).toHaveValue("demo123");
+    await passwordInput.fill(ADMIN_PASSWORD);
+    await expect(passwordInput).toHaveValue(ADMIN_PASSWORD);
   });
 
   test("submit control has clear accessible name", async ({ page }) => {
@@ -28,7 +30,7 @@ test.describe("Accessibility - Login", () => {
 
 test.describe("Accessibility - Dashboard", () => {
   test.beforeEach(async ({ page }) => {
-    await loginAsDemo(page, "trader");
+    await loginAsUser(page, "trader");
   });
 
   test("main heading exists exactly once", async ({ page }) => {

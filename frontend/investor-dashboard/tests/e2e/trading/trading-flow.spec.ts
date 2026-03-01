@@ -1,9 +1,9 @@
 import { expect, test } from "../fixtures/warning-budget";
-import { loginAsDemo } from "../utils/auth";
+import { loginAsUser } from "../utils/auth";
 
 test.describe("Trading Flow - Proposals", () => {
   test.beforeEach(async ({ page }) => {
-    await loginAsDemo(page, "trader");
+    await loginAsUser(page, "trader");
   });
 
   test("proposals page is reachable and shows tabs", async ({ page }) => {
@@ -41,7 +41,7 @@ test.describe("Trading Flow - Proposals", () => {
 
 test.describe("Trading Flow - Positions and Risk", () => {
   test.beforeEach(async ({ page }) => {
-    await loginAsDemo(page, "trader");
+    await loginAsUser(page, "trader");
   });
 
   test("positions page shows portfolio table", async ({ page }) => {

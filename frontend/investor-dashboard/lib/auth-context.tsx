@@ -1,17 +1,17 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  fetchCurrentUser,
+  loginWithPassword,
+  logoutCurrentSession,
+  refreshAuthSession,
+  type AuthUser as User,
+  type UserRole,
+} from "@/lib/auth-api";
 
-export type UserRole = "admin" | "trader" | "viewer";
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  avatar?: string;
-  permissions: string[];
-}
+export type { UserRole };
+export type { User };
 
 interface AuthContextType {
   user: User | null;
@@ -25,89 +25,110 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demo
-const MOCK_USERS: Record<string, User> = {
-  "admin@investor-os.com": {
-    id: "1",
-    email: "admin@investor-os.com",
-    name: "Admin User",
-    role: "admin",
-    avatar: "AU",
-    permissions: ["*"], // All permissions
-  },
-  "trader@investor-os.com": {
-    id: "2",
-    email: "trader@investor-os.com",
-    name: "John Trader",
-    role: "trader",
-    avatar: "JT",
-    permissions: [
-      "dashboard.read",
-      "portfolio.read",
-      "portfolio.trade",
-      "positions.read",
-      "proposals.read",
-      "proposals.execute",
-      "risk.read",
-      "backtest.read",
-      "backtest.run",
-      "journal.read",
-      "journal.write",
-      "settings.read",
-      "settings.update",
-    ],
-  },
-  "viewer@investor-os.com": {
-    id: "3",
-    email: "viewer@investor-os.com",
-    name: "View Only",
-    role: "viewer",
-    avatar: "VO",
-    permissions: [
-      "dashboard.read",
-      "portfolio.read",
-      "positions.read",
-      "proposals.read",
-      "risk.read",
-      "journal.read",
-    ],
-  },
-};
+const STORAGE_KEYS = {
+  user: "auth.user",
+  accessToken: "auth.accessToken",
+  refreshToken: "auth.refreshToken",
+} as const;
+const SESSION_COOKIE_NAME = "investor_os_session";
+
+function setSessionCookie() {
+  document.cookie = `${SESSION_COOKIE_NAME}=1; Path=/; Max-Age=86400; SameSite=Lax`;
+}
+
+function clearSessionCookie() {
+  document.cookie = `${SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
+
+function persistSession(user: User, accessToken: string, refreshToken: string) {
+  localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
+  localStorage.setItem(STORAGE_KEYS.accessToken, accessToken);
+  localStorage.setItem(STORAGE_KEYS.refreshToken, refreshToken);
+  setSessionCookie();
+}
+
+function clearSessionStorage() {
+  localStorage.removeItem(STORAGE_KEYS.user);
+  localStorage.removeItem(STORAGE_KEYS.accessToken);
+  localStorage.removeItem(STORAGE_KEYS.refreshToken);
+  clearSessionCookie();
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for stored session on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem("user");
+    let mounted = true;
+
+    const restoreSession = async () => {
+      const accessToken = localStorage.getItem(STORAGE_KEYS.accessToken);
+      const refreshToken = localStorage.getItem(STORAGE_KEYS.refreshToken);
+      const storedUser = localStorage.getItem(STORAGE_KEYS.user);
+
+      if (!accessToken || !refreshToken) {
+        clearSessionStorage();
+        if (mounted) {
+          setUser(null);
+          setIsLoading(false);
+        }
+        return;
       }
-    }
-    setIsLoading(false);
+
+      try {
+        const profile = await fetchCurrentUser(accessToken);
+        persistSession(profile, accessToken, refreshToken);
+        if (mounted) {
+          setUser(profile);
+        }
+      } catch {
+        try {
+          const refreshed = await refreshAuthSession(refreshToken);
+          const profile = await fetchCurrentUser(refreshed.access_token);
+          persistSession(profile, refreshed.access_token, refreshed.refresh_token);
+          if (mounted) {
+            setUser(profile);
+          }
+        } catch {
+          if (storedUser) {
+            try {
+              JSON.parse(storedUser);
+            } catch {
+              // Ignore malformed cached user payload.
+            }
+          }
+          clearSessionStorage();
+          if (mounted) {
+            setUser(null);
+          }
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void restoreSession();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const mockUser = MOCK_USERS[email.toLowerCase()];
-    
-    if (!mockUser || password !== "demo123") {
-      throw new Error("Invalid credentials");
-    }
-
-    setUser(mockUser);
-    localStorage.setItem("user", JSON.stringify(mockUser));
+    const session = await loginWithPassword(email, password);
+    persistSession(session.user, session.access_token, session.refresh_token);
+    setUser(session.user);
   };
 
   const logout = () => {
+    const accessToken = localStorage.getItem(STORAGE_KEYS.accessToken);
+    const refreshToken = localStorage.getItem(STORAGE_KEYS.refreshToken);
+    void logoutCurrentSession(accessToken, refreshToken);
+
     setUser(null);
-    localStorage.removeItem("user");
+    clearSessionStorage();
   };
 
   const hasRole = (role: UserRole | UserRole[]): boolean => {

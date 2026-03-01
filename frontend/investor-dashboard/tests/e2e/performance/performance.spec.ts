@@ -1,5 +1,5 @@
 import { expect, test } from "../fixtures/warning-budget";
-import { loginAsDemo } from "../utils/auth";
+import { loginAsUser } from "../utils/auth";
 
 test.describe("Performance - Baseline", () => {
   test("login page loads under baseline threshold", async ({ page }) => {
@@ -13,7 +13,7 @@ test.describe("Performance - Baseline", () => {
 
   test("post-login dashboard transition stays under threshold", async ({ page }) => {
     const start = Date.now();
-    await loginAsDemo(page, "trader");
+    await loginAsUser(page, "trader");
     await page.waitForLoadState("domcontentloaded");
     const transitionMs = Date.now() - start;
 
@@ -33,7 +33,7 @@ test.describe("Performance - Baseline", () => {
 
 test.describe("Performance - Interaction Latency", () => {
   test.beforeEach(async ({ page }) => {
-    await loginAsDemo(page, "trader");
+    await loginAsUser(page, "trader");
   });
 
   test("navigation to proposals stays responsive", async ({ page }) => {

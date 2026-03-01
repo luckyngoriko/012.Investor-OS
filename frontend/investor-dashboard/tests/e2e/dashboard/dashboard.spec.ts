@@ -1,9 +1,9 @@
 import { expect, test } from "../fixtures/warning-budget";
-import { loginAsDemo } from "../utils/auth";
+import { loginAsUser } from "../utils/auth";
 
 test.describe("Dashboard", () => {
   test.beforeEach(async ({ page }) => {
-    await loginAsDemo(page, "trader");
+    await loginAsUser(page, "trader");
   });
 
   test("renders core dashboard sections", async ({ page }) => {
@@ -30,7 +30,7 @@ test.describe("Dashboard", () => {
 test.describe("Dashboard - Responsive", () => {
   test("dashboard is usable on mobile viewport", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await loginAsDemo(page, "trader");
+    await loginAsUser(page, "trader");
 
     await expect(page.getByRole("heading", { name: /dashboard/i })).toBeVisible();
 

@@ -1,5 +1,5 @@
 import { expect, test } from "../fixtures/warning-budget";
-import { loginAsDemo } from "../utils/auth";
+import { loginAsUser } from "../utils/auth";
 
 test.describe("Resilience - Frontend Degradation", () => {
   test("dashboard stays usable when proposal API fails", async ({ page }) => {
@@ -11,14 +11,14 @@ test.describe("Resilience - Frontend Degradation", () => {
       });
     });
 
-    await loginAsDemo(page, "trader");
+    await loginAsUser(page, "trader");
 
     await expect(page.getByRole("heading", { name: /dashboard/i })).toBeVisible();
     await expect(page.getByText(/ai trade proposals/i)).toBeVisible();
   });
 
   test("monitoring page shows warning banner when health API degrades", async ({ page }) => {
-    await loginAsDemo(page, "trader");
+    await loginAsUser(page, "trader");
 
     await page.route("**/api/health", async (route) => {
       await route.fulfill({
@@ -34,7 +34,7 @@ test.describe("Resilience - Frontend Degradation", () => {
   });
 
   test("settings page surfaces API failures without crashing", async ({ page }) => {
-    await loginAsDemo(page, "trader");
+    await loginAsUser(page, "trader");
 
     await page.route("**/api/runtime/config", async (route) => {
       await route.fulfill({
