@@ -46,8 +46,75 @@ jobs:
       - name: Install Playwright browsers
         run: cd frontend/investor-dashboard && npx playwright install --with-deps chromium firefox webkit
 
-      - name: Run Playwright tests
-        run: cd frontend/investor-dashboard && npx playwright test --project=${{ matrix.project }}
+      - name: Run stable and quarantined suites
+        id: e2e_run
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd frontend/investor-dashboard
+
+          QUARANTINE_FILE="tests/e2e/flaky-quarantine.json"
+          if [[ ! -f "$QUARANTINE_FILE" ]]; then
+            echo "Missing quarantine manifest: $QUARANTINE_FILE"
+            exit 1
+          fi
+
+          mapfile -t all_specs < <(find tests/e2e -type f -name "*.spec.ts" | sort)
+          mapfile -t quarantine_specs < <(jq -r '.entries[]?.spec // empty' "$QUARANTINE_FILE")
+
+          declare -A quarantine_map=()
+          for spec in "${quarantine_specs[@]}"; do
+            quarantine_map["$spec"]=1
+          done
+
+          stable_specs=()
+          quarantined_specs=()
+          for spec in "${all_specs[@]}"; do
+            if [[ -n "${quarantine_map[$spec]:-}" ]]; then
+              quarantined_specs+=("$spec")
+            else
+              stable_specs+=("$spec")
+            fi
+          done
+
+          echo "stable_count=${#stable_specs[@]}" >> "$GITHUB_OUTPUT"
+          echo "quarantine_count=${#quarantined_specs[@]}" >> "$GITHUB_OUTPUT"
+
+          stable_exit=0
+          if (( ${#stable_specs[@]} > 0 )); then
+            set +e
+            npx playwright test --project=${{ matrix.project }} "${stable_specs[@]}"
+            stable_exit=$?
+            set -e
+            cp -f test-results.json "test-results-stable-${{ matrix.project }}.json" || true
+          fi
+
+          quarantine_exit=0
+          if (( ${#quarantined_specs[@]} > 0 )); then
+            set +e
+            npx playwright test --project=${{ matrix.project }} "${quarantined_specs[@]}"
+            quarantine_exit=$?
+            set -e
+            cp -f test-results.json "test-results-quarantine-${{ matrix.project }}.json" || true
+          fi
+
+          echo "stable_exit=${stable_exit}" >> "$GITHUB_OUTPUT"
+          echo "quarantine_exit=${quarantine_exit}" >> "$GITHUB_OUTPUT"
+          exit "${stable_exit}"
+
+      - name: Generate flaky triage evidence
+        if: always()
+        shell: bash
+        run: |
+          PROJECT_NAME="${{ matrix.project }}" \
+          STABLE_JSON="frontend/investor-dashboard/test-results-stable-${{ matrix.project }}.json" \
+          QUARANTINE_JSON="frontend/investor-dashboard/test-results-quarantine-${{ matrix.project }}.json" \
+          QUARANTINE_MANIFEST="frontend/investor-dashboard/tests/e2e/flaky-quarantine.json" \
+          STABLE_EXIT_CODE="${{ steps.e2e_run.outputs.stable_exit || '0' }}" \
+          QUARANTINE_EXIT_CODE="${{ steps.e2e_run.outputs.quarantine_exit || '0' }}" \
+          OUTPUT_MD="frontend/investor-dashboard/flaky-triage-${{ matrix.project }}.md" \
+          OUTPUT_JSON="frontend/investor-dashboard/flaky-triage-${{ matrix.project }}.json" \
+          ./scripts/flaky_triage_report.sh
 
       - name: Upload Playwright evidence
         if: always()
@@ -58,6 +125,11 @@ jobs:
             frontend/investor-dashboard/playwright-report
             frontend/investor-dashboard/test-results
             frontend/investor-dashboard/test-results.json
+            frontend/investor-dashboard/test-results-stable-${{ matrix.project }}.json
+            frontend/investor-dashboard/test-results-quarantine-${{ matrix.project }}.json
+            frontend/investor-dashboard/flaky-triage-${{ matrix.project }}.md
+            frontend/investor-dashboard/flaky-triage-${{ matrix.project }}.json
+            frontend/investor-dashboard/tests/e2e/flaky-quarantine.json
           retention-days: 14
 
   governance-summary:
@@ -94,6 +166,23 @@ jobs:
             else
               echo "- No artifacts found."
             fi
+            echo
+            echo "## Flaky Quarantine Signals"
+            triage_files="$(find artifacts -type f -name 'flaky-triage-*.json' | sort || true)"
+            if [[ -z "${triage_files}" ]]; then
+              echo "- No flaky triage artifacts found."
+            else
+              while IFS= read -r triage_file; do
+                [[ -z "$triage_file" ]] && continue
+                project="$(jq -r '.project // "unknown"' "$triage_file")"
+                verdict="$(jq -r '.verdict // "unknown"' "$triage_file")"
+                stable_unexpected="$(jq -r '.stats.stable.unexpected // 0' "$triage_file")"
+                stable_flaky="$(jq -r '.stats.stable.flaky // 0' "$triage_file")"
+                quarantine_unexpected="$(jq -r '.stats.quarantine.unexpected // 0' "$triage_file")"
+                quarantine_flaky="$(jq -r '.stats.quarantine.flaky // 0' "$triage_file")"
+                echo "- ${project}: verdict=${verdict}, stable(unexpected=${stable_unexpected}, flaky=${stable_flaky}), quarantine(unexpected=${quarantine_unexpected}, flaky=${quarantine_flaky})"
+              done <<< "$triage_files"
+            fi
           } | tee governance/FULL_E2E_MATRIX_SUMMARY.md
           cat governance/FULL_E2E_MATRIX_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
 
@@ -103,4 +192,3 @@ jobs:
           name: full-e2e-matrix-governance-summary
           path: governance/FULL_E2E_MATRIX_SUMMARY.md
           retention-days: 14
-

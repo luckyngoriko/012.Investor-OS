@@ -4,7 +4,7 @@
 
 - Status: in_progress
 - Gate: pending (G26)
-- Planned scope completion: 25%
+- Planned scope completion: 38%
 
 ## Delivered
 
@@ -21,15 +21,23 @@
    - schedule trigger (`30 3 * * *`) + manual dispatch
    - controlled backend lifecycle (`start -> readiness wait -> strict smoke -> teardown`)
    - nightly runtime logs uploaded as workflow artifact for governance evidence
+6. Implemented WP-79C flaky quarantine + triage evidence flow:
+   - quarantine manifest: `frontend/investor-dashboard/tests/e2e/flaky-quarantine.json`
+   - triage generator script: `scripts/flaky_triage_report.sh`
+   - matrix integration in `.github/workflows/full-e2e-matrix.yml`:
+     - split execution into stable (blocking) and quarantined (non-blocking) suites
+     - generated per-project flaky triage markdown/json artifacts
+     - governance summary now includes flaky quarantine signals across matrix projects
 
 ## Not Delivered / Deferred
 
-1. WP-79C through WP-79D are pending implementation.
+1. WP-79D is pending implementation.
 
 ## Verification Summary
 
 - `.github/workflows/full-e2e-matrix.yml` added and validated for policy alignment with artifact-based governance evidence.
 - `.github/workflows/nightly-runtime-contract.yml` added with strict runtime smoke execution path and deterministic teardown.
+- `scripts/flaky_triage_report.sh` validated against real Playwright JSON reporter output (sample run), producing markdown/json triage evidence.
 - Manual PM sync check: pass (`PM_SYNC_OK total=17 done=16 in_progress=1 completion=94% remaining=6%`).
 - `scripts/verify_pm_sync.sh` / `scripts/verify_pm_boundaries.sh` are not present in the current repository baseline, so equivalent PM sync validation was executed via inline governance check.
 
