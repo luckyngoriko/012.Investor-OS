@@ -8,34 +8,35 @@ Single source board aligned with:
 
 ## Program Snapshot
 
-- Program Scope: Sprint 63 to Sprint 81
-- Total Sprints: 19
+- Program Scope: Sprint 63 to Sprint 82
+- Total Sprints: 20
 - Completed: 19
-- In Progress: 0
-- Overall Completion: 100%
-- Remaining to 100%: 0%
+- In Progress: 1
+- Overall Completion: 95%
+- Remaining to 100%: 5%
 
 ## Planned Milestone Trajectory
 
 - After Sprint 63 close-out: 5% complete, 95% remaining
 - After Sprint 64 close-out: 10% complete, 90% remaining
 - After Sprint 65 close-out: 15% complete, 85% remaining
-- After Sprint 66 close-out: 21% complete, 79% remaining
-- After Sprint 67 close-out: 26% complete, 74% remaining
-- After Sprint 68 close-out: 31% complete, 69% remaining
-- After Sprint 69 close-out: 36% complete, 64% remaining
-- After Sprint 70 close-out: 42% complete, 58% remaining
-- After Sprint 71 close-out: 47% complete, 53% remaining
-- After Sprint 72 close-out: 52% complete, 48% remaining
-- After Sprint 73 close-out: 57% complete, 43% remaining
-- After Sprint 74 close-out: 63% complete, 37% remaining
-- After Sprint 75 close-out: 68% complete, 32% remaining
-- After Sprint 76 close-out: 73% complete, 27% remaining
-- After Sprint 77 close-out: 78% complete, 22% remaining
-- After Sprint 78 close-out: 84% complete, 16% remaining
-- After Sprint 79 close-out: 89% complete, 11% remaining
-- After Sprint 80 close-out: 95% complete, 5% remaining
-- After Sprint 81 close-out: 100% complete, 0% remaining
+- After Sprint 66 close-out: 20% complete, 80% remaining
+- After Sprint 67 close-out: 25% complete, 75% remaining
+- After Sprint 68 close-out: 30% complete, 70% remaining
+- After Sprint 69 close-out: 35% complete, 65% remaining
+- After Sprint 70 close-out: 40% complete, 60% remaining
+- After Sprint 71 close-out: 45% complete, 55% remaining
+- After Sprint 72 close-out: 50% complete, 50% remaining
+- After Sprint 73 close-out: 55% complete, 45% remaining
+- After Sprint 74 close-out: 60% complete, 40% remaining
+- After Sprint 75 close-out: 65% complete, 35% remaining
+- After Sprint 76 close-out: 70% complete, 30% remaining
+- After Sprint 77 close-out: 75% complete, 25% remaining
+- After Sprint 78 close-out: 80% complete, 20% remaining
+- After Sprint 79 close-out: 85% complete, 15% remaining
+- After Sprint 80 close-out: 90% complete, 10% remaining
+- After Sprint 81 close-out: 95% complete, 5% remaining
+- After Sprint 82 close-out: 100% complete, 0% remaining
 
 ## Sprint Table
 
@@ -60,6 +61,7 @@ Single source board aligned with:
 | 79 | Continuous Verification Expansion & CI Stability Hardening | done | G26 | `sprints/specs/SPRINT-079.md` | `sprints/reports/SPRINT-079.md` |
 | 80 | CI Dependency Determinism & Runtime Verification Unblocking | done | G27 | `sprints/specs/SPRINT-080.md` | `sprints/reports/SPRINT-080.md` |
 | 81 | Runtime Warning Budget Enforcement & Signal Hygiene | done | G28 | `sprints/specs/SPRINT-081.md` | `sprints/reports/SPRINT-081.md` |
+| 82 | Security Backlog Burn-down & PR Signal Hardening | in_progress | G29 | `sprints/specs/SPRINT-082.md` | `sprints/reports/SPRINT-082.md` |
 
 ## Rule
 

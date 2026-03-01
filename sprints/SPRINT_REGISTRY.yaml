@@ -6,21 +6,21 @@ program:
     registry: sprints/SPRINT_REGISTRY.yaml
   scope:
     first_sprint: 63
-    last_sprint: 81
-    total_sprints: 19
+    last_sprint: 82
+    total_sprints: 20
 
 progress:
   completed_sprints: 19
-  in_progress_sprints: 0
+  in_progress_sprints: 1
   queued_sprints: 0
   blocked_sprints: 0
-  overall_completion_percent: 100
-  remaining_percent: 0
+  overall_completion_percent: 95
+  remaining_percent: 5
 
 active:
-  sprint_id: 81
-  title: Runtime Warning Budget Enforcement & Signal Hygiene
-  gate: G28
+  sprint_id: 82
+  title: Security Backlog Burn-down & PR Signal Hardening
+  gate: G29
 
 sprints:
   - id: 63
@@ -137,3 +137,9 @@ sprints:
     gate: G28
     spec: sprints/specs/SPRINT-081.md
     report: sprints/reports/SPRINT-081.md
+  - id: 82
+    title: Security Backlog Burn-down & PR Signal Hardening
+    status: in_progress
+    gate: G29
+    spec: sprints/specs/SPRINT-082.md
+    report: sprints/reports/SPRINT-082.md
