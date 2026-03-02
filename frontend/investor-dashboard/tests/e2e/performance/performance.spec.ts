@@ -47,9 +47,23 @@ test.describe("Performance - Interaction Latency", () => {
   });
 
   test("command palette opens with keyboard shortcut under threshold", async ({ page }) => {
+    const projectName = test.info().project.name;
+    test.skip(
+      projectName.includes("mobile"),
+      "Keyboard shortcut latency is not applicable to touch-only mobile projects.",
+    );
+
+    const search = page.getByPlaceholder(/search commands, pages, or actions/i);
     const start = Date.now();
-    await page.keyboard.press("Control+k");
-    await expect(page.getByPlaceholder(/search commands, pages, or actions/i)).toBeVisible();
+
+    for (const shortcut of ["Control+k", "Meta+k"]) {
+      await page.keyboard.press(shortcut);
+      if (await search.isVisible().catch(() => false)) {
+        break;
+      }
+    }
+
+    await expect(search).toBeVisible();
     const openMs = Date.now() - start;
 
     expect(openMs).toBeLessThan(2000);

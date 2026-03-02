@@ -49,8 +49,21 @@ test.describe("Accessibility - Dashboard", () => {
   });
 
   test("keyboard shortcut opens and closes command palette", async ({ page }) => {
-    await page.keyboard.press("Control+k");
+    const projectName = test.info().project.name;
+    test.skip(
+      projectName.includes("mobile"),
+      "Keyboard shortcut coverage is not applicable to touch-only mobile projects.",
+    );
+
     const search = page.getByPlaceholder(/search commands, pages, or actions/i);
+
+    for (const shortcut of ["Control+k", "Meta+k"]) {
+      await page.keyboard.press(shortcut);
+      if (await search.isVisible().catch(() => false)) {
+        break;
+      }
+    }
+
     await expect(search).toBeVisible();
 
     await page.keyboard.press("Escape");
