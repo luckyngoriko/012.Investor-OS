@@ -8,25 +8,27 @@ Single source board aligned with:
 
 ## Program Snapshot
 
-- Program Scope: Sprint 63 to Sprint 93
-- Total Sprints: 31
-- Completed: 22
-- In Progress: 1
-- Overall Completion: 71%
-- Remaining to 100%: 29%
+- Program Scope: Sprint 63 to Sprint 95
+- Total Sprints: 33
+- Completed: 33
+- In Progress: 0
+- Overall Completion: 100%
+- Remaining to 100: 0%
 
 ## Planned Milestone Trajectory
 
 - Baseline after Sprint 84 close-out: 71% complete, 29% remaining
 - After Sprint 85 close-out: 74% complete, 26% remaining
 - After Sprint 86 close-out: 77% complete, 23% remaining
-- After Sprint 87 close-out: 81% complete, 19% remaining
-- After Sprint 88 close-out: 84% complete, 16% remaining
-- After Sprint 89 close-out: 87% complete, 13% remaining
-- After Sprint 90 close-out: 90% complete, 10% remaining
-- After Sprint 91 close-out: 94% complete, 6% remaining
-- After Sprint 92 close-out: 97% complete, 3% remaining
-- After Sprint 93 close-out: 100% complete, 0% remaining
+- After Sprint 87 close-out: 80% complete, 20% remaining
+- After Sprint 88 close-out: 83% complete, 17% remaining
+- After Sprint 89 close-out: 86% complete, 14% remaining
+- After Sprint 90 close-out: 89% complete, 11% remaining
+- After Sprint 91 close-out: 92% complete, 8% remaining
+- After Sprint 92 close-out: 95% complete, 5% remaining
+- After Sprint 93 close-out: 98% complete, 2% remaining
+- After Sprint 94 close-out: 100% complete, 0% remaining
+- After Sprint 95 close-out: anti-fake hardening sprint completed, program at 100% completed / 0% remaining
 
 ## Sprint Table
 
@@ -54,15 +56,17 @@ Single source board aligned with:
 | 82 | Security Backlog Burn-down & PR Signal Hardening | done | G29 | `sprints/specs/SPRINT-082.md` | `sprints/reports/SPRINT-082.md` |
 | 83 | Always-On Security Audit Gate & Advisory Remediation Track | done | G30 | `sprints/specs/SPRINT-083.md` | `sprints/reports/SPRINT-083.md` |
 | 84 | Security Gate Install Resilience & Remediation Retry | done | G31 | `sprints/specs/SPRINT-084.md` | `sprints/reports/SPRINT-084.md` |
-| 85 | Production Auth & Identity Integration | in_progress | G32 | `sprints/specs/SPRINT-085.md` | `sprints/reports/SPRINT-085.md` |
-| 86 | Frontend De-Mock: Tax, Security, Portfolio Optimization | queued | G33 | `sprints/specs/SPRINT-086.md` | `sprints/reports/SPRINT-086.md` |
-| 87 | HRM Real Inference Model Integration | queued | G34 | `sprints/specs/SPRINT-087.md` | `sprints/reports/SPRINT-087.md` |
-| 88 | Analytics Real Market Data Backtesting | queued | G35 | `sprints/specs/SPRINT-088.md` | `sprints/reports/SPRINT-088.md` |
-| 89 | Data Source Service SQL Completion | queued | G36 | `sprints/specs/SPRINT-089.md` | `sprints/reports/SPRINT-089.md` |
-| 90 | Distributed Runtime: gRPC + Service Discovery | queued | G37 | `sprints/specs/SPRINT-090.md` | `sprints/reports/SPRINT-090.md` |
-| 91 | Treasury Production Integrations | queued | G38 | `sprints/specs/SPRINT-091.md` | `sprints/reports/SPRINT-091.md` |
-| 92 | Observability Metrics Production Wiring | queued | G39 | `sprints/specs/SPRINT-092.md` | `sprints/reports/SPRINT-092.md` |
-| 93 | Security Debt Closure & Final Product Readiness | queued | G40 | `sprints/specs/SPRINT-093.md` | `sprints/reports/SPRINT-093.md` |
+| 85 | Production Auth & Identity Integration | done | G32 | `sprints/specs/SPRINT-085.md` | `sprints/reports/SPRINT-085.md` |
+| 86 | Frontend De-Mock: Tax, Security, Portfolio Optimization | done | G33 | `sprints/specs/SPRINT-086.md` | `sprints/reports/SPRINT-086.md` |
+| 87 | HRM Real Inference Model Integration | done | G34 | `sprints/specs/SPRINT-087.md` | `sprints/reports/SPRINT-087.md` |
+| 88 | Analytics Real Market Data Backtesting | done | G35 | `sprints/specs/SPRINT-088.md` | `sprints/reports/SPRINT-088.md` |
+| 89 | Data Source Service SQL Completion | done | G36 | `sprints/specs/SPRINT-089.md` | `sprints/reports/SPRINT-089.md` |
+| 90 | Distributed Runtime: gRPC + Service Discovery | done | G37 | `sprints/specs/SPRINT-090.md` | `sprints/reports/SPRINT-090.md` |
+| 91 | Treasury Production Integrations | done | G38 | `sprints/specs/SPRINT-091.md` | `sprints/reports/SPRINT-091.md` |
+| 92 | Observability Metrics Production Wiring | done | G39 | `sprints/specs/SPRINT-092.md` | `sprints/reports/SPRINT-092.md` |
+| 93 | Security Debt Closure & Final Product Readiness | done | G40 | `sprints/specs/SPRINT-093.md` | `sprints/reports/SPRINT-093.md` |
+| 94 | Real-Capital Go-Live & Live-Data Certification | done | G41 | `sprints/specs/SPRINT-094.md` | `sprints/reports/SPRINT-094.md` |
+| 95 | Anti-Fake Engineering and Fake-Source Purge | done | G42 | `sprints/specs/SPRINT-095.md` | `sprints/reports/SPRINT-095.md` |
 
 ## Rule
 
