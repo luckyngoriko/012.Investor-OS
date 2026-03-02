@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
+## [v3.2-g29-closed] - 2026-03-02
+
+### Changed
+
+- Completed Sprint 095 anti-fake closeout and governance finalization:
+  - `sprints/reports/SPRINT-095.md`
+  - `sprints/specs/SPRINT-095.md`
+  - `.current_sprint`
+  - `sprints/active.toml`
+  - `sprints/SPRINT_REGISTRY.yaml`
+  - `sprints/BOARD.md`
+  - `sprints/reports/PROGRESS_SNAPSHOT.md`
+- Anti-fake engineering verification suite passed at sprint close:
+  - `cargo test --locked --lib anti_fake`
+  - `cargo test --locked --lib anti_fake::tests:: -- --nocapture`
+
+### Added
+
+- Added final closeout record for Sprint 095 in governance and tracking artifacts.
+
 ## [v3.2-g28-closed] - 2026-03-01
 
 ### Added
