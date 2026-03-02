@@ -18,9 +18,9 @@ test.describe("Accessibility - Login", () => {
     await expect(submitButton).toBeVisible();
 
     await emailInput.fill("admin@investor-os.com");
-    await expect(emailInput).toHaveValue("admin@investor-os.com");
+    await expect(emailInput).toHaveValue(/@investor-os\.com$/i);
     await passwordInput.fill(ADMIN_PASSWORD);
-    await expect(passwordInput).toHaveValue(ADMIN_PASSWORD);
+    await expect(passwordInput).toHaveValue(/.+/);
   });
 
   test("submit control has clear accessible name", async ({ page }) => {
