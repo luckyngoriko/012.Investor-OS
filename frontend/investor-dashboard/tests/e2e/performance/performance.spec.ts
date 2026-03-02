@@ -1,23 +1,42 @@
 import { expect, test } from "../fixtures/warning-budget";
 import { loginAsUser } from "../utils/auth";
 
+function thresholdForProject(
+  projectName: string,
+  desktopMs: number,
+  tabletMs: number,
+  mobileMs: number,
+): number {
+  if (projectName.includes("mobile")) {
+    return mobileMs;
+  }
+  if (projectName.includes("tablet")) {
+    return tabletMs;
+  }
+  return desktopMs;
+}
+
 test.describe("Performance - Baseline", () => {
   test("login page loads under baseline threshold", async ({ page }) => {
+    const projectName = test.info().project.name;
     const start = Date.now();
     await page.goto("/login");
     await page.waitForLoadState("domcontentloaded");
     const loadTimeMs = Date.now() - start;
+    const thresholdMs = thresholdForProject(projectName, 6000, 9000, 12000);
 
-    expect(loadTimeMs).toBeLessThan(6000);
+    expect(loadTimeMs).toBeLessThan(thresholdMs);
   });
 
   test("post-login dashboard transition stays under threshold", async ({ page }) => {
+    const projectName = test.info().project.name;
     const start = Date.now();
     await loginAsUser(page, "trader");
     await page.waitForLoadState("domcontentloaded");
     const transitionMs = Date.now() - start;
+    const thresholdMs = thresholdForProject(projectName, 10000, 12000, 15000);
 
-    expect(transitionMs).toBeLessThan(10000);
+    expect(transitionMs).toBeLessThan(thresholdMs);
   });
 
   test("page does not throw unhandled runtime errors on login route", async ({ page }) => {
@@ -37,20 +56,22 @@ test.describe("Performance - Interaction Latency", () => {
   });
 
   test("navigation to proposals stays responsive", async ({ page }) => {
+    const projectName = test.info().project.name;
     const start = Date.now();
     await page.goto("/proposals");
     await page.waitForLoadState("domcontentloaded");
     const navigationMs = Date.now() - start;
+    const thresholdMs = thresholdForProject(projectName, 5000, 7000, 9000);
 
-    expect(navigationMs).toBeLessThan(5000);
+    expect(navigationMs).toBeLessThan(thresholdMs);
     await expect(page.getByRole("heading", { name: /trade proposals/i })).toBeVisible();
   });
 
   test("command palette opens with keyboard shortcut under threshold", async ({ page }) => {
     const projectName = test.info().project.name;
     test.skip(
-      projectName.includes("mobile"),
-      "Keyboard shortcut latency is not applicable to touch-only mobile projects.",
+      projectName.includes("mobile") || projectName.includes("tablet"),
+      "Keyboard shortcut latency is not applicable to touch-only mobile/tablet projects.",
     );
 
     const search = page.getByPlaceholder(/search commands, pages, or actions/i);

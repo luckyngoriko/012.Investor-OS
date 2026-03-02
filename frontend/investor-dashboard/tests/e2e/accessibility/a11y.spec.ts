@@ -51,8 +51,8 @@ test.describe("Accessibility - Dashboard", () => {
   test("keyboard shortcut opens and closes command palette", async ({ page }) => {
     const projectName = test.info().project.name;
     test.skip(
-      projectName.includes("mobile"),
-      "Keyboard shortcut coverage is not applicable to touch-only mobile projects.",
+      projectName.includes("mobile") || projectName.includes("tablet"),
+      "Keyboard shortcut coverage is not applicable to touch-only mobile/tablet projects.",
     );
 
     const search = page.getByPlaceholder(/search commands, pages, or actions/i);
