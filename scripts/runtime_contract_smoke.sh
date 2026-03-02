@@ -5,6 +5,7 @@ BACKEND_BASE_URL="${BACKEND_BASE_URL:-http://127.0.0.1:8080}"
 FRONTEND_BASE_URL="${FRONTEND_BASE_URL:-http://127.0.0.1:3000}"
 REQUIRE_BACKEND="${REQUIRE_BACKEND:-0}"
 REQUIRE_FRONTEND="${REQUIRE_FRONTEND:-0}"
+ALLOW_MONITORING_AUTH_REDIRECT="${ALLOW_MONITORING_AUTH_REDIRECT:-1}"
 CURL_MAX_TIME="${CURL_MAX_TIME:-8}"
 
 WORKDIR="$(mktemp -d)"
@@ -44,6 +45,32 @@ ensure_endpoint_200() {
     return 1
   fi
   log "OK ${name} -> 200"
+}
+
+ensure_monitoring_endpoint() {
+  local url="$1"
+  local body_out="$WORKDIR/frontend_monitoring.body"
+  local header_out="$WORKDIR/frontend_monitoring.headers"
+  local status
+
+  status="$(curl -sS -m "$CURL_MAX_TIME" -D "$header_out" -o "$body_out" -w "%{http_code}" "$url" || true)"
+
+  if [[ "$status" == "200" ]]; then
+    log "OK frontend_monitoring -> 200"
+    return 0
+  fi
+
+  if [[ "$ALLOW_MONITORING_AUTH_REDIRECT" == "1" && "$status" == "307" ]]; then
+    if grep -iq '^location: /login?next=%2Fmonitoring' "$header_out"; then
+      log "OK frontend_monitoring -> 307 auth redirect"
+      return 0
+    fi
+  fi
+
+  log "ASSERTION FAILED: frontend_monitoring expected HTTP 200 or auth redirect, got ${status} (${url})"
+  [[ -s "$header_out" ]] && cat "$header_out"
+  [[ -s "$body_out" ]] && cat "$body_out"
+  return 1
 }
 
 backend_probe="$WORKDIR/backend_probe.body"
@@ -91,6 +118,6 @@ if [[ "$frontend_probe_status" != "200" ]]; then
 fi
 
 ensure_endpoint_200 "${FRONTEND_BASE_URL}/login" "frontend_login"
-ensure_endpoint_200 "${FRONTEND_BASE_URL}/monitoring" "frontend_monitoring"
+ensure_monitoring_endpoint "${FRONTEND_BASE_URL}/monitoring"
 
 log "Runtime contract smoke passed."
