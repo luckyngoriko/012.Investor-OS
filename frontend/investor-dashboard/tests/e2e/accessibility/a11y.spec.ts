@@ -1,5 +1,7 @@
 import { expect, test } from "../fixtures/warning-budget";
-import { loginAsDemo } from "../utils/auth";
+import { loginAsUser } from "../utils/auth";
+
+const ADMIN_PASSWORD = process.env.E2E_AUTH_PASSWORD_ADMIN ?? "Admin#2026!";
 
 test.describe("Accessibility - Login", () => {
   test.beforeEach(async ({ page }) => {
@@ -16,9 +18,9 @@ test.describe("Accessibility - Login", () => {
     await expect(submitButton).toBeVisible();
 
     await emailInput.fill("admin@investor-os.com");
-    await expect(emailInput).toHaveValue("admin@investor-os.com");
-    await passwordInput.fill("demo123");
-    await expect(passwordInput).toHaveValue("demo123");
+    await expect(emailInput).toHaveValue(/@investor-os\.com$/i);
+    await passwordInput.fill(ADMIN_PASSWORD);
+    await expect(passwordInput).toHaveValue(/.+/);
   });
 
   test("submit control has clear accessible name", async ({ page }) => {
@@ -28,7 +30,7 @@ test.describe("Accessibility - Login", () => {
 
 test.describe("Accessibility - Dashboard", () => {
   test.beforeEach(async ({ page }) => {
-    await loginAsDemo(page, "trader");
+    await loginAsUser(page, "trader");
   });
 
   test("main heading exists exactly once", async ({ page }) => {
@@ -47,8 +49,21 @@ test.describe("Accessibility - Dashboard", () => {
   });
 
   test("keyboard shortcut opens and closes command palette", async ({ page }) => {
-    await page.keyboard.press("Control+k");
+    const projectName = test.info().project.name;
+    test.skip(
+      projectName.includes("mobile") || projectName.includes("tablet"),
+      "Keyboard shortcut coverage is not applicable to touch-only mobile/tablet projects.",
+    );
+
     const search = page.getByPlaceholder(/search commands, pages, or actions/i);
+
+    for (const shortcut of ["Control+k", "Meta+k"]) {
+      await page.keyboard.press(shortcut);
+      if (await search.isVisible().catch(() => false)) {
+        break;
+      }
+    }
+
     await expect(search).toBeVisible();
 
     await page.keyboard.press("Escape");

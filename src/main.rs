@@ -2,17 +2,21 @@
 //! 
 //! Демо версия за разглеждане на функционалностите
 
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use axum::{
+    middleware::{from_fn_with_state, Next},
     routing::{get, post, delete},
     Router, Json,
-    extract::{State, Path},
-    http::StatusCode,
+    extract::{Extension, Path, Request, State},
+    http::{HeaderMap, StatusCode},
+    response::Response,
 };
+use chrono::{Duration, Utc};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
-use chrono::Utc;
 use tracing::{info, warn};
 use uuid::Uuid;
 use rust_decimal::Decimal;
@@ -28,6 +32,7 @@ struct AppState {
     request_count: Arc<Mutex<u64>>,
     broker: Arc<Mutex<PaperBroker>>,
     runtime_contract: RuntimeContract,
+    auth: Arc<Mutex<AuthService>>,
 }
 
 #[derive(Clone)]
@@ -35,6 +40,256 @@ struct RuntimeContract {
     api_base_url: String,
     ws_hrm_url: String,
     allowed_origins: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum UserRole {
+    Admin,
+    Trader,
+    Viewer,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct AuthUser {
+    id: String,
+    email: String,
+    name: String,
+    role: UserRole,
+    permissions: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+struct AuthUserRecord {
+    user: AuthUser,
+    password: String,
+}
+
+#[derive(Debug, Clone)]
+struct SessionRecord {
+    email: String,
+    refresh_token: String,
+    expires_at: chrono::DateTime<Utc>,
+    refresh_expires_at: chrono::DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
+struct AuthService {
+    users: HashMap<String, AuthUserRecord>,
+    sessions_by_access: HashMap<String, SessionRecord>,
+    access_by_refresh: HashMap<String, String>,
+    access_ttl_seconds: i64,
+    refresh_ttl_seconds: i64,
+}
+
+#[derive(Debug, Deserialize)]
+struct LoginRequest {
+    email: String,
+    password: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct RefreshRequest {
+    refresh_token: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct LogoutRequest {
+    refresh_token: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct LoginData {
+    user: AuthUser,
+    access_token: String,
+    refresh_token: String,
+    expires_at: chrono::DateTime<Utc>,
+    refresh_expires_at: chrono::DateTime<Utc>,
+}
+
+impl AuthService {
+    fn new_from_env() -> Self {
+        let access_ttl_seconds = std::env::var("AUTH_ACCESS_TTL_SECONDS")
+            .ok()
+            .and_then(|v| v.parse::<i64>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(15 * 60);
+        let refresh_ttl_seconds = std::env::var("AUTH_REFRESH_TTL_SECONDS")
+            .ok()
+            .and_then(|v| v.parse::<i64>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(7 * 24 * 60 * 60);
+
+        let admin_password =
+            std::env::var("AUTH_ADMIN_PASSWORD").unwrap_or_else(|_| "Admin#2026!".to_string());
+        let trader_password =
+            std::env::var("AUTH_TRADER_PASSWORD").unwrap_or_else(|_| "Trader#2026!".to_string());
+        let viewer_password =
+            std::env::var("AUTH_VIEWER_PASSWORD").unwrap_or_else(|_| "Viewer#2026!".to_string());
+
+        let mut users = HashMap::new();
+        users.insert(
+            "admin@investor-os.com".to_string(),
+            AuthUserRecord {
+                user: AuthUser {
+                    id: "1".to_string(),
+                    email: "admin@investor-os.com".to_string(),
+                    name: "Admin User".to_string(),
+                    role: UserRole::Admin,
+                    permissions: vec!["*".to_string()],
+                },
+                password: admin_password,
+            },
+        );
+        users.insert(
+            "trader@investor-os.com".to_string(),
+            AuthUserRecord {
+                user: AuthUser {
+                    id: "2".to_string(),
+                    email: "trader@investor-os.com".to_string(),
+                    name: "Trader User".to_string(),
+                    role: UserRole::Trader,
+                    permissions: vec![
+                        "dashboard.read".to_string(),
+                        "portfolio.read".to_string(),
+                        "portfolio.trade".to_string(),
+                        "positions.read".to_string(),
+                        "proposals.read".to_string(),
+                        "proposals.execute".to_string(),
+                        "risk.read".to_string(),
+                        "backtest.read".to_string(),
+                        "backtest.run".to_string(),
+                        "journal.read".to_string(),
+                        "journal.write".to_string(),
+                        "settings.read".to_string(),
+                        "settings.update".to_string(),
+                    ],
+                },
+                password: trader_password,
+            },
+        );
+        users.insert(
+            "viewer@investor-os.com".to_string(),
+            AuthUserRecord {
+                user: AuthUser {
+                    id: "3".to_string(),
+                    email: "viewer@investor-os.com".to_string(),
+                    name: "Viewer User".to_string(),
+                    role: UserRole::Viewer,
+                    permissions: vec![
+                        "dashboard.read".to_string(),
+                        "portfolio.read".to_string(),
+                        "positions.read".to_string(),
+                        "proposals.read".to_string(),
+                        "risk.read".to_string(),
+                        "journal.read".to_string(),
+                    ],
+                },
+                password: viewer_password,
+            },
+        );
+
+        Self {
+            users,
+            sessions_by_access: HashMap::new(),
+            access_by_refresh: HashMap::new(),
+            access_ttl_seconds,
+            refresh_ttl_seconds,
+        }
+    }
+
+    fn prune_expired_sessions(&mut self) {
+        let now = Utc::now();
+        let expired_tokens: Vec<String> = self
+            .sessions_by_access
+            .iter()
+            .filter_map(|(access, session)| {
+                if session.expires_at <= now || session.refresh_expires_at <= now {
+                    Some(access.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        for access in expired_tokens {
+            self.remove_session_by_access_token(&access);
+        }
+    }
+
+    fn issue_session_for_email(&mut self, email: &str) -> Option<LoginData> {
+        let user = self.users.get(email)?.user.clone();
+        let now = Utc::now();
+        let access_token = format!("atk_{}", Uuid::new_v4().as_simple());
+        let refresh_token = format!("rtk_{}", Uuid::new_v4().as_simple());
+        let expires_at = now + Duration::seconds(self.access_ttl_seconds);
+        let refresh_expires_at = now + Duration::seconds(self.refresh_ttl_seconds);
+
+        let session = SessionRecord {
+            email: email.to_string(),
+            refresh_token: refresh_token.clone(),
+            expires_at,
+            refresh_expires_at,
+        };
+
+        self.access_by_refresh
+            .insert(refresh_token.clone(), access_token.clone());
+        self.sessions_by_access
+            .insert(access_token.clone(), session);
+
+        Some(LoginData {
+            user,
+            access_token,
+            refresh_token,
+            expires_at,
+            refresh_expires_at,
+        })
+    }
+
+    fn remove_session_by_access_token(&mut self, access_token: &str) {
+        if let Some(session) = self.sessions_by_access.remove(access_token) {
+            self.access_by_refresh.remove(&session.refresh_token);
+        }
+    }
+
+    fn login(&mut self, email: &str, password: &str) -> Option<LoginData> {
+        self.prune_expired_sessions();
+        let normalized = email.trim().to_lowercase();
+        let user_record = self.users.get(&normalized)?;
+        if user_record.password != password {
+            return None;
+        }
+        self.issue_session_for_email(&normalized)
+    }
+
+    fn validate_access_token(&mut self, access_token: &str) -> Option<AuthUser> {
+        self.prune_expired_sessions();
+        let session = self.sessions_by_access.get(access_token)?;
+        let user_record = self.users.get(&session.email)?;
+        Some(user_record.user.clone())
+    }
+
+    fn refresh_session(&mut self, refresh_token: &str) -> Option<LoginData> {
+        self.prune_expired_sessions();
+        let access = self.access_by_refresh.get(refresh_token)?.clone();
+        let old_session = self.sessions_by_access.get(&access)?.clone();
+        self.remove_session_by_access_token(&access);
+        self.issue_session_for_email(&old_session.email)
+    }
+
+    fn logout(&mut self, access_token: Option<&str>, refresh_token: Option<&str>) {
+        self.prune_expired_sessions();
+
+        if let Some(access) = access_token {
+            self.remove_session_by_access_token(access);
+        }
+
+        if let Some(refresh) = refresh_token {
+            if let Some(access) = self.access_by_refresh.get(refresh).cloned() {
+                self.remove_session_by_access_token(&access);
+            }
+        }
+    }
 }
 
 #[tokio::main]
@@ -98,6 +353,7 @@ async fn main() {
         request_count: Arc::new(Mutex::new(0)),
         broker: Arc::new(Mutex::new(broker)),
         runtime_contract,
+        auth: Arc::new(Mutex::new(AuthService::new_from_env())),
     };
     
     // Създаване на router
@@ -123,8 +379,9 @@ async fn main() {
 }
 
 fn create_router(state: AppState) -> Router {
-    Router::new()
-        // Основни endpoints
+    let auth_layer = from_fn_with_state(state.clone(), require_auth_middleware);
+
+    let public_router = Router::new()
         .route("/", get(root_handler))
         .route("/api/health", get(health_handler))
         .route("/api/ready", get(readiness_handler))
@@ -132,43 +389,151 @@ fn create_router(state: AppState) -> Router {
         .route("/api/hrm/status", get(hrm_status_handler))
         .route("/metrics", get(metrics_prometheus_handler))
         .route("/api/docs", get(docs_handler))
-        
+        .route("/api/auth/login", post(auth_login_handler))
+        .route("/api/auth/refresh", post(auth_refresh_handler));
+
+    let protected_router = Router::new()
+        .route("/api/auth/me", get(auth_me_handler))
+        .route("/api/auth/logout", post(auth_logout_handler))
         // Security endpoints
         .route("/api/security/status", get(security_status))
         .route("/api/security/clearance-levels", get(clearance_levels))
         .route("/api/security/generate-key", post(generate_api_key))
-        
         // Portfolio endpoints
         .route("/api/portfolio/optimize", post(optimize_portfolio))
         .route("/api/portfolio/efficient-frontier", get(efficient_frontier))
-        
         // Strategy endpoints
         .route("/api/strategy/regime", get(current_regime))
         .route("/api/strategy/select", post(select_strategy))
-        
         // Tax endpoints
         .route("/api/tax/status", get(tax_status))
         .route("/api/tax/calculate", post(calculate_tax))
-        
         // Monitoring endpoints
         .route("/api/monitoring/metrics", get(metrics_handler))
         .route("/api/monitoring/system", get(system_metrics))
-        
         // Deployment endpoints
         .route("/api/deployment/status", get(deployment_status))
         .route("/api/deployment/config", get(deployment_config))
-        
         // Demo endpoints
         .route("/api/demo/trade", post(demo_trade))
         .route("/api/demo/positions", get(demo_positions))
-        
         // Broker endpoints (Paper Trading)
         .route("/api/broker/orders", post(place_order_handler))
         .route("/api/broker/orders/:id", delete(cancel_order_handler))
         .route("/api/broker/positions", get(get_positions_handler))
         .route("/api/broker/account", get(get_account_handler))
-        
+        .route_layer(auth_layer);
+
+    Router::new()
+        .merge(public_router)
+        .merge(protected_router)
         .with_state(state)
+}
+
+fn unauthorized(message: &str) -> (StatusCode, Json<serde_json::Value>) {
+    (
+        StatusCode::UNAUTHORIZED,
+        Json(json!({
+            "success": false,
+            "error": message
+        })),
+    )
+}
+
+fn extract_bearer_token(headers: &HeaderMap) -> Option<String> {
+    let header_value = headers.get("Authorization")?.to_str().ok()?;
+    let (scheme, token) = header_value.split_once(' ')?;
+    if !scheme.eq_ignore_ascii_case("bearer") || token.trim().is_empty() {
+        return None;
+    }
+    Some(token.trim().to_string())
+}
+
+async fn require_auth_middleware(
+    State(state): State<AppState>,
+    mut request: Request,
+    next: Next,
+) -> Result<Response, (StatusCode, Json<serde_json::Value>)> {
+    let Some(access_token) = extract_bearer_token(request.headers()) else {
+        return Err(unauthorized("Missing or invalid Authorization header"));
+    };
+
+    let mut auth = state.auth.lock().await;
+    let Some(user) = auth.validate_access_token(&access_token) else {
+        return Err(unauthorized("Invalid or expired session"));
+    };
+    drop(auth);
+
+    request.extensions_mut().insert(user);
+    Ok(next.run(request).await)
+}
+
+async fn auth_login_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<LoginRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let mut auth = state.auth.lock().await;
+    match auth.login(&payload.email, &payload.password) {
+        Some(session) => (
+            StatusCode::OK,
+            Json(json!({
+                "success": true,
+                "data": session
+            })),
+        ),
+        None => unauthorized("Invalid credentials"),
+    }
+}
+
+async fn auth_refresh_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<RefreshRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let mut auth = state.auth.lock().await;
+    match auth.refresh_session(&payload.refresh_token) {
+        Some(session) => (
+            StatusCode::OK,
+            Json(json!({
+                "success": true,
+                "data": session
+            })),
+        ),
+        None => unauthorized("Invalid or expired refresh token"),
+    }
+}
+
+async fn auth_me_handler(Extension(user): Extension<AuthUser>) -> (StatusCode, Json<serde_json::Value>) {
+    (
+        StatusCode::OK,
+        Json(json!({
+            "success": true,
+            "data": {
+                "user": user
+            }
+        })),
+    )
+}
+
+async fn auth_logout_handler(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Option<Json<LogoutRequest>>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let access_token = extract_bearer_token(&headers);
+    let refresh_token = payload.and_then(|body| body.0.refresh_token);
+
+    let mut auth = state.auth.lock().await;
+    auth.logout(access_token.as_deref(), refresh_token.as_deref());
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "success": true,
+            "data": {
+                "logged_out": true
+            }
+        })),
+    )
 }
 
 // ===== Основни handlers =====
@@ -321,11 +686,16 @@ async fn docs_handler() -> Json<serde_json::Value> {
             }
         ],
         "authentication": {
-            "type": "API Key",
-            "header": "X-API-Key",
-            "clearance_levels": ["Public", "Internal", "Confidential", "Restricted", "TopSecret"]
+            "type": "Bearer session token",
+            "header": "Authorization: Bearer <access_token>",
+            "refresh_endpoint": "/api/auth/refresh",
+            "bootstrap_credentials": [
+                "admin@investor-os.com",
+                "trader@investor-os.com",
+                "viewer@investor-os.com"
+            ]
         },
-        "note": "This is a demo version showing all implemented features"
+        "note": "Runtime auth enforces session validation on protected endpoints"
     }))
 }
 

@@ -63,23 +63,19 @@ burn = { version = "0.16", default-features = false, features = ["std"] }
 
 # Backends (Sprint 48: Multi-Backend GPU)
 burn-ndarray = { version = "0.16", optional = true, default-features = false, features = ["std"] }
-burn-cuda = { version = "0.16", optional = true }      # NVIDIA CUDA
-burn-wgpu = { version = "0.16", optional = true }      # Vulkan/WebGPU (Intel/AMD)
 
 # SafeTensors for weight loading
 safetensors = "0.4"
 
-# Quantum Computing (Sprint 51)
-roqoqo = "1.14"                    # Rust quantum computing
-roqoqo-quest = "0.14"              # Quest simulator backend
-num-complex = "0.4"                # Complex numbers for quantum
+# Quantum-related math utilities (research paths)
+num-complex = "0.4"
 fastrand = "2.3"
 
 # Treasury - Real Custody (optional)
 jsonwebtoken = { version = "9.3", optional = true }  # JWT for Fireblocks
 
 # Monitoring & Metrics (Sprint 46)
-prometheus = { version = "0.13", features = ["process"] }
+prometheus = { version = "0.14", features = ["process"] }
 lazy_static = "1.4"
 
 [features]
@@ -89,10 +85,10 @@ cpu = ["burn-ndarray"]         # CPU fallback (always available)
 gpu-auto = ["cuda", "rocm", "intel"]  # Auto-detect all GPUs
 
 # GPU backends (optional)
-cuda = ["dep:burn-cuda"]       # NVIDIA CUDA
+cuda = []                      # NVIDIA CUDA placeholder (dependency isolated from core lock graph)
 rocm = []                      # AMD ROCm (placeholder)
 intel = []                     # Intel oneAPI (placeholder)
-wgpu = ["dep:burn-wgpu"]       # Cross-platform via Vulkan/WebGPU
+wgpu = []                      # Cross-platform placeholder (dependency isolated from core lock graph)
 
 # Treasury - Real custody providers
 fireblocks = ["dep:jsonwebtoken"]  # Fireblocks custody integration
@@ -122,3 +118,9 @@ path = "src/bin/hrm_lb.rs"
 [[bench]]
 name = "hrm_inference"
 harness = false
+
+[patch.crates-io]
+# Sprint 94 hardening: strip non-postgres SQLx mysql path and trim unused Burn GPU backend paths.
+sqlx = { path = "vendor/patches/sqlx-0.8.6" }
+sqlx-macros-core = { path = "vendor/patches/sqlx-macros-core-0.8.6" }
+burn-core = { path = "vendor/patches/burn-core-0.16.1" }

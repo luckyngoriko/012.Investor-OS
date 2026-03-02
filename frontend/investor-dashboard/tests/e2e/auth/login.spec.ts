@@ -1,5 +1,5 @@
 import { expect, test } from "../fixtures/warning-budget";
-import { loginAsDemo } from "../utils/auth";
+import { loginAsUser } from "../utils/auth";
 
 test.describe("Authentication", () => {
   test.beforeEach(async ({ page }) => {
@@ -7,8 +7,8 @@ test.describe("Authentication", () => {
     await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
   });
 
-  test("successful login with valid demo credentials", async ({ page }) => {
-    await loginAsDemo(page, "trader");
+  test("successful login with valid credentials", async ({ page }) => {
+    await loginAsUser(page, "trader");
 
     await expect(page).toHaveURL("/");
     await expect(page.getByRole("heading", { name: /dashboard/i })).toBeVisible();

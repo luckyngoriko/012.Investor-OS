@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1.75-slim as builder
+FROM rust:1.88-slim AS builder
 
 WORKDIR /app
 
@@ -9,12 +9,11 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy manifests
-COPY Cargo.toml Cargo.lock ./
-COPY crates/ ./crates/
+# Copy source tree (includes vendor patches referenced by Cargo.toml)
+COPY . .
 
 # Build release binary
-RUN cargo build --release --bin investor-api
+RUN cargo build --release --bin investor-os
 
 # Runtime stage
 FROM debian:bookworm-slim
@@ -28,14 +27,14 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy binary from builder
-COPY --from=builder /app/target/release/investor-api /usr/local/bin/investor-api
+COPY --from=builder /app/target/release/investor-os /usr/local/bin/investor-os
 
 # Expose port
-EXPOSE 3000
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/api/health || exit 1
+    CMD curl -f http://localhost:8080/api/health || exit 1
 
 # Run the application
-CMD ["investor-api"]
+CMD ["investor-os"]
