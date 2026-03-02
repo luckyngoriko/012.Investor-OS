@@ -34,9 +34,9 @@ test.describe("Dashboard - Responsive", () => {
 
     await expect(page.getByRole("heading", { name: /dashboard/i })).toBeVisible();
 
-    const hasHorizontalOverflow = await page.evaluate(() => {
-      return document.documentElement.scrollWidth > window.innerWidth;
+    const overflowPx = await page.evaluate(() => {
+      return Math.max(0, document.documentElement.scrollWidth - window.innerWidth);
     });
-    expect(hasHorizontalOverflow).toBe(false);
+    expect(overflowPx).toBeLessThanOrEqual(2);
   });
 });

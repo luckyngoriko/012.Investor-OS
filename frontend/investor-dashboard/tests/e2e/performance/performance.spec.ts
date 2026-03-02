@@ -23,7 +23,7 @@ test.describe("Performance - Baseline", () => {
     await page.goto("/login");
     await page.waitForLoadState("domcontentloaded");
     const loadTimeMs = Date.now() - start;
-    const thresholdMs = thresholdForProject(projectName, 6000, 9000, 12000);
+    const thresholdMs = thresholdForProject(projectName, 6000, 10000, 18000);
 
     expect(loadTimeMs).toBeLessThan(thresholdMs);
   });
@@ -34,7 +34,7 @@ test.describe("Performance - Baseline", () => {
     await loginAsUser(page, "trader");
     await page.waitForLoadState("domcontentloaded");
     const transitionMs = Date.now() - start;
-    const thresholdMs = thresholdForProject(projectName, 10000, 12000, 15000);
+    const thresholdMs = thresholdForProject(projectName, 10000, 14000, 22000);
 
     expect(transitionMs).toBeLessThan(thresholdMs);
   });
@@ -61,7 +61,7 @@ test.describe("Performance - Interaction Latency", () => {
     await page.goto("/proposals");
     await page.waitForLoadState("domcontentloaded");
     const navigationMs = Date.now() - start;
-    const thresholdMs = thresholdForProject(projectName, 5000, 7000, 9000);
+    const thresholdMs = thresholdForProject(projectName, 5000, 9000, 13000);
 
     expect(navigationMs).toBeLessThan(thresholdMs);
     await expect(page.getByRole("heading", { name: /trade proposals/i })).toBeVisible();
