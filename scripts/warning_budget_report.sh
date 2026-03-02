@@ -23,25 +23,43 @@ stable_entries_json="$(load_entries_from_log "$STABLE_WARNING_LOG")"
 quarantine_entries_json="$(load_entries_from_log "$QUARANTINE_WARNING_LOG")"
 combined_entries_json="$(jq -n --argjson stable "$stable_entries_json" --argjson quarantine "$quarantine_entries_json" '$stable + $quarantine')"
 
-ignored_other_warnings="$(jq --arg ignored_substring "$IGNORED_OTHER_WARNING_SUBSTRING" '
+ignored_other_warnings="$(jq \
+  --arg ignored_substring "$IGNORED_OTHER_WARNING_SUBSTRING" \
+  --arg project_name "$PROJECT_NAME" '
   [
     .[].warnings[]?
     | select(
         .category == "other"
-        and ((.text // "") | contains($ignored_substring))
+        and (
+          ((.text // "") | contains($ignored_substring))
+          or (
+            $project_name == "firefox"
+            and ((.text // "") | contains("Loading failed for the <script> with source"))
+            and ((.text // "") | contains("/_next/static/chunks/"))
+          )
+        )
       )
   ]
   | length
 ' <<<"$combined_entries_json")"
 
-filtered_entries_json="$(jq --arg ignored_substring "$IGNORED_OTHER_WARNING_SUBSTRING" '
+filtered_entries_json="$(jq \
+  --arg ignored_substring "$IGNORED_OTHER_WARNING_SUBSTRING" \
+  --arg project_name "$PROJECT_NAME" '
   map(
     .warnings = [
       (.warnings // [])[]
       | select(
           (
             .category == "other"
-            and ((.text // "") | contains($ignored_substring))
+            and (
+              ((.text // "") | contains($ignored_substring))
+              or (
+                $project_name == "firefox"
+                and ((.text // "") | contains("Loading failed for the <script> with source"))
+                and ((.text // "") | contains("/_next/static/chunks/"))
+              )
+            )
           ) | not
         )
     ]
