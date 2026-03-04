@@ -71,7 +71,7 @@ services:
       - /mnt/MainPool/appsdata/investor-os.net/models:/app/models:ro
       - /mnt/MainPool/appsdata/investor-os.net/market-data:/app/market-data
     ports:
-      - "8080:8080"
+      - "${API_HOST_PORT:-18080}:8080"
     networks:
       - ios-net
     depends_on:
@@ -94,11 +94,11 @@ services:
       dockerfile: Dockerfile
     container_name: ios-frontend
     environment:
-      NEXT_PUBLIC_API_URL: http://api:8080
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:8080}
       NODE_ENV: production
       PORT: "3000"
     ports:
-      - "3000:3000"
+      - "${FE_HOST_PORT:-13000}:3000"
     networks:
       - ios-net
     depends_on:
