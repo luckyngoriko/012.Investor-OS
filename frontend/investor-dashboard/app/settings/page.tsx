@@ -92,10 +92,10 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error("Failed to trigger killswitch:", error);
-      addNotification(
-        "error",
-        "Failed to trigger killswitch. Please try again.",
-      );
+      addNotification({
+        type: "error",
+        title: "Failed to trigger killswitch. Please try again.",
+      });
     } finally {
       setIsLoading(false);
     }

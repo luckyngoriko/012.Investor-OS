@@ -65,6 +65,8 @@ services:
       WS_DEFAULT_EXCHANGE: binance
       WS_DEFAULT_SYMBOLS: "${WS_DEFAULT_SYMBOLS:-BTCUSDT}"
       JWT_SECRET: ${JWT_SECRET}
+      AUTH_ADMIN_EMAIL: ${AUTH_ADMIN_EMAIL:-admin@investor-os.com}
+      AUTH_ADMIN_PASSWORD: ${AUTH_ADMIN_PASSWORD}
     volumes:
       - /mnt/MainPool/appsdata/investor-os.net/config:/app/config:ro
       - /mnt/MainPool/appsdata/investor-os.net/logs:/app/logs
