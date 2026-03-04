@@ -17,7 +17,7 @@ services:
       - /mnt/MainPool/appsdata/investor-os.net/postgres:/var/lib/postgresql/data
       - ../../migrations:/docker-entrypoint-initdb.d:ro
     ports:
-      - "5432:5432"
+      - "${PG_HOST_PORT:-15432}:5432"
     networks:
       - ios-net
     healthcheck:
@@ -36,7 +36,7 @@ services:
     volumes:
       - /mnt/MainPool/appsdata/investor-os.net/redis:/data
     ports:
-      - "6379:6379"
+      - "${REDIS_HOST_PORT:-16379}:6379"
     networks:
       - ios-net
     healthcheck:
