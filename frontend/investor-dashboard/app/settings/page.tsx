@@ -94,7 +94,8 @@ export default function SettingsPage() {
       console.error("Failed to trigger killswitch:", error);
       addNotification({
         type: "error",
-        title: "Failed to trigger killswitch. Please try again.",
+        title: "Killswitch Error",
+        message: "Failed to trigger killswitch. Please try again.",
       });
     } finally {
       setIsLoading(false);
