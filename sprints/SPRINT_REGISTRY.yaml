@@ -1,16 +1,32 @@
 program:
-  name: Investor OS Enterprise Readiness Recovery Program
-  system_version: enterprise-v2
+  name: Investor OS Production Hardening Program
+  system_version: enterprise-v3
   source_of_truth:
     status: sprints/active.toml
     registry: sprints/SPRINT_REGISTRY.yaml
   scope:
-    first_sprint: 63
-    last_sprint: 95
-    total_sprints: 33
+    first_sprint: 106
+    last_sprint: 110
+    total_sprints: 5
+  previous_programs:
+    - name: Investor OS Enterprise Readiness Recovery Program
+      scope: 63-95
+      status: completed
+    - name: Investor OS Production Purity Program
+      scope: 96-100
+      status: completed
+    - name: Investor OS Production RBAC
+      scope: 101-101
+      status: completed
+    - name: Investor OS World-Class Platform Program
+      scope: 102-105
+      status: completed
+    - name: Investor OS Production Hardening Program
+      scope: 106-110
+      status: completed
 
 progress:
-  completed_sprints: 33
+  completed_sprints: 5
   in_progress_sprints: 0
   queued_sprints: 0
   blocked_sprints: 0
@@ -18,206 +34,63 @@ progress:
   remaining_percent: 0
 
 active:
-  sprint_id: 95
-  title: Anti-Fake Engineering and Fake-Source Purge
-  gate: G42
+  sprint_id: 110
+  title: "Config-Driven Endpoints & Production Hardening Closure"
+  gate: G57
+  status: done
 
 sprints:
-  - id: 63
-    title: Security Baseline & Auth Hardening
+  - id: 102
+    title: Auth Hardening & Security Middleware
     status: done
-    gate: G10
-    spec: sprints/specs/SPRINT-063.md
-    report: sprints/reports/SPRINT-063.md
-  - id: 64
-    title: Runtime & Configuration Reliability
+    gate: G49
+    spec: sprints/specs/SPRINT-102.md
+    report: sprints/reports/SPRINT-102.md
+  - id: 103
+    title: API Production Quality
     status: done
-    gate: G11
-    spec: sprints/specs/SPRINT-064.md
-    report: sprints/reports/SPRINT-064.md
-  - id: 65
-    title: Real-Time HRM & WebSocket Integration
+    gate: G50
+    spec: sprints/specs/SPRINT-103.md
+    report: sprints/reports/SPRINT-103.md
+  - id: 104
+    title: Observability & Resilience
     status: done
-    gate: G12
-    spec: sprints/specs/SPRINT-065.md
-    report: sprints/reports/SPRINT-065.md
-  - id: 66
-    title: Execution Safety & Kill-Switch Enforcement
+    gate: G51
+    spec: sprints/specs/SPRINT-104.md
+    report: sprints/reports/SPRINT-104.md
+  - id: 105
+    title: Testing, CI Security & Frontend Hardening
     status: done
-    gate: G13
-    spec: sprints/specs/SPRINT-066.md
-    report: sprints/reports/SPRINT-066.md
-  - id: 67
-    title: Market Data & Analytics De-Mock
+    gate: G52
+    spec: sprints/specs/SPRINT-105.md
+    report: sprints/reports/SPRINT-105.md
+  - id: 106
+    title: "Critical Production Gaps — 2FA, Env Validation, API Keys"
     status: done
-    gate: G14
-    spec: sprints/specs/SPRINT-067.md
-    report: sprints/reports/SPRINT-067.md
-  - id: 68
-    title: Data Source Service Completion
+    gate: G53
+    spec: sprints/specs/SPRINT-106.md
+    report: sprints/reports/SPRINT-106.md
+  - id: 107
+    title: "Auth Wiring Completion & Demo Endpoint Cleanup"
     status: done
-    gate: G15
-    spec: sprints/specs/SPRINT-068.md
-    report: sprints/reports/SPRINT-068.md
-  - id: 69
-    title: Treasury & Custody Production Path
+    gate: G54
+    spec: sprints/specs/SPRINT-107.md
+    report: sprints/reports/SPRINT-107.md
+  - id: 108
+    title: "Killswitch Persistence & Auth Test Coverage"
     status: done
-    gate: G16
-    spec: sprints/specs/SPRINT-069.md
-    report: sprints/reports/SPRINT-069.md
-  - id: 70
-    title: Frontend De-Mock & Enterprise UX Consistency
+    gate: G55
+    spec: sprints/specs/SPRINT-108.md
+    report: sprints/reports/SPRINT-108.md
+  - id: 109
+    title: "Wire Portfolio/Tax/Strategy Endpoints to Real Services"
     status: done
-    gate: G17
-    spec: sprints/specs/SPRINT-070.md
-    report: sprints/reports/SPRINT-070.md
-  - id: 71
-    title: End-to-End, Performance & Resilience QA
+    gate: G56
+    spec: sprints/specs/SPRINT-109.md
+    report: sprints/reports/SPRINT-109.md
+  - id: 110
+    title: "Config-Driven Endpoints & Production Hardening Closure"
     status: done
-    gate: G18
-    spec: sprints/specs/SPRINT-071.md
-    report: sprints/reports/SPRINT-071.md
-  - id: 72
-    title: Release Governance & Controlled Go-Live
-    status: done
-    gate: G19
-    spec: sprints/specs/SPRINT-072.md
-    report: sprints/reports/SPRINT-072.md
-  - id: 73
-    title: Post-Go-Live Stabilization & SLO Enforcement
-    status: done
-    gate: G20
-    spec: sprints/specs/SPRINT-073.md
-    report: sprints/reports/SPRINT-073.md
-  - id: 74
-    title: Reliability Regression Elimination & CI Hardening
-    status: done
-    gate: G21
-    spec: sprints/specs/SPRINT-074.md
-    report: sprints/reports/SPRINT-074.md
-  - id: 75
-    title: Operational Cost Control & Observability Signal Tuning
-    status: done
-    gate: G22
-    spec: sprints/specs/SPRINT-075.md
-    report: sprints/reports/SPRINT-075.md
-  - id: 76
-    title: Runbook Automation & On-Call Readiness
-    status: done
-    gate: G23
-    spec: sprints/specs/SPRINT-076.md
-    report: sprints/reports/SPRINT-076.md
-  - id: 77
-    title: Final Enterprise Readiness Certification & Program Closure
-    status: done
-    gate: G24
-    spec: sprints/specs/SPRINT-077.md
-    report: sprints/reports/SPRINT-077.md
-  - id: 78
-    title: Post-Certification Reliability Guardrails & Drift Prevention
-    status: done
-    gate: G25
-    spec: sprints/specs/SPRINT-078.md
-    report: sprints/reports/SPRINT-078.md
-  - id: 79
-    title: Continuous Verification Expansion & CI Stability Hardening
-    status: done
-    gate: G26
-    spec: sprints/specs/SPRINT-079.md
-    report: sprints/reports/SPRINT-079.md
-  - id: 80
-    title: CI Dependency Determinism & Runtime Verification Unblocking
-    status: done
-    gate: G27
-    spec: sprints/specs/SPRINT-080.md
-    report: sprints/reports/SPRINT-080.md
-  - id: 81
-    title: Runtime Warning Budget Enforcement & Signal Hygiene
-    status: done
-    gate: G28
-    spec: sprints/specs/SPRINT-081.md
-    report: sprints/reports/SPRINT-081.md
-  - id: 82
-    title: Security Backlog Burn-down & PR Signal Hardening
-    status: done
-    gate: G29
-    spec: sprints/specs/SPRINT-082.md
-    report: sprints/reports/SPRINT-082.md
-  - id: 83
-    title: Always-On Security Audit Gate & Advisory Remediation Track
-    status: done
-    gate: G30
-    spec: sprints/specs/SPRINT-083.md
-    report: sprints/reports/SPRINT-083.md
-  - id: 84
-    title: Security Gate Install Resilience & Remediation Retry
-    status: done
-    gate: G31
-    spec: sprints/specs/SPRINT-084.md
-    report: sprints/reports/SPRINT-084.md
-  - id: 85
-    title: Production Auth & Identity Integration
-    status: done
-    gate: G32
-    spec: sprints/specs/SPRINT-085.md
-    report: sprints/reports/SPRINT-085.md
-  - id: 86
-    title: Frontend De-Mock: Tax, Security, Portfolio Optimization
-    status: done
-    gate: G33
-    spec: sprints/specs/SPRINT-086.md
-    report: sprints/reports/SPRINT-086.md
-  - id: 87
-    title: HRM Real Inference Model Integration
-    status: done
-    gate: G34
-    spec: sprints/specs/SPRINT-087.md
-    report: sprints/reports/SPRINT-087.md
-  - id: 88
-    title: Analytics Real Market Data Backtesting
-    status: done
-    gate: G35
-    spec: sprints/specs/SPRINT-088.md
-    report: sprints/reports/SPRINT-088.md
-  - id: 89
-    title: Data Source Service SQL Completion
-    status: done
-    gate: G36
-    spec: sprints/specs/SPRINT-089.md
-    report: sprints/reports/SPRINT-089.md
-  - id: 90
-    title: Distributed Runtime: gRPC + Service Discovery
-    status: done
-    gate: G37
-    spec: sprints/specs/SPRINT-090.md
-    report: sprints/reports/SPRINT-090.md
-  - id: 91
-    title: Treasury Production Integrations
-    status: done
-    gate: G38
-    spec: sprints/specs/SPRINT-091.md
-    report: sprints/reports/SPRINT-091.md
-  - id: 92
-    title: Observability Metrics Production Wiring
-    status: done
-    gate: G39
-    spec: sprints/specs/SPRINT-092.md
-    report: sprints/reports/SPRINT-092.md
-  - id: 93
-    title: Security Debt Closure & Final Product Readiness
-    status: done
-    gate: G40
-    spec: sprints/specs/SPRINT-093.md
-    report: sprints/reports/SPRINT-093.md
-  - id: 94
-    title: Real-Capital Go-Live & Live-Data Certification
-    status: done
-    gate: G41
-    spec: sprints/specs/SPRINT-094.md
-    report: sprints/reports/SPRINT-094.md
-  - id: 95
-    title: Anti-Fake Engineering and Fake-Source Purge
-    status: done
-    gate: G42
-    spec: sprints/specs/SPRINT-095.md
-    report: sprints/reports/SPRINT-095.md
+    gate: G57
+    spec: sprints/specs/SPRINT-110.md
+    report: sprints/reports/SPRINT-110.md

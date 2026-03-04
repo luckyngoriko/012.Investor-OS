@@ -2,7 +2,6 @@
 //!
 //! Reddit, Twitter/X sentiment analysis
 
-
 /// Social media collector
 #[derive(Debug, Clone)]
 pub struct SocialCollector {
@@ -17,25 +16,25 @@ impl SocialCollector {
             twitter: TwitterClient::new(),
         }
     }
-    
+
     /// Get Reddit sentiment for a ticker
     pub async fn reddit_sentiment(&self, ticker: &str) -> Result<SocialSentiment, SocialError> {
         let posts = self.reddit.fetch_posts(ticker).await?;
-        
+
         let mut total_score = 0.0;
         let mut total_comments = 0;
-        
+
         for post in &posts {
             total_score += post.sentiment_score;
             total_comments += post.comment_count;
         }
-        
+
         let avg_sentiment = if posts.is_empty() {
             0.0
         } else {
             total_score / posts.len() as f64
         };
-        
+
         Ok(SocialSentiment {
             platform: Platform::Reddit,
             ticker: ticker.to_string(),
@@ -45,18 +44,18 @@ impl SocialCollector {
             trending: posts.len() > 10,
         })
     }
-    
+
     /// Get Twitter sentiment for a ticker
     pub async fn twitter_sentiment(&self, ticker: &str) -> Result<SocialSentiment, SocialError> {
         let tweets = self.twitter.fetch_tweets(ticker).await?;
-        
+
         let total_score: f64 = tweets.iter().map(|t| t.sentiment).sum();
         let avg_sentiment = if tweets.is_empty() {
             0.0
         } else {
             total_score / tweets.len() as f64
         };
-        
+
         Ok(SocialSentiment {
             platform: Platform::Twitter,
             ticker: ticker.to_string(),
@@ -66,12 +65,12 @@ impl SocialCollector {
             trending: tweets.len() > 100,
         })
     }
-    
+
     /// Get composite social sentiment
     pub async fn composite_sentiment(&self, ticker: &str) -> Result<SocialSentiment, SocialError> {
         let reddit = self.reddit_sentiment(ticker).await?;
         let twitter = self.twitter_sentiment(ticker).await?;
-        
+
         // Weighted average
         let total_mentions = reddit.mention_count + twitter.mention_count;
         if total_mentions == 0 {
@@ -84,12 +83,11 @@ impl SocialCollector {
                 trending: false,
             });
         }
-        
-        let weighted_score = (
-            reddit.sentiment_score * reddit.mention_count as f64 +
-            twitter.sentiment_score * twitter.mention_count as f64
-        ) / total_mentions as f64;
-        
+
+        let weighted_score = (reddit.sentiment_score * reddit.mention_count as f64
+            + twitter.sentiment_score * twitter.mention_count as f64)
+            / total_mentions as f64;
+
         Ok(SocialSentiment {
             platform: Platform::Combined,
             ticker: ticker.to_string(),
@@ -99,21 +97,38 @@ impl SocialCollector {
             trending: reddit.trending || twitter.trending,
         })
     }
-    
-    /// Get trending tickers on social media
+
+    /// Get trending tickers from Reddit.
+    /// Scans r/wallstreetbets and r/stocks for frequently mentioned tickers.
+    /// Returns empty vec with warning if Reddit is unreachable.
     pub async fn trending_tickers(&self) -> Result<Vec<String>, SocialError> {
-        // Would fetch from r/wallstreetbets, StockTwits, etc.
-        Ok(vec![
-            "GME".to_string(),
-            "AMC".to_string(),
-            "TSLA".to_string(),
-            "AAPL".to_string(),
-        ])
+        let posts = self.reddit.fetch_trending_posts().await?;
+
+        // Extract ticker symbols ($AAPL, $TSLA, etc.) from post titles
+        let mut counts: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+        let ticker_pattern = regex::Regex::new(r"\$([A-Z]{1,5})\b").ok();
+
+        for post in &posts {
+            if let Some(ref re) = ticker_pattern {
+                for cap in re.captures_iter(&post.title) {
+                    if let Some(m) = cap.get(1) {
+                        *counts.entry(m.as_str().to_string()).or_insert(0) += 1;
+                    }
+                }
+            }
+        }
+
+        // Sort by mention count descending, take top 20
+        let mut sorted: Vec<(String, u32)> = counts.into_iter().collect();
+        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+        Ok(sorted.into_iter().take(20).map(|(t, _)| t).collect())
     }
 }
 
 impl Default for SocialCollector {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// Reddit client
@@ -134,26 +149,101 @@ impl RedditClient {
             user_agent: "InvestorOS/1.0".to_string(),
         }
     }
-    
+
+    /// Fetch posts mentioning a ticker from Reddit JSON API.
+    /// Uses public `.json` endpoints (no OAuth required for read).
     pub async fn fetch_posts(&self, ticker: &str) -> Result<Vec<RedditPost>, SocialError> {
-        // Would use Reddit API
-        // Placeholder
-        Ok(vec![
-            RedditPost {
-                title: format!("${} to the moon!", ticker),
-                sentiment_score: 0.8,
-                upvotes: 1000,
-                comment_count: 200,
-                subreddit: "wallstreetbets".to_string(),
-            },
-            RedditPost {
-                title: format!("${} earnings discussion", ticker),
-                sentiment_score: 0.3,
-                upvotes: 500,
-                comment_count: 100,
-                subreddit: "investing".to_string(),
-            },
-        ])
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .map_err(|e| SocialError::ApiError(e.to_string()))?;
+
+        let subreddits = ["wallstreetbets", "stocks", "investing"];
+        let mut posts = Vec::new();
+
+        for sub in &subreddits {
+            let url = format!(
+                "https://www.reddit.com/r/{}/search.json?q={}&restrict_sr=1&sort=new&limit=25",
+                sub, ticker
+            );
+            match client
+                .get(&url)
+                .header("User-Agent", &self.user_agent)
+                .send()
+                .await
+            {
+                Ok(resp) => {
+                    if let Ok(json) = resp.json::<serde_json::Value>().await {
+                        if let Some(children) = json["data"]["children"].as_array() {
+                            for child in children {
+                                let d = &child["data"];
+                                let title = d["title"].as_str().unwrap_or_default().to_string();
+                                let ups = d["ups"].as_u64().unwrap_or(0) as u32;
+                                let comments = d["num_comments"].as_u64().unwrap_or(0) as u32;
+                                let upvote_ratio = d["upvote_ratio"].as_f64().unwrap_or(0.5);
+                                // Simple sentiment: upvote_ratio > 0.7 = positive, < 0.4 = negative
+                                let sentiment = (upvote_ratio - 0.5) * 2.0;
+                                posts.push(RedditPost {
+                                    title,
+                                    sentiment_score: sentiment,
+                                    upvotes: ups,
+                                    comment_count: comments,
+                                    subreddit: sub.to_string(),
+                                });
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Reddit fetch failed for r/{}: {}", sub, e);
+                }
+            }
+        }
+
+        if posts.is_empty() {
+            tracing::warn!("No Reddit posts found for ticker {}", ticker);
+        }
+
+        Ok(posts)
+    }
+
+    /// Fetch trending posts from popular finance subreddits (for trending_tickers)
+    pub async fn fetch_trending_posts(&self) -> Result<Vec<RedditPost>, SocialError> {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .map_err(|e| SocialError::ApiError(e.to_string()))?;
+
+        let mut posts = Vec::new();
+        let url = "https://www.reddit.com/r/wallstreetbets/hot.json?limit=50";
+        match client
+            .get(url)
+            .header("User-Agent", &self.user_agent)
+            .send()
+            .await
+        {
+            Ok(resp) => {
+                if let Ok(json) = resp.json::<serde_json::Value>().await {
+                    if let Some(children) = json["data"]["children"].as_array() {
+                        for child in children {
+                            let d = &child["data"];
+                            posts.push(RedditPost {
+                                title: d["title"].as_str().unwrap_or_default().to_string(),
+                                sentiment_score: 0.0,
+                                upvotes: d["ups"].as_u64().unwrap_or(0) as u32,
+                                comment_count: d["num_comments"].as_u64().unwrap_or(0) as u32,
+                                subreddit: "wallstreetbets".to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Reddit trending fetch failed: {}", e);
+            }
+        }
+
+        Ok(posts)
     }
 }
 
@@ -175,26 +265,67 @@ impl TwitterClient {
             bearer_token: std::env::var("TWITTER_BEARER_TOKEN").ok(),
         }
     }
-    
+
+    /// Fetch tweets for a ticker. Requires `TWITTER_BEARER_TOKEN` env var.
+    /// Returns empty vec without the token (no fake data).
     pub async fn fetch_tweets(&self, ticker: &str) -> Result<Vec<Tweet>, SocialError> {
-        // Would use Twitter API v2
-        // Placeholder
-        Ok(vec![
-            Tweet {
-                text: format!("Bullish on ${}", ticker),
-                sentiment: 0.7,
-                likes: 50,
-                retweets: 20,
-                author_followers: 10000,
-            },
-            Tweet {
-                text: format!("${} looking weak today", ticker),
-                sentiment: -0.4,
-                likes: 10,
-                retweets: 2,
-                author_followers: 1000,
-            },
-        ])
+        let bearer = match &self.bearer_token {
+            Some(token) if !token.is_empty() => token.clone(),
+            _ => {
+                tracing::debug!("Twitter API disabled — TWITTER_BEARER_TOKEN not set");
+                return Ok(vec![]);
+            }
+        };
+
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .map_err(|e| SocialError::ApiError(e.to_string()))?;
+
+        let url = format!(
+            "https://api.twitter.com/2/tweets/search/recent?query=%24{}&max_results=25&tweet.fields=public_metrics",
+            ticker
+        );
+        let resp = client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", bearer))
+            .send()
+            .await
+            .map_err(|e| SocialError::ApiError(e.to_string()))?;
+
+        if resp.status() == reqwest::StatusCode::UNAUTHORIZED {
+            return Err(SocialError::AuthError);
+        }
+        if resp.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+            return Err(SocialError::RateLimit);
+        }
+
+        let json: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| SocialError::ApiError(e.to_string()))?;
+
+        let mut tweets = Vec::new();
+        if let Some(data) = json["data"].as_array() {
+            for tweet in data {
+                let text = tweet["text"].as_str().unwrap_or_default().to_string();
+                let metrics = &tweet["public_metrics"];
+                let likes = metrics["like_count"].as_u64().unwrap_or(0) as u32;
+                let retweets = metrics["retweet_count"].as_u64().unwrap_or(0) as u32;
+                // Simple sentiment from engagement ratio
+                let total = (likes + retweets).max(1) as f64;
+                let sentiment = ((likes as f64 / total) - 0.5).clamp(-1.0, 1.0);
+                tweets.push(Tweet {
+                    text,
+                    sentiment,
+                    likes,
+                    retweets,
+                    author_followers: 0, // Requires user expansion
+                });
+            }
+        }
+
+        Ok(tweets)
     }
 }
 
@@ -223,7 +354,7 @@ pub struct Tweet {
 pub struct SocialSentiment {
     pub platform: Platform,
     pub ticker: String,
-    pub sentiment_score: f64,  // -1 to 1
+    pub sentiment_score: f64, // -1 to 1
     pub mention_count: u32,
     pub engagement: u32,
     pub trending: bool,

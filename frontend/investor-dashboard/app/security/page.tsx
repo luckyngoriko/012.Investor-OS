@@ -1,40 +1,217 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { 
-  Lock, Shield, Key, RefreshCw, CheckCircle2, AlertTriangle,
-  Eye, EyeOff, Copy, Trash2, Smartphone, History
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Copy,
+  Eye,
+  EyeOff,
+  History,
+  Key,
+  Lock,
+  RefreshCw,
+  Shield,
+  Smartphone,
+  Trash2,
 } from "lucide-react";
 import Sidebar from "@/components/sidebar";
+import {
+  type ClearanceLevel,
+  type ClearanceLevelsResponse,
+  type GenerateApiKeyResponse,
+  type SecurityStatusResponse,
+  fetchClearanceLevels,
+  fetchSecurityStatus,
+  generateSecurityApiKey,
+} from "@/lib/domain-api";
 
-const mockApiKeys = [
-  { id: "key_1", name: "Trading API", clearance: "Internal", created: "2026-01-15", lastUsed: "2026-02-10", status: "active" },
-  { id: "key_2", name: "Dashboard Access", clearance: "Confidential", created: "2026-01-20", lastUsed: "2026-02-09", status: "active" },
-];
+type SecurityTab = "overview" | "keys" | "2fa" | "audit";
+type Severity = "info" | "warning";
 
-const mockAuditEvents = [
-  { id: 1, event: "Login Success", user: "trader@example.com", ip: "192.168.1.100", timestamp: "2026-02-10 14:30:22", severity: "info" },
-  { id: 2, event: "API Key Created", user: "trader@example.com", ip: "192.168.1.100", timestamp: "2026-02-10 14:25:15", severity: "info" },
-  { id: 3, event: "2FA Verified", user: "trader@example.com", ip: "192.168.1.100", timestamp: "2026-02-10 14:20:08", severity: "info" },
-  { id: 4, event: "Login Failed", user: "unknown", ip: "10.0.0.50", timestamp: "2026-02-10 13:45:33", severity: "warning" },
-];
+interface SecurityAuditEvent {
+  id: string;
+  event: string;
+  details: string;
+  severity: Severity;
+  timestamp: string;
+}
+
+interface SecurityApiKeyRow {
+  id: string;
+  name: string;
+  clearance: string;
+  created: string;
+  lastUsed: string;
+  status: "active";
+}
+
+const LEVEL_STYLE_MAP: Record<string, { card: string; label: string }> = {
+  Public: {
+    card: "bg-gray-500/10 border border-gray-500/30",
+    label: "text-gray-300",
+  },
+  Internal: {
+    card: "bg-blue-500/10 border border-blue-500/30",
+    label: "text-blue-400",
+  },
+  Confidential: {
+    card: "bg-amber-500/10 border border-amber-500/30",
+    label: "text-amber-400",
+  },
+  Restricted: {
+    card: "bg-orange-500/10 border border-orange-500/30",
+    label: "text-orange-400",
+  },
+  TopSecret: {
+    card: "bg-rose-500/10 border border-rose-500/30",
+    label: "text-rose-400",
+  },
+};
+
+function nowDateLabel(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function nowTimestampLabel(): string {
+  return new Date().toISOString().replace("T", " ").slice(0, 19);
+}
+
+function buildAuditEvents(status: SecurityStatusResponse | null): SecurityAuditEvent[] {
+  if (!status) {
+    return [];
+  }
+
+  const now = nowTimestampLabel();
+  const featureEvents: SecurityAuditEvent[] = status.features.map((feature, index) => ({
+    id: `evt_feature_${index}`,
+    event: `${feature.name} Status`,
+    details: feature.description,
+    severity: (feature.name.includes("Policies") ? "warning" : "info") as Severity,
+    timestamp: now,
+  }));
+
+  return [
+    {
+      id: "evt_module",
+      event: "Security Module Health",
+      details: `Module state: ${status.status}`,
+      severity: status.status === "active" ? "info" : "warning",
+      timestamp: now,
+    },
+    ...featureEvents,
+  ];
+}
+
+function mapGeneratedKeyToRow(payload: GenerateApiKeyResponse): SecurityApiKeyRow {
+  return {
+    id: payload.key_id,
+    name: `Generated Key ${payload.key_id.slice(0, 8)}`,
+    clearance: payload.clearance,
+    created: nowDateLabel(),
+    lastUsed: "Just now",
+    status: "active",
+  };
+}
+
+function resolveClearanceLevels(
+  payload: ClearanceLevelsResponse | null,
+): ClearanceLevel[] {
+  if (!payload) {
+    return [];
+  }
+  return payload.levels;
+}
 
 export default function SecurityPage() {
-  const [activeTab, setActiveTab] = useState<"overview" | "keys" | "2fa" | "audit">("overview");
+  const [activeTab, setActiveTab] = useState<SecurityTab>("overview");
+  const [statusPayload, setStatusPayload] = useState<SecurityStatusResponse | null>(null);
+  const [clearancePayload, setClearancePayload] = useState<ClearanceLevelsResponse | null>(null);
+  const [apiKeys, setApiKeys] = useState<SecurityApiKeyRow[]>([]);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadSecurityData = async () => {
+      setIsLoading(true);
+      setErrorMessage(null);
+      try {
+        const [status, clearance] = await Promise.all([
+          fetchSecurityStatus(),
+          fetchClearanceLevels(),
+        ]);
+        if (!mounted) return;
+
+        setStatusPayload(status);
+        setClearancePayload(clearance);
+      } catch (error) {
+        if (!mounted) return;
+        setErrorMessage(
+          error instanceof Error ? error.message : "Failed to load security data",
+        );
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadSecurityData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const auditEvents = useMemo(
+    () => buildAuditEvents(statusPayload),
+    [statusPayload],
+  );
+  const clearanceLevels = useMemo(
+    () => resolveClearanceLevels(clearancePayload),
+    [clearancePayload],
+  );
+  const infoEvents = auditEvents.filter((event) => event.severity === "info").length;
+  const warningEvents = auditEvents.filter((event) => event.severity === "warning").length;
+
+  const encryptionFeature = statusPayload?.features.find((feature) =>
+    feature.name.includes("Encryption"),
+  );
+  const twoFactorFeature = statusPayload?.features.find((feature) =>
+    feature.name.includes("Two-Factor"),
+  );
 
   const handleGenerateKey = async () => {
-    const mockKey = "ios_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    setGeneratedKey(mockKey);
-    setShowKey(true);
+    setIsGeneratingKey(true);
+    setErrorMessage(null);
+
+    try {
+      const payload = await generateSecurityApiKey();
+      setGeneratedKey(payload.api_key);
+      setShowKey(true);
+      setApiKeys((current) => [mapGeneratedKeyToRow(payload), ...current]);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to generate API key",
+      );
+    } finally {
+      setIsGeneratingKey(false);
+    }
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert("Copied to clipboard!");
+    void navigator.clipboard.writeText(text);
+  };
+
+  const removeKey = (id: string) => {
+    setApiKeys((current) => current.filter((row) => row.id !== id));
   };
 
   return (
@@ -49,10 +226,18 @@ export default function SecurityPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-white">Security & Encryption</h1>
-                <p className="text-gray-400 text-sm">Sprint 34: HSM-backed API keys, 2FA, and audit trails</p>
+                <p className="text-gray-400 text-sm">
+                  Backend-driven security status, keys, and audit visibility
+                </p>
               </div>
             </div>
           </motion.div>
+
+          {errorMessage && (
+            <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-300">
+              {errorMessage}
+            </div>
+          )}
 
           <div className="flex gap-2 p-1 bg-gray-800/30 rounded-xl w-fit">
             {[
@@ -63,9 +248,12 @@ export default function SecurityPage() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all
-                  ${activeTab === tab.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white hover:bg-gray-700/50"}`}
+                onClick={() => setActiveTab(tab.id as SecurityTab)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                  activeTab === tab.id
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-400 hover:text-white hover:bg-gray-700/50"
+                }`}
               >
                 <tab.icon className="w-4 h-4" />
                 <span className="text-sm font-medium">{tab.label}</span>
@@ -73,8 +261,19 @@ export default function SecurityPage() {
             ))}
           </div>
 
-          {activeTab === "overview" && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {isLoading ? (
+            <div className="glass-card rounded-2xl p-6 text-gray-300 flex items-center gap-3">
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              Loading security data...
+            </div>
+          ) : null}
+
+          {!isLoading && activeTab === "overview" && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+            >
               <div className="glass-card rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
@@ -85,7 +284,11 @@ export default function SecurityPage() {
                     <p className="text-lg font-bold text-white">AES-256-GCM</p>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500">HSM-backed key storage</p>
+                <p className="text-xs text-gray-500">
+                  {encryptionFeature?.rotation_interval
+                    ? `Rotation: ${encryptionFeature.rotation_interval}`
+                    : "Rotation policy available"}
+                </p>
               </div>
 
               <div className="glass-card rounded-2xl p-6">
@@ -95,10 +298,10 @@ export default function SecurityPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Active API Keys</p>
-                    <p className="text-lg font-bold text-white">{mockApiKeys.length}</p>
+                    <p className="text-lg font-bold text-white">{apiKeys.length}</p>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500">Across all clearance levels</p>
+                <p className="text-xs text-gray-500">Generated through backend API</p>
               </div>
 
               <div className="glass-card rounded-2xl p-6">
@@ -108,10 +311,14 @@ export default function SecurityPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">2FA Status</p>
-                    <p className="text-lg font-bold text-white">{twoFactorEnabled ? "Enabled" : "Disabled"}</p>
+                    <p className="text-lg font-bold text-white">
+                      {twoFactorEnabled ? "Enabled" : "Disabled"}
+                    </p>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500">TOTP/HOTP supported</p>
+                <p className="text-xs text-gray-500">
+                  {twoFactorFeature?.methods?.join(", ") ?? "Methods exposed by backend"}
+                </p>
               </div>
 
               <div className="glass-card rounded-2xl p-6">
@@ -120,48 +327,59 @@ export default function SecurityPage() {
                     <RefreshCw className="w-5 h-5 text-amber-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">Key Rotation</p>
-                    <p className="text-lg font-bold text-white">Auto (90d)</p>
+                    <p className="text-sm text-gray-400">Module Status</p>
+                    <p className="text-lg font-bold text-white">
+                      {statusPayload?.status ?? "unknown"}
+                    </p>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500">Grace period: 7 days</p>
+                <p className="text-xs text-gray-500">Sourced from `/api/security/status`</p>
               </div>
 
               <div className="md:col-span-2 lg:col-span-4 glass-card rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Clearance Levels</h3>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                  {[
-                    { level: "Public", value: 0, desc: "Basic read access", color: "gray" },
-                    { level: "Internal", value: 1, desc: "Standard trading", color: "blue" },
-                    { level: "Confidential", value: 2, desc: "Sensitive data", color: "amber", requires2fa: true },
-                    { level: "Restricted", value: 3, desc: "High-value tx", color: "orange", requires2fa: true },
-                    { level: "TopSecret", value: 4, desc: "Admin only", color: "red", requires2fa: true },
-                  ].map((item) => (
-                    <div key={item.level} className={`p-4 rounded-xl bg-${item.color}-500/10 border border-${item.color}-500/30`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-sm font-bold text-${item.color}-400`}>{item.level}</span>
-                        {item.requires2fa && <Lock className="w-3 h-3 text-amber-400" />}
+                  {clearanceLevels.map((level) => {
+                    const style = LEVEL_STYLE_MAP[level.name] ?? LEVEL_STYLE_MAP.Public;
+                    return (
+                      <div key={level.name} className={`p-4 rounded-xl ${style.card}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`text-sm font-bold ${style.label}`}>{level.name}</span>
+                          {level["2fa_required"] ? (
+                            <Lock className="w-3 h-3 text-amber-400" />
+                          ) : null}
+                        </div>
+                        <p className="text-xs text-gray-400">{level.description}</p>
                       </div>
-                      <p className="text-xs text-gray-400">{item.desc}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </motion.div>
           )}
 
-          {activeTab === "keys" && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          {!isLoading && activeTab === "keys" && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
               <div className="glass-card rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Generate API Key</h3>
                 <div className="flex flex-col md:flex-row gap-4">
-                  <select className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white">
-                    <option>Internal - Standard trading operations</option>
-                    <option>Confidential - Sensitive positions</option>
-                    <option>Restricted - High-value transactions</option>
-                  </select>
-                  <button onClick={handleGenerateKey} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors">
-                    Generate Key
+                  <button
+                    onClick={handleGenerateKey}
+                    disabled={isGeneratingKey}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isGeneratingKey ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      "Generate Key"
+                    )}
                   </button>
                 </div>
 
@@ -169,16 +387,24 @@ export default function SecurityPage() {
                   <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
                       <AlertTriangle className="w-5 h-5 text-amber-400" />
-                      <span className="text-amber-400 font-medium">Copy this key now! It will not be shown again.</span>
+                      <span className="text-amber-400 font-medium">
+                        Copy this key now. It is shown only once.
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 p-3 bg-gray-900 rounded-lg text-green-400 font-mono text-sm">
                         {showKey ? generatedKey : "ios_" + "*".repeat(32)}
                       </code>
-                      <button onClick={() => setShowKey(!showKey)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400">
+                      <button
+                        onClick={() => setShowKey((current) => !current)}
+                        className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"
+                      >
                         {showKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
-                      <button onClick={() => copyToClipboard(generatedKey)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400">
+                      <button
+                        onClick={() => copyToClipboard(generatedKey)}
+                        className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"
+                      >
                         <Copy className="w-5 h-5" />
                       </button>
                     </div>
@@ -190,49 +416,65 @@ export default function SecurityPage() {
                 <div className="p-6 border-b border-gray-800">
                   <h3 className="text-lg font-semibold text-white">Active API Keys</h3>
                 </div>
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-xs text-gray-500 uppercase">
-                      <th className="px-6 py-4">Name</th>
-                      <th className="px-6 py-4">Clearance</th>
-                      <th className="px-6 py-4">Created</th>
-                      <th className="px-6 py-4">Last Used</th>
-                      <th className="px-6 py-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockApiKeys.map((key) => (
-                      <tr key={key.id} className="border-t border-gray-800">
-                        <td className="px-6 py-4 text-white">{key.name}</td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 text-xs rounded-full bg-blue-500/20 text-blue-400">{key.clearance}</span>
-                        </td>
-                        <td className="px-6 py-4 text-gray-400">{key.created}</td>
-                        <td className="px-6 py-4 text-gray-400">{key.lastUsed}</td>
-                        <td className="px-6 py-4">
-                          <button className="p-2 hover:bg-rose-500/10 rounded-lg text-rose-400">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
+                {apiKeys.length === 0 ? (
+                  <div className="p-6 text-sm text-gray-400">No keys generated yet.</div>
+                ) : (
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-left text-xs text-gray-500 uppercase">
+                        <th className="px-6 py-4">Name</th>
+                        <th className="px-6 py-4">Clearance</th>
+                        <th className="px-6 py-4">Created</th>
+                        <th className="px-6 py-4">Last Used</th>
+                        <th className="px-6 py-4">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {apiKeys.map((row) => (
+                        <tr key={row.id} className="border-t border-gray-800">
+                          <td className="px-6 py-4 text-white">{row.name}</td>
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 text-xs rounded-full bg-blue-500/20 text-blue-400">
+                              {row.clearance}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-400">{row.created}</td>
+                          <td className="px-6 py-4 text-gray-400">{row.lastUsed}</td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => removeKey(row.id)}
+                              className="p-2 hover:bg-rose-500/10 rounded-lg text-rose-400"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </motion.div>
           )}
 
-          {activeTab === "2fa" && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-6">
+          {!isLoading && activeTab === "2fa" && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card rounded-2xl p-6"
+            >
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-lg font-semibold text-white">Two-Factor Authentication</h3>
-                  <p className="text-gray-400">Add an extra layer of security to your account</p>
+                  <p className="text-gray-400">Add an extra layer of account protection</p>
                 </div>
                 <button
-                  onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors
-                    ${twoFactorEnabled ? "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30" : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"}`}
+                  onClick={() => setTwoFactorEnabled((current) => !current)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    twoFactorEnabled
+                      ? "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
+                      : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                  }`}
                 >
                   {twoFactorEnabled ? "Disable 2FA" : "Enable 2FA"}
                 </button>
@@ -244,7 +486,7 @@ export default function SecurityPage() {
                     <CheckCircle2 className="w-6 h-6 text-emerald-400" />
                     <div>
                       <p className="text-white font-medium">2FA is enabled</p>
-                      <p className="text-sm text-gray-400">Your account is protected with TOTP</p>
+                      <p className="text-sm text-gray-400">Runtime toggle for secure operations</p>
                     </div>
                   </div>
                 </div>
@@ -253,57 +495,72 @@ export default function SecurityPage() {
                   <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-4">
                     <Smartphone className="w-8 h-8 text-gray-400" />
                   </div>
-                  <p className="text-gray-400 mb-4">Enable 2FA to protect your account</p>
-                  <p className="text-sm text-gray-500">Supported: TOTP, HOTP, WebAuthn, SMS, Email</p>
+                  <p className="text-gray-400 mb-4">Enable 2FA for stronger account security</p>
+                  <p className="text-sm text-gray-500">
+                    {twoFactorFeature?.methods?.join(", ") ?? "TOTP, HOTP, WebAuthn, SMS, Email"}
+                  </p>
                 </div>
               )}
             </motion.div>
           )}
 
-          {activeTab === "audit" && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl overflow-hidden">
+          {!isLoading && activeTab === "audit" && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card rounded-2xl overflow-hidden"
+            >
               <div className="p-6 border-b border-gray-800 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-white">Security Audit Log</h3>
-                  <p className="text-gray-400 text-sm">Immutable event logging with tamper detection</p>
+                  <p className="text-gray-400 text-sm">
+                    Backend-derived security activity snapshot
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <span className="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400">
-                    {mockAuditEvents.filter(e => e.severity === "info").length} Info
+                    {infoEvents} Info
                   </span>
                   <span className="px-3 py-1 text-xs rounded-full bg-amber-500/20 text-amber-400">
-                    {mockAuditEvents.filter(e => e.severity === "warning").length} Warning
+                    {warningEvents} Warning
                   </span>
                 </div>
               </div>
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-xs text-gray-500 uppercase">
-                    <th className="px-6 py-4">Event</th>
-                    <th className="px-6 py-4">User</th>
-                    <th className="px-6 py-4">IP Address</th>
-                    <th className="px-6 py-4">Timestamp</th>
-                    <th className="px-6 py-4">Severity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mockAuditEvents.map((event) => (
-                    <tr key={event.id} className="border-t border-gray-800">
-                      <td className="px-6 py-4 text-white">{event.event}</td>
-                      <td className="px-6 py-4 text-gray-400">{event.user}</td>
-                      <td className="px-6 py-4 text-gray-400 font-mono">{event.ip}</td>
-                      <td className="px-6 py-4 text-gray-400">{event.timestamp}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 text-xs rounded-full
-                          ${event.severity === "info" ? "bg-blue-500/20 text-blue-400" : ""}
-                          ${event.severity === "warning" ? "bg-amber-500/20 text-amber-400" : ""}`}>
-                          {event.severity}
-                        </span>
-                      </td>
+
+              {auditEvents.length === 0 ? (
+                <div className="p-6 text-sm text-gray-400">No audit events available.</div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-xs text-gray-500 uppercase">
+                      <th className="px-6 py-4">Event</th>
+                      <th className="px-6 py-4">Details</th>
+                      <th className="px-6 py-4">Severity</th>
+                      <th className="px-6 py-4">Timestamp</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {auditEvents.map((event) => (
+                      <tr key={event.id} className="border-t border-gray-800">
+                        <td className="px-6 py-4 text-white">{event.event}</td>
+                        <td className="px-6 py-4 text-gray-400">{event.details}</td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              event.severity === "info"
+                                ? "bg-emerald-500/20 text-emerald-400"
+                                : "bg-amber-500/20 text-amber-400"
+                            }`}
+                          >
+                            {event.severity}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-gray-400">{event.timestamp}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </motion.div>
           )}
         </div>

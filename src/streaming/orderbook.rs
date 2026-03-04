@@ -5,7 +5,6 @@ use rust_decimal::Decimal;
 use std::collections::BTreeMap;
 use tracing::{debug, trace};
 
-
 /// Order book side
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Side {
@@ -138,7 +137,11 @@ impl OrderBook {
         self.sequence += 1;
         self.last_update = Utc::now();
 
-        debug!("Applied snapshot: {} bids, {} asks", self.bids.len(), self.asks.len());
+        debug!(
+            "Applied snapshot: {} bids, {} asks",
+            self.bids.len(),
+            self.asks.len()
+        );
     }
 
     /// Get best bid
@@ -183,7 +186,13 @@ impl OrderBook {
     /// imbalance_ratio > 0 means more bids (bullish)
     /// imbalance_ratio < 0 means more asks (bearish)
     pub fn get_imbalance(&self, depth: usize) -> (Decimal, Decimal, Decimal) {
-        let bid_volume: Decimal = self.bids.values().rev().take(depth).map(|l| l.quantity).sum();
+        let bid_volume: Decimal = self
+            .bids
+            .values()
+            .rev()
+            .take(depth)
+            .map(|l| l.quantity)
+            .sum();
         let ask_volume: Decimal = self.asks.values().take(depth).map(|l| l.quantity).sum();
 
         let total = bid_volume + ask_volume;
@@ -260,8 +269,8 @@ impl OrderBook {
     /// Calculate market impact for an order
     pub fn market_impact(&self, side: Side, quantity: Decimal) -> Option<Decimal> {
         let entry_price = match side {
-            Side::Bid => self.best_ask()?.price,  // Buying at ask
-            Side::Ask => self.best_bid()?.price,  // Selling at bid
+            Side::Bid => self.best_ask()?.price, // Buying at ask
+            Side::Ask => self.best_bid()?.price, // Selling at bid
         };
 
         let exec_price = self.vwap(side, quantity)?;
@@ -277,7 +286,13 @@ impl OrderBook {
 
     /// Get total volume at each level of depth
     pub fn cumulative_volume(&self, levels: usize) -> (Decimal, Decimal) {
-        let bid_vol: Decimal = self.bids.values().rev().take(levels).map(|l| l.quantity).sum();
+        let bid_vol: Decimal = self
+            .bids
+            .values()
+            .rev()
+            .take(levels)
+            .map(|l| l.quantity)
+            .sum();
         let ask_vol: Decimal = self.asks.values().take(levels).map(|l| l.quantity).sum();
         (bid_vol, ask_vol)
     }
@@ -366,7 +381,7 @@ mod tests {
         let book = create_test_book();
 
         let (bid_vol, ask_vol, imbalance) = book.get_imbalance(5);
-        
+
         // Bid volumes: 5,4,3,2,1 = 15
         // Ask volumes: 1,2,3,4,5 = 15
         assert_eq!(bid_vol, Decimal::from(15));

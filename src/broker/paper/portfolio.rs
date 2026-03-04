@@ -53,7 +53,8 @@ impl PaperPortfolio {
                 self.cash -= total_cost;
 
                 // Update or create position
-                let position = self.positions
+                let position = self
+                    .positions
                     .entry(execution.ticker.clone())
                     .or_insert_with(|| PaperPosition {
                         symbol: execution.ticker.clone(),
@@ -73,7 +74,7 @@ impl PaperPortfolio {
                 let current_cost = position.quantity * position.avg_cost;
                 let new_cost = execution.quantity * execution.price + execution.commission;
                 position.quantity += execution.quantity;
-                
+
                 if !position.quantity.is_zero() {
                     position.avg_cost = (current_cost + new_cost) / position.quantity;
                 }
@@ -93,7 +94,7 @@ impl PaperPortfolio {
 
                     // Update position
                     position.quantity -= execution.quantity;
-                    
+
                     // Keep avg_cost for remaining shares
                     if position.quantity.is_zero() {
                         position.avg_cost = Decimal::ZERO;
@@ -134,30 +135,28 @@ impl PaperPortfolio {
 
     /// Get total equity (cash + position values)
     pub fn total_equity(&self, prices: &HashMap<String, Decimal>) -> Decimal {
-        let position_value: Decimal = self.positions
+        let position_value: Decimal = self
+            .positions
             .iter()
             .map(|(sym, pos)| {
-                prices.get(sym).map(|p| pos.quantity * *p).unwrap_or(Decimal::ZERO)
+                prices
+                    .get(sym)
+                    .map(|p| pos.quantity * *p)
+                    .unwrap_or(Decimal::ZERO)
             })
             .sum();
-        
+
         self.cash + position_value
     }
 
     /// Get total unrealized P&L
     pub fn total_unrealized_pnl(&self) -> Decimal {
-        self.positions
-            .values()
-            .map(|p| p.unrealized_pnl)
-            .sum()
+        self.positions.values().map(|p| p.unrealized_pnl).sum()
     }
 
     /// Get total realized P&L
     pub fn total_realized_pnl(&self) -> Decimal {
-        self.positions
-            .values()
-            .map(|p| p.realized_pnl)
-            .sum()
+        self.positions.values().map(|p| p.realized_pnl).sum()
     }
 
     /// Convert to broker Positions
@@ -177,10 +176,14 @@ impl PaperPortfolio {
     /// Get portfolio summary
     pub fn summary(&self, prices: &HashMap<String, Decimal>) -> PortfolioSummary {
         let equity = self.total_equity(prices);
-        let initial_equity = self.executions.first().map(|_| {
-            // Approximate initial equity
-            self.cash + self.total_realized_pnl() + self.total_unrealized_pnl()
-        }).unwrap_or(equity);
+        let initial_equity = self
+            .executions
+            .first()
+            .map(|_| {
+                // Approximate initial equity
+                self.cash + self.total_realized_pnl() + self.total_unrealized_pnl()
+            })
+            .unwrap_or(equity);
 
         let total_return = if !initial_equity.is_zero() {
             (equity - initial_equity) / initial_equity * Decimal::from(100)
@@ -260,7 +263,7 @@ mod tests {
     #[test]
     fn test_apply_buy_execution() {
         let mut portfolio = PaperPortfolio::new(Decimal::from(100000));
-        
+
         let execution = Execution {
             id: Uuid::new_v4(),
             order_id: Uuid::new_v4(),
@@ -277,7 +280,7 @@ mod tests {
 
         assert_eq!(portfolio.cash_balance(), Decimal::from(49950)); // 100000 - 50000 - 50
         assert_eq!(portfolio.positions().len(), 1);
-        
+
         let pos = portfolio.get_position("BTC").unwrap();
         assert_eq!(pos.quantity, Decimal::from(1));
         // avg_cost includes commission: (50000 + 50) / 1 = 50050
@@ -287,7 +290,7 @@ mod tests {
     #[test]
     fn test_apply_sell_execution() {
         let mut portfolio = PaperPortfolio::new(Decimal::from(100000));
-        
+
         // First buy
         let buy_exec = Execution {
             id: Uuid::new_v4(),
@@ -318,7 +321,7 @@ mod tests {
 
         // Cash should be: 49950 + 55000 - 55 = 104895
         assert_eq!(portfolio.cash_balance(), Decimal::from(104895));
-        
+
         let pos = portfolio.get_position("BTC").unwrap();
         assert!(pos.quantity.is_zero());
         // Realized P&L: (55000 - 50000) - 50 - 55 = 4895
@@ -328,7 +331,7 @@ mod tests {
     #[test]
     fn test_unrealized_pnl() {
         let mut portfolio = PaperPortfolio::new(Decimal::from(100000));
-        
+
         let execution = Execution {
             id: Uuid::new_v4(),
             order_id: Uuid::new_v4(),

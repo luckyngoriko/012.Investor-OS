@@ -39,8 +39,7 @@ impl GdprManager {
     pub async fn forget_user(&self, user_id: &str) -> Result<DeletionRequest, GdprError> {
         info!("Processing GDPR deletion request for user: {}", user_id);
 
-        let user_uuid = Uuid::parse_str(user_id)
-            .map_err(|_| GdprError::InvalidUserId)?;
+        let user_uuid = Uuid::parse_str(user_id).map_err(|_| GdprError::InvalidUserId)?;
 
         // Schedule deletion 30 days from now (GDPR allows reasonable time)
         let scheduled_deletion = Utc::now() + Duration::days(30);
@@ -63,7 +62,7 @@ impl GdprManager {
                     requested_at = EXCLUDED.requested_at,
                     scheduled_deletion = EXCLUDED.scheduled_deletion,
                     status = EXCLUDED.status
-                "#
+                "#,
             )
             .bind(user_uuid)
             .bind(request.requested_at)
@@ -97,8 +96,7 @@ impl GdprManager {
     ) -> Result<DataExport, GdprError> {
         info!("Processing GDPR data export for user: {}", user_id);
 
-        let user_uuid = Uuid::parse_str(user_id)
-            .map_err(|_| GdprError::InvalidUserId)?;
+        let user_uuid = Uuid::parse_str(user_id).map_err(|_| GdprError::InvalidUserId)?;
 
         // Collect user data from all relevant tables
         let user_data = self.collect_user_data(user_uuid).await?;
@@ -116,21 +114,17 @@ impl GdprManager {
     }
 
     /// Collect all user data for export
-    async fn collect_user_data(
-        &self,
-        user_id: Uuid,
-    ) -> Result<serde_json::Value, GdprError> {
+    async fn collect_user_data(&self, user_id: Uuid) -> Result<serde_json::Value, GdprError> {
         let mut data = serde_json::Map::new();
 
         if let Some(ref pool) = self.db_pool {
             // User profile
-            let profile: Option<(serde_json::Value,)> = sqlx::query_as(
-                r#"SELECT to_jsonb(u.*) as profile FROM users u WHERE u.id = $1"#
-            )
-            .bind(user_id)
-            .fetch_optional(pool)
-            .await
-            .map_err(GdprError::Database)?;
+            let profile: Option<(serde_json::Value,)> =
+                sqlx::query_as(r#"SELECT to_jsonb(u.*) as profile FROM users u WHERE u.id = $1"#)
+                    .bind(user_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(GdprError::Database)?;
 
             if let Some((profile,)) = profile {
                 data.insert("profile".to_string(), profile);
@@ -138,86 +132,107 @@ impl GdprManager {
 
             // Trading history
             let trades: Vec<(serde_json::Value,)> = sqlx::query_as(
-                r#"SELECT to_jsonb(t.*) as trade FROM trades t WHERE t.user_id = $1"#
+                r#"SELECT to_jsonb(t.*) as trade FROM trades t WHERE t.user_id = $1"#,
             )
             .bind(user_id)
             .fetch_all(pool)
             .await
             .map_err(GdprError::Database)?;
 
-            data.insert("trades".to_string(), json!(trades.into_iter().map(|(t,)| t).collect::<Vec<_>>()));
+            data.insert(
+                "trades".to_string(),
+                json!(trades.into_iter().map(|(t,)| t).collect::<Vec<_>>()),
+            );
 
             // Portfolio positions
             let positions: Vec<(serde_json::Value,)> = sqlx::query_as(
-                r#"SELECT to_jsonb(p.*) as position FROM positions p WHERE p.user_id = $1"#
+                r#"SELECT to_jsonb(p.*) as position FROM positions p WHERE p.user_id = $1"#,
             )
             .bind(user_id)
             .fetch_all(pool)
             .await
             .map_err(GdprError::Database)?;
 
-            data.insert("positions".to_string(), json!(positions.into_iter().map(|(p,)| p).collect::<Vec<_>>()));
+            data.insert(
+                "positions".to_string(),
+                json!(positions.into_iter().map(|(p,)| p).collect::<Vec<_>>()),
+            );
 
             // Audit logs
             let audit_logs: Vec<(serde_json::Value,)> = sqlx::query_as(
-                r#"SELECT to_jsonb(a.*) as log FROM audit_logs a WHERE a.user_id = $1"#
+                r#"SELECT to_jsonb(a.*) as log FROM audit_logs a WHERE a.user_id = $1"#,
             )
             .bind(user_id)
             .fetch_all(pool)
             .await
             .map_err(GdprError::Database)?;
 
-            data.insert("audit_logs".to_string(), json!(audit_logs.into_iter().map(|(l,)| l).collect::<Vec<_>>()));
+            data.insert(
+                "audit_logs".to_string(),
+                json!(audit_logs.into_iter().map(|(l,)| l).collect::<Vec<_>>()),
+            );
 
             // Activity logs
             let activity: Vec<(serde_json::Value,)> = sqlx::query_as(
-                r#"SELECT to_jsonb(l.*) as activity FROM activity_logs l WHERE l.user_id = $1"#
+                r#"SELECT to_jsonb(l.*) as activity FROM activity_logs l WHERE l.user_id = $1"#,
             )
             .bind(user_id)
             .fetch_all(pool)
             .await
             .map_err(GdprError::Database)?;
 
-            data.insert("activity_logs".to_string(), json!(activity.into_iter().map(|(a,)| a).collect::<Vec<_>>()));
+            data.insert(
+                "activity_logs".to_string(),
+                json!(activity.into_iter().map(|(a,)| a).collect::<Vec<_>>()),
+            );
         } else {
             // Mock data for testing
-            data.insert("profile".to_string(), json!({
-                "id": user_id,
-                "email": "user@example.com",
-                "created_at": Utc::now(),
-            }));
+            data.insert(
+                "profile".to_string(),
+                json!({
+                    "id": user_id,
+                    "email": "user@example.com",
+                    "created_at": Utc::now(),
+                }),
+            );
             data.insert("trades".to_string(), json!([]));
             data.insert("positions".to_string(), json!([]));
             data.insert("audit_logs".to_string(), json!([]));
         }
 
-        data.insert("export_metadata".to_string(), json!({
-            "exported_at": Utc::now(),
-            "system": "Investor OS",
-            "version": env!("CARGO_PKG_VERSION"),
-            "regulation": "GDPR Article 20",
-        }));
+        data.insert(
+            "export_metadata".to_string(),
+            json!({
+                "exported_at": Utc::now(),
+                "system": "Investor OS",
+                "version": env!("CARGO_PKG_VERSION"),
+                "regulation": "GDPR Article 20",
+            }),
+        );
 
         Ok(serde_json::Value::Object(data))
     }
 
     /// Get deletion status for a user
-    pub async fn get_deletion_status(&self, user_id: &str) -> Result<Option<DeletionRequest>, GdprError> {
-        let user_uuid = Uuid::parse_str(user_id)
-            .map_err(|_| GdprError::InvalidUserId)?;
+    pub async fn get_deletion_status(
+        &self,
+        user_id: &str,
+    ) -> Result<Option<DeletionRequest>, GdprError> {
+        let user_uuid = Uuid::parse_str(user_id).map_err(|_| GdprError::InvalidUserId)?;
 
         if let Some(ref pool) = self.db_pool {
-            let record: Option<(Uuid, chrono::DateTime<Utc>, chrono::DateTime<Utc>, String)> = sqlx::query_as(
-                r#"
+            let record: Option<(Uuid, chrono::DateTime<Utc>, chrono::DateTime<Utc>, String)> =
+                sqlx::query_as(
+                    r#"
                 SELECT user_id, requested_at, scheduled_deletion, status
                 FROM gdpr_deletion_requests
                 WHERE user_id = $1
-                "#
-            )
-            .bind(user_uuid)
-            .fetch_optional(pool)
-            .await
-            .map_err(GdprError::Database)?;
+                "#,
+                )
+                .bind(user_uuid)
+                .fetch_optional(pool)
+                .await
+                .map_err(GdprError::Database)?;
 
             if let Some((user_id, requested_at, scheduled_deletion, status)) = record {
                 let status = match status.as_str() {
@@ -253,7 +268,7 @@ impl GdprManager {
                 SELECT user_id FROM gdpr_deletion_requests
                 WHERE status = 'pending'
                 AND scheduled_deletion <= NOW()
-                "#
+                "#,
             )
             .fetch_all(pool)
             .await
@@ -267,7 +282,7 @@ impl GdprManager {
                     }
                     Err(e) => {
                         error!("Failed to delete user {}: {}", user_id, e);
-                        
+
                         // Mark as failed
                         sqlx::query(
                             "UPDATE gdpr_deletion_requests SET status = 'failed' WHERE user_id = $1"
@@ -292,7 +307,7 @@ impl GdprManager {
 
             // Delete user data from all tables
             // Note: Actual records are soft-deleted, personal data is hard-deleted
-            
+
             sqlx::query("DELETE FROM trades WHERE user_id = $1")
                 .bind(user_id)
                 .execute(&mut *tx)
@@ -313,7 +328,7 @@ impl GdprManager {
 
             // Mark deletion as completed
             sqlx::query(
-                "UPDATE gdpr_deletion_requests SET status = 'completed' WHERE user_id = $1"
+                "UPDATE gdpr_deletion_requests SET status = 'completed' WHERE user_id = $1",
             )
             .bind(user_id)
             .execute(&mut *tx)
@@ -332,16 +347,16 @@ impl GdprManager {
 pub enum GdprError {
     #[error("Invalid user ID format")]
     InvalidUserId,
-    
+
     #[error("User not found")]
     UserNotFound,
-    
+
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
-    
+
     #[error("Export failed: {0}")]
     ExportFailed(String),
-    
+
     #[error("Deletion already pending")]
     DeletionAlreadyPending,
 }
@@ -362,17 +377,78 @@ pub mod handlers {
         pub format: Option<String>,
     }
 
+    /// Extract user_id from Authorization header (Bearer JWT).
+    /// Decodes the JWT payload without signature verification
+    /// (auth middleware already validated the token).
+    fn extract_user_id_from_auth(headers: &axum::http::HeaderMap) -> Result<String, StatusCode> {
+        let auth_header = headers
+            .get("authorization")
+            .and_then(|v| v.to_str().ok())
+            .ok_or(StatusCode::UNAUTHORIZED)?;
+
+        let token = auth_header
+            .strip_prefix("Bearer ")
+            .ok_or(StatusCode::UNAUTHORIZED)?;
+
+        // JWT is base64(header).base64(payload).signature — extract payload
+        let parts: Vec<&str> = token.split('.').collect();
+        if parts.len() != 3 {
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+
+        // Decode payload (base64url → standard base64)
+        let payload_b64 = parts[1];
+        let padded = match payload_b64.len() % 4 {
+            2 => format!("{}==", payload_b64),
+            3 => format!("{}=", payload_b64),
+            _ => payload_b64.to_string(),
+        };
+        let standard = padded.replace('-', "+").replace('_', "/");
+
+        // Simple base64 decode
+        const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        let mut output = Vec::new();
+        let mut buf = 0u32;
+        let mut bits = 0u8;
+        for &b in standard.as_bytes() {
+            if b == b'=' {
+                break;
+            }
+            let val = ALPHABET
+                .iter()
+                .position(|&c| c == b)
+                .ok_or(StatusCode::UNAUTHORIZED)? as u32;
+            buf = (buf << 6) | val;
+            bits += 6;
+            if bits >= 8 {
+                bits -= 8;
+                output.push((buf >> bits) as u8);
+                buf &= (1 << bits) - 1;
+            }
+        }
+
+        let payload: serde_json::Value =
+            serde_json::from_slice(&output).map_err(|_| StatusCode::UNAUTHORIZED)?;
+
+        payload
+            .get("sub")
+            .or_else(|| payload.get("user_id"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .ok_or(StatusCode::UNAUTHORIZED)
+    }
+
     /// DELETE /api/v1/gdpr/forget-me
     /// GDPR Article 17: Right to erasure
     pub async fn forget_me(
         State(_state): State<std::sync::Arc<crate::api::AppState>>,
+        headers: axum::http::HeaderMap,
     ) -> Result<Json<serde_json::Value>, StatusCode> {
-        // In real implementation, get user_id from JWT claims
-        let user_id = "test-user-id"; // Placeholder
+        let user_id = extract_user_id_from_auth(&headers)?;
 
         let manager = GdprManager::new_without_db();
-        
-        match manager.forget_user(user_id).await {
+
+        match manager.forget_user(&user_id).await {
             Ok(request) => Ok(Json(json!({
                 "success": true,
                 "message": "User data deletion scheduled",
@@ -394,10 +470,10 @@ pub mod handlers {
     /// GDPR Article 20: Right to data portability
     pub async fn export_data(
         State(_state): State<std::sync::Arc<crate::api::AppState>>,
+        headers: axum::http::HeaderMap,
         Query(query): Query<ExportQuery>,
     ) -> Result<Json<serde_json::Value>, StatusCode> {
-        // In real implementation, get user_id from JWT claims
-        let user_id = "test-user-id"; // Placeholder
+        let user_id = extract_user_id_from_auth(&headers)?;
 
         let format = match query.format.as_deref() {
             Some("xml") => ExportFormat::Xml,
@@ -406,8 +482,8 @@ pub mod handlers {
         };
 
         let manager = GdprManager::new_without_db();
-        
-        match manager.export_user_data(user_id, format).await {
+
+        match manager.export_user_data(&user_id, format).await {
             Ok(export) => Ok(Json(json!({
                 "success": true,
                 "message": "Data export completed",
@@ -424,8 +500,16 @@ pub mod handlers {
     /// Alias for export-data with default JSON format
     pub async fn data_portability(
         State(state): State<std::sync::Arc<crate::api::AppState>>,
+        headers: axum::http::HeaderMap,
     ) -> Result<Json<serde_json::Value>, StatusCode> {
-        export_data(State(state), Query(ExportQuery { format: Some("json".to_string()) })).await
+        export_data(
+            State(state),
+            headers,
+            Query(ExportQuery {
+                format: Some("json".to_string()),
+            }),
+        )
+        .await
     }
 }
 
@@ -443,14 +527,14 @@ mod tests {
     async fn test_forget_user() {
         let manager = GdprManager::new_without_db();
         let user_id = Uuid::new_v4().to_string();
-        
+
         let result = manager.forget_user(&user_id).await;
         assert!(result.is_ok());
-        
+
         let request = result.unwrap();
         assert_eq!(request.user_id.to_string(), user_id);
         assert_eq!(request.status, DeletionStatus::Pending);
-        
+
         // Check that deletion is scheduled 30 days from now
         let days_diff = (request.scheduled_deletion - request.requested_at).num_days();
         assert_eq!(days_diff, 30);
@@ -460,10 +544,10 @@ mod tests {
     async fn test_export_user_data() {
         let manager = GdprManager::new_without_db();
         let user_id = Uuid::new_v4().to_string();
-        
+
         let result = manager.export_user_data(&user_id, ExportFormat::Json).await;
         assert!(result.is_ok());
-        
+
         let export = result.unwrap();
         assert_eq!(export.user_id.to_string(), user_id);
         assert!(export.data.get("profile").is_some());
@@ -474,7 +558,7 @@ mod tests {
     fn test_invalid_user_id() {
         let manager = GdprManager::new_without_db();
         let rt = tokio::runtime::Runtime::new().unwrap();
-        
+
         let result = rt.block_on(manager.forget_user("invalid-uuid"));
         assert!(matches!(result, Err(GdprError::InvalidUserId)));
     }

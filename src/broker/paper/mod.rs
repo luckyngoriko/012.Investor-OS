@@ -53,14 +53,14 @@ impl PaperBroker {
     /// Update market data for a symbol
     pub async fn update_market_data(&self, tick: &MarketTick) {
         let mut books = self.order_book.write().await;
-        let book = books.entry(tick.symbol.clone()).or_insert_with(|| {
-            OrderBook::new(tick.symbol.clone(), tick.exchange.clone())
-        });
+        let book = books
+            .entry(tick.symbol.clone())
+            .or_insert_with(|| OrderBook::new(tick.symbol.clone(), tick.exchange.clone()));
 
         // Update book based on tick type
-        use crate::streaming::TickType;
         use crate::streaming::orderbook::{BookUpdate, UpdateType};
-        
+        use crate::streaming::TickType;
+
         match tick.tick_type {
             TickType::Bid => {
                 book.apply_update(BookUpdate {
@@ -92,7 +92,7 @@ impl PaperBroker {
     async fn process_pending_orders(&self, symbol: &str) {
         let mut orders = self.orders.write().await;
         let books = self.order_book.read().await;
-        
+
         let Some(book) = books.get(symbol) else {
             return;
         };
@@ -115,8 +115,10 @@ impl PaperBroker {
                     }
                 }
                 OrderType::Limit => {
-                    let Some(limit_price) = order.limit_price else { continue };
-                    
+                    let Some(limit_price) = order.limit_price else {
+                        continue;
+                    };
+
                     // Check if limit order should fill
                     let should_fill = match order.side {
                         OrderSide::Buy => {
@@ -141,7 +143,74 @@ impl PaperBroker {
                         self.fill_order(order, fill_price).await;
                     }
                 }
-                _ => {} // Other order types not yet implemented
+                OrderType::Stop => {
+                    let Some(stop_price) = order.stop_price else {
+                        continue;
+                    };
+
+                    let (should_trigger, fill_price) = match order.side {
+                        OrderSide::Buy => book
+                            .best_ask()
+                            .map(|level| (level.price >= stop_price, level.price)),
+                        OrderSide::Sell => book
+                            .best_bid()
+                            .map(|level| (level.price <= stop_price, level.price)),
+                    }
+                    .unwrap_or((false, Decimal::ZERO));
+
+                    if should_trigger {
+                        self.fill_order(order, fill_price).await;
+                    }
+                }
+                OrderType::StopLimit => {
+                    let Some(stop_price) = order.stop_price else {
+                        continue;
+                    };
+                    let Some(limit_price) = order.limit_price else {
+                        continue;
+                    };
+
+                    let (should_trigger, price) = match order.side {
+                        OrderSide::Buy => book
+                            .best_ask()
+                            .map(|level| (level.price >= stop_price, level.price)),
+                        OrderSide::Sell => book
+                            .best_bid()
+                            .map(|level| (level.price <= stop_price, level.price)),
+                    }
+                    .unwrap_or((false, Decimal::ZERO));
+
+                    if should_trigger {
+                        let should_fill = match order.side {
+                            OrderSide::Buy => price <= limit_price,
+                            OrderSide::Sell => price >= limit_price,
+                        };
+
+                        if should_fill {
+                            let fill_price = match order.side {
+                                OrderSide::Buy => {
+                                    if price < limit_price {
+                                        price
+                                    } else {
+                                        limit_price
+                                    }
+                                }
+                                OrderSide::Sell => {
+                                    if price > limit_price {
+                                        price
+                                    } else {
+                                        limit_price
+                                    }
+                                }
+                            };
+
+                            self.fill_order(order, fill_price).await;
+                        }
+                    }
+                }
+                OrderType::TrailingStop => {
+                    continue;
+                }
             }
         }
     }
@@ -198,6 +267,20 @@ impl PaperBroker {
     pub async fn get_order_book(&self, symbol: &str) -> Option<OrderBook> {
         self.order_book.read().await.get(symbol).cloned()
     }
+
+    /// Get current mid-prices for all symbols with order book data
+    pub async fn get_current_prices(&self) -> HashMap<String, Decimal> {
+        self.get_current_prices_internal().await
+    }
+
+    /// Internal price reader (used by get_account_info while portfolio lock is held)
+    async fn get_current_prices_internal(&self) -> HashMap<String, Decimal> {
+        let books = self.order_book.read().await;
+        books
+            .iter()
+            .filter_map(|(symbol, book)| book.mid_price().map(|price| (symbol.clone(), price)))
+            .collect()
+    }
 }
 
 #[async_trait::async_trait]
@@ -220,14 +303,16 @@ impl Broker for PaperBroker {
     }
 
     async fn get_account_info(&self) -> Result<AccountInfo> {
+        let prices = self.get_current_prices_internal().await;
         let portfolio = self.portfolio.read().await;
-        
+        let equity = portfolio.total_equity(&prices);
+
         Ok(AccountInfo {
             account_id: "paper-account".to_string(),
             cash_balance: portfolio.cash_balance(),
             buying_power: portfolio.cash_balance(), // No margin in paper
-            equity_with_loan: portfolio.cash_balance(),
-            net_liquidation: portfolio.cash_balance(), // Simplified
+            equity_with_loan: equity,
+            net_liquidation: equity,
             unrealized_pnl: portfolio.total_unrealized_pnl(),
             realized_pnl: portfolio.total_realized_pnl(),
             currency: "USD".to_string(),
@@ -247,7 +332,7 @@ impl Broker for PaperBroker {
 
     async fn place_order(&self, order: &mut Order) -> Result<()> {
         debug!("Paper broker placing order: {:?}", order);
-        
+
         order.status = OrderStatus::Submitted;
         order.updated_at = Utc::now();
 
@@ -265,7 +350,7 @@ impl Broker for PaperBroker {
                     let mut order_clone = order.clone();
                     self.fill_order(&mut order_clone, price).await;
                     *order = order_clone;
-                    
+
                     let mut orders = self.orders.write().await;
                     orders.insert(order.id, order.clone());
                     return Ok(());
@@ -303,7 +388,12 @@ impl Broker for PaperBroker {
         }
     }
 
-    async fn modify_order(&self, order: &mut Order, new_quantity: Option<Decimal>, new_price: Option<Decimal>) -> Result<()> {
+    async fn modify_order(
+        &self,
+        order: &mut Order,
+        new_quantity: Option<Decimal>,
+        new_price: Option<Decimal>,
+    ) -> Result<()> {
         let mut orders = self.orders.write().await;
         if let Some(existing) = orders.get_mut(&order.id) {
             if !existing.is_active() {
@@ -312,7 +402,7 @@ impl Broker for PaperBroker {
                     order.id, existing.status
                 )));
             }
-            
+
             if let Some(qty) = new_quantity {
                 existing.quantity = qty;
             }
@@ -320,12 +410,12 @@ impl Broker for PaperBroker {
                 existing.limit_price = Some(price);
             }
             existing.updated_at = Utc::now();
-            
+
             // Update the passed order
             order.quantity = existing.quantity;
             order.limit_price = existing.limit_price;
             order.updated_at = existing.updated_at;
-            
+
             Ok(())
         } else {
             Err(BrokerError::OrderRejected(format!(
@@ -413,10 +503,10 @@ mod tests {
         let mut broker = PaperBroker::new(config);
 
         assert!(!broker.is_connected());
-        
+
         broker.connect().await.unwrap();
         assert!(broker.is_connected());
-        
+
         broker.disconnect().await.unwrap();
         assert!(!broker.is_connected());
     }

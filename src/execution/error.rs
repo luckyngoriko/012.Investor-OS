@@ -30,4 +30,7 @@ pub enum ExecutionError {
     
     #[error("Partial fill: filled {filled} of {requested}")]
     PartialFill { filled: Decimal, requested: Decimal },
+
+    #[error("No market data: {0}")]
+    NoMarketData(String),
 }

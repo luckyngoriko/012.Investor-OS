@@ -208,8 +208,10 @@ impl QuantumBackend for HardwareBackend {
             ));
         }
         
-        // TODO: Implement actual hardware API calls
-        // For now, use simulator as fallback
+        // Hardware quantum API integration is not yet available.
+        // Limitation: when hardware backend is configured but the provider API client
+        // is not implemented, execution falls back to the local simulator.
+        // This produces mathematically correct results but without quantum advantage.
         let sim = SimulatorBackend::with_qubits(self.n_qubits);
         sim.execute(_circuit, _shots)
     }

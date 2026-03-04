@@ -110,3 +110,214 @@
 [debug] [2026-02-12T06:23:45.482Z] Running auto auth
 [debug] [2026-02-12T06:23:45.482Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
 [debug] [2026-02-12T06:23:45.482Z] Running auto auth
+[debug] [2026-03-03T18:17:15.931Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-03T18:17:15.932Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-03T18:17:15.933Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-03T18:17:15.933Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-03T18:17:15.933Z] Checked if tokens are valid: false, expires at: 1772551108086
+[debug] [2026-03-03T18:17:15.933Z] Checked if tokens are valid: false, expires at: 1772551108086
+[debug] [2026-03-03T18:17:15.933Z] > refreshing access token with scopes: []
+[debug] [2026-03-03T18:17:15.934Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-03-03T18:17:15.934Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-03T18:17:15.949Z] Checked if tokens are valid: false, expires at: 1772551108086
+[debug] [2026-03-03T18:17:15.949Z] Checked if tokens are valid: false, expires at: 1772551108086
+[debug] [2026-03-03T18:17:15.950Z] > refreshing access token with scopes: []
+[debug] [2026-03-03T18:17:15.950Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-03-03T18:17:15.950Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-03T18:17:15.951Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-03T18:17:15.951Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-03T18:17:15.951Z] Checked if tokens are valid: false, expires at: 1772551108086
+[debug] [2026-03-03T18:17:15.951Z] Checked if tokens are valid: false, expires at: 1772551108086
+[debug] [2026-03-03T18:17:15.951Z] > refreshing access token with scopes: []
+[debug] [2026-03-03T18:17:15.951Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-03-03T18:17:15.951Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-03T18:17:16.063Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-03-03T18:17:16.063Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-03T18:17:16.074Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo [none]
+[debug] [2026-03-03T18:17:16.076Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-03-03T18:17:16.076Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-03T18:17:16.083Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo [none]
+[debug] [2026-03-03T18:17:16.084Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-03-03T18:17:16.084Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-03T18:17:16.092Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo [none]
+[debug] [2026-03-03T18:17:16.820Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo 200
+[debug] [2026-03-03T18:17:16.820Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo {"name":"projects/iconys-digital/billingInfo","projectId":"iconys-digital","billingAccountName":"billingAccounts/018BC2-FCB9C2-496FF7","billingEnabled":true}
+[debug] [2026-03-03T18:17:16.825Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:16.825Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:16.831Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:16.832Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:16.832Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:16.832Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:16.832Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com [none]
+[debug] [2026-03-03T18:17:16.832Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-03T18:17:16.833Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com [none]
+[debug] [2026-03-03T18:17:16.833Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-03T18:17:16.833Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com [none]
+[debug] [2026-03-03T18:17:16.833Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-03T18:17:16.904Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo 200
+[debug] [2026-03-03T18:17:16.904Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo {"name":"projects/iconys-digital/billingInfo","projectId":"iconys-digital","billingAccountName":"billingAccounts/018BC2-FCB9C2-496FF7","billingEnabled":true}
+[debug] [2026-03-03T18:17:16.905Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:16.905Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:16.907Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:16.907Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:16.907Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:16.907Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:16.907Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com [none]
+[debug] [2026-03-03T18:17:16.907Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-03T18:17:16.908Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com [none]
+[debug] [2026-03-03T18:17:16.908Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-03T18:17:16.908Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com [none]
+[debug] [2026-03-03T18:17:16.909Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-03T18:17:17.113Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo 200
+[debug] [2026-03-03T18:17:17.113Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo {"name":"projects/iconys-digital/billingInfo","projectId":"iconys-digital","billingAccountName":"billingAccounts/018BC2-FCB9C2-496FF7","billingEnabled":true}
+[debug] [2026-03-03T18:17:17.113Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:17.113Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:17.115Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:17.115Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:17.115Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:17.115Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:17.115Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com [none]
+[debug] [2026-03-03T18:17:17.115Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-03T18:17:17.116Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com [none]
+[debug] [2026-03-03T18:17:17.116Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-03T18:17:17.117Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com [none]
+[debug] [2026-03-03T18:17:17.117Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-03T18:17:17.707Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com 403
+[debug] [2026-03-03T18:17:17.707Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com [omitted]
+[debug] [2026-03-03T18:17:17.863Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com 200
+[debug] [2026-03-03T18:17:17.863Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2026-03-03T18:17:17.881Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com 200
+[debug] [2026-03-03T18:17:17.882Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2026-03-03T18:17:17.888Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com 200
+[debug] [2026-03-03T18:17:17.888Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2026-03-03T18:17:17.913Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com 200
+[debug] [2026-03-03T18:17:17.913Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2026-03-03T18:17:18.407Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com 403
+[debug] [2026-03-03T18:17:18.407Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com [omitted]
+[debug] [2026-03-03T18:17:18.408Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com 403
+[debug] [2026-03-03T18:17:18.408Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com [omitted]
+[debug] [2026-03-03T18:17:18.409Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-03T18:17:18.409Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-03T18:17:18.410Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:18.410Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:18.410Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo [none]
+[debug] [2026-03-03T18:17:18.740Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo 200
+[debug] [2026-03-03T18:17:18.740Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo {"name":"projects/iconys-digital/billingInfo","projectId":"iconys-digital","billingAccountName":"billingAccounts/018BC2-FCB9C2-496FF7","billingEnabled":true}
+[debug] [2026-03-03T18:17:18.741Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-03T18:17:18.741Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-03T18:17:18.743Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com 200
+[debug] [2026-03-03T18:17:18.743Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2026-03-03T18:17:18.749Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com 200
+[debug] [2026-03-03T18:17:18.749Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2026-03-03T18:17:18.750Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-03T18:17:18.750Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-03T18:17:18.751Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:18.751Z] Checked if tokens are valid: true, expires at: 1772565435084
+[debug] [2026-03-03T18:17:18.751Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo [none]
+[debug] [2026-03-03T18:17:19.402Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo 200
+[debug] [2026-03-03T18:17:19.402Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo {"name":"projects/iconys-digital/billingInfo","projectId":"iconys-digital","billingAccountName":"billingAccounts/018BC2-FCB9C2-496FF7","billingEnabled":true}
+[debug] [2026-03-03T18:17:19.403Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-03T18:17:19.403Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-04T05:43:57.062Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-04T05:43:57.063Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-04T05:43:57.064Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:43:57.064Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:43:57.064Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-04T05:43:57.064Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-04T05:43:57.064Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:43:57.064Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:43:57.065Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo [none]
+[debug] [2026-03-04T05:43:57.080Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo [none]
+[debug] [2026-03-04T05:44:06.013Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-04T05:44:06.014Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-04T05:44:06.015Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-04T05:44:06.015Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-04T05:44:06.015Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.015Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.015Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.015Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.015Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-04T05:44:06.015Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-04T05:44:06.016Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.016Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.016Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo [none]
+[debug] [2026-03-04T05:44:06.031Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo [none]
+[debug] [2026-03-04T05:44:06.032Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo [none]
+[debug] [2026-03-04T05:44:06.510Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo 200
+[debug] [2026-03-04T05:44:06.510Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo {"name":"projects/iconys-digital/billingInfo","projectId":"iconys-digital","billingAccountName":"billingAccounts/018BC2-FCB9C2-496FF7","billingEnabled":true}
+[debug] [2026-03-04T05:44:06.513Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.513Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.519Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.519Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.519Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.519Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.519Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com [none]
+[debug] [2026-03-04T05:44:06.519Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-04T05:44:06.520Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com [none]
+[debug] [2026-03-04T05:44:06.520Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-04T05:44:06.520Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com [none]
+[debug] [2026-03-04T05:44:06.520Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-04T05:44:06.574Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo 200
+[debug] [2026-03-04T05:44:06.575Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo {"name":"projects/iconys-digital/billingInfo","projectId":"iconys-digital","billingAccountName":"billingAccounts/018BC2-FCB9C2-496FF7","billingEnabled":true}
+[debug] [2026-03-04T05:44:06.575Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.575Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.577Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.577Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.577Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.577Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.577Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com [none]
+[debug] [2026-03-04T05:44:06.577Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-04T05:44:06.578Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com [none]
+[debug] [2026-03-04T05:44:06.578Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-04T05:44:06.579Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com [none]
+[debug] [2026-03-04T05:44:06.579Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-04T05:44:06.614Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo 200
+[debug] [2026-03-04T05:44:06.614Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo {"name":"projects/iconys-digital/billingInfo","projectId":"iconys-digital","billingAccountName":"billingAccounts/018BC2-FCB9C2-496FF7","billingEnabled":true}
+[debug] [2026-03-04T05:44:06.614Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.614Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.615Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.615Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.615Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.615Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:06.616Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com [none]
+[debug] [2026-03-04T05:44:06.616Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-04T05:44:06.616Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com [none]
+[debug] [2026-03-04T05:44:06.616Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-04T05:44:06.617Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com [none]
+[debug] [2026-03-04T05:44:06.617Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com  x-goog-user-project=iconys-digital
+[debug] [2026-03-04T05:44:07.459Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com 403
+[debug] [2026-03-04T05:44:07.460Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com [omitted]
+[debug] [2026-03-04T05:44:07.581Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com 200
+[debug] [2026-03-04T05:44:07.581Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2026-03-04T05:44:07.586Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com 200
+[debug] [2026-03-04T05:44:07.586Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2026-03-04T05:44:07.586Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-04T05:44:07.587Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-04T05:44:07.587Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:07.587Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:07.587Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo [none]
+[debug] [2026-03-04T05:44:07.606Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com 200
+[debug] [2026-03-04T05:44:07.606Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2026-03-04T05:44:07.633Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com 200
+[debug] [2026-03-04T05:44:07.633Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2026-03-04T05:44:07.637Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com 200
+[debug] [2026-03-04T05:44:07.637Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2026-03-04T05:44:07.642Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com 200
+[debug] [2026-03-04T05:44:07.642Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2026-03-04T05:44:07.939Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo 200
+[debug] [2026-03-04T05:44:07.939Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo {"name":"projects/iconys-digital/billingInfo","projectId":"iconys-digital","billingAccountName":"billingAccounts/018BC2-FCB9C2-496FF7","billingEnabled":true}
+[debug] [2026-03-04T05:44:07.940Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-04T05:44:07.940Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-04T05:44:08.243Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com 403
+[debug] [2026-03-04T05:44:08.243Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com [omitted]
+[debug] [2026-03-04T05:44:08.279Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com 403
+[debug] [2026-03-04T05:44:08.279Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iconys-digital/services/firebaseio.com [omitted]
+[debug] [2026-03-04T05:44:08.279Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-04T05:44:08.279Z] > authorizing via signed-in user (luckyngoriko@gmail.com)
+[debug] [2026-03-04T05:44:08.280Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:08.280Z] Checked if tokens are valid: true, expires at: 1772604193897
+[debug] [2026-03-04T05:44:08.280Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo [none]
+[debug] [2026-03-04T05:44:08.550Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo 200
+[debug] [2026-03-04T05:44:08.550Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/iconys-digital/billingInfo {"name":"projects/iconys-digital/billingInfo","projectId":"iconys-digital","billingAccountName":"billingAccounts/018BC2-FCB9C2-496FF7","billingEnabled":true}
+[debug] [2026-03-04T05:44:08.550Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-04T05:44:08.550Z] > authorizing via signed-in user (luckyngoriko@gmail.com)

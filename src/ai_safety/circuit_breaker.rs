@@ -5,6 +5,7 @@
 //! - Maximum drawdown
 //! - Volatility spikes
 //! - Correlation breakdowns
+//! - Order frequency and rejection spikes
 
 use chrono::{DateTime, Duration, Utc};
 use rust_decimal::Decimal;
@@ -66,6 +67,28 @@ impl BreakerConfig {
             condition: BreakerCondition::VolatilitySpike,
             threshold: multiplier,
             cooldown_seconds: 1800, // 30 minutes
+            auto_reset: true,
+        }
+    }
+
+    /// Trigger when number of orders in the last minute reaches a threshold.
+    pub fn frequency_limit(max_orders_per_minute: u32) -> Self {
+        Self {
+            name: "Order Frequency".to_string(),
+            condition: BreakerCondition::FrequencyLimit,
+            threshold: f64::from(max_orders_per_minute),
+            cooldown_seconds: 300, // 5 minutes
+            auto_reset: true,
+        }
+    }
+
+    /// Trigger when rejection ratio in the last minute exceeds threshold.
+    pub fn rejection_spike(max_rejection_ratio: f64) -> Self {
+        Self {
+            name: "Rejection Spike".to_string(),
+            condition: BreakerCondition::OrderRejectionSpike,
+            threshold: max_rejection_ratio,
+            cooldown_seconds: 600, // 10 minutes
             auto_reset: true,
         }
     }
@@ -157,6 +180,8 @@ pub struct MarketState {
     pub current_drawdown: Decimal,
     pub volatility_index: f64,
     pub correlation_breakdown: bool,
+    pub orders_last_minute: u32,
+    pub rejected_orders_last_minute: u32,
     pub timestamp: DateTime<Utc>,
 }
 
@@ -239,8 +264,19 @@ impl CircuitBreaker {
                     }
                 }
                 BreakerCondition::CorrelationBreakdown => state.correlation_breakdown,
-                BreakerCondition::FrequencyLimit => false, // Not implemented
-                BreakerCondition::OrderRejectionSpike => false, // Not implemented
+                BreakerCondition::FrequencyLimit => {
+                    let orders = state.orders_last_minute as f64;
+                    orders >= rule.config.threshold
+                }
+                BreakerCondition::OrderRejectionSpike => {
+                    if state.orders_last_minute > 0 {
+                        let rejected_ratio = state.rejected_orders_last_minute as f64
+                            / state.orders_last_minute as f64;
+                        rejected_ratio >= rule.config.threshold
+                    } else {
+                        false
+                    }
+                }
             };
             
             if triggered {
@@ -251,6 +287,14 @@ impl CircuitBreaker {
                     }
                     BreakerCondition::Drawdown => state.current_drawdown.try_into().unwrap_or(0.0),
                     BreakerCondition::VolatilitySpike => state.volatility_index,
+                    BreakerCondition::FrequencyLimit => state.orders_last_minute as f64,
+                    BreakerCondition::OrderRejectionSpike => {
+                        if state.orders_last_minute > 0 {
+                            state.rejected_orders_last_minute as f64 / state.orders_last_minute as f64
+                        } else {
+                            0.0
+                        }
+                    }
                     _ => rule.config.threshold,
                 };
                 
@@ -384,6 +428,37 @@ mod tests {
         
         assert!(trigger.is_some());
         assert!(cb.get_active()[0].contains("Volatility"));
+    }
+
+    #[test]
+    fn test_frequency_limit_trigger() {
+        let mut cb = CircuitBreaker::new(vec![BreakerConfig::frequency_limit(5)]);
+        let state = MarketState {
+            orders_last_minute: 7,
+            ..Default::default()
+        };
+
+        let trigger = cb.update(&state);
+
+        assert!(trigger.is_some());
+        assert_eq!(cb.get_active().len(), 1);
+        assert!(cb.get_active()[0].contains("Order Frequency"));
+    }
+
+    #[test]
+    fn test_rejection_spike_trigger() {
+        let mut cb = CircuitBreaker::new(vec![BreakerConfig::rejection_spike(0.35)]);
+        let state = MarketState {
+            orders_last_minute: 20,
+            rejected_orders_last_minute: 8, // 40%
+            ..Default::default()
+        };
+
+        let trigger = cb.update(&state);
+
+        assert!(trigger.is_some());
+        assert_eq!(cb.get_active().len(), 1);
+        assert!(cb.get_active()[0].contains("Rejection"));
     }
 
     #[test]

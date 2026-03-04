@@ -9,8 +9,7 @@ use uuid::Uuid;
 use super::Result;
 
 /// Stop-loss order types
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum StopLossType {
     /// Fixed price stop-loss
     #[default]
@@ -22,7 +21,6 @@ pub enum StopLossType {
     /// Time-based stop (exit after duration)
     TimeBased,
 }
-
 
 /// Stop-loss configuration
 #[derive(Debug, Clone)]
@@ -65,10 +63,22 @@ impl Default for TakeProfitConfig {
     fn default() -> Self {
         Self {
             targets: vec![
-                (Decimal::try_from(1.02).unwrap(), Decimal::try_from(0.25).unwrap()), // +2%, close 25%
-                (Decimal::try_from(1.04).unwrap(), Decimal::try_from(0.25).unwrap()), // +4%, close 25%
-                (Decimal::try_from(1.06).unwrap(), Decimal::try_from(0.25).unwrap()), // +6%, close 25%
-                (Decimal::try_from(1.10).unwrap(), Decimal::try_from(0.25).unwrap()), // +10%, close 25%
+                (
+                    Decimal::try_from(1.02).unwrap(),
+                    Decimal::try_from(0.25).unwrap(),
+                ), // +2%, close 25%
+                (
+                    Decimal::try_from(1.04).unwrap(),
+                    Decimal::try_from(0.25).unwrap(),
+                ), // +4%, close 25%
+                (
+                    Decimal::try_from(1.06).unwrap(),
+                    Decimal::try_from(0.25).unwrap(),
+                ), // +6%, close 25%
+                (
+                    Decimal::try_from(1.10).unwrap(),
+                    Decimal::try_from(0.25).unwrap(),
+                ), // +10%, close 25%
             ],
             move_to_breakeven: true,
             trailing_take_profit: false,
@@ -120,13 +130,9 @@ impl StopLossManager {
         current_atr: Option<Decimal>,
     ) -> Result<String> {
         let stop_price = match config.stop_type {
-            StopLossType::Fixed => {
-                config.stop_price.ok_or_else(|| {
-                    super::RiskError::CalculationError(
-                        "Stop price required for fixed stop".to_string(),
-                    )
-                })?
-            }
+            StopLossType::Fixed => config.stop_price.ok_or_else(|| {
+                super::RiskError::CalculationError("Stop price required for fixed stop".to_string())
+            })?,
             StopLossType::Trailing => {
                 // Initial stop is entry - trailing_distance
                 if is_long {
@@ -137,7 +143,9 @@ impl StopLossManager {
             }
             StopLossType::AtrBased => {
                 let atr = current_atr.ok_or_else(|| {
-                    super::RiskError::CalculationError("ATR required for ATR-based stop".to_string())
+                    super::RiskError::CalculationError(
+                        "ATR required for ATR-based stop".to_string(),
+                    )
                 })?;
                 if is_long {
                     entry_price - atr * config.atr_multiplier
@@ -187,7 +195,7 @@ impl StopLossManager {
     pub fn update_stop_price(&mut self, order_id: &str, new_price: Decimal) -> Result<()> {
         if let Some(order) = self.orders.get_mut(order_id) {
             let old_price = order.stop_price;
-            
+
             // For trailing stops, only move in favorable direction
             match order.stop_type {
                 StopLossType::Trailing => {
@@ -207,9 +215,10 @@ impl StopLossManager {
             }
             Ok(())
         } else {
-            Err(super::RiskError::CalculationError(
-                format!("Stop-loss order {} not found", order_id)
-            ))
+            Err(super::RiskError::CalculationError(format!(
+                "Stop-loss order {} not found",
+                order_id
+            )))
         }
     }
 
@@ -219,10 +228,11 @@ impl StopLossManager {
             let triggered = match order.stop_type {
                 StopLossType::TimeBased => {
                     let elapsed = Utc::now() - order.created_at;
-                    elapsed.num_seconds() > self
-                        .get_config_for_order(order_id)
-                        .map(|c| c.time_limit_seconds)
-                        .unwrap_or(86400)
+                    elapsed.num_seconds()
+                        > self
+                            .get_config_for_order(order_id)
+                            .map(|c| c.time_limit_seconds)
+                            .unwrap_or(86400)
                 }
                 _ => {
                     if order.is_long {
@@ -241,7 +251,12 @@ impl StopLossManager {
     }
 
     /// Update trailing stop based on new price
-    pub fn update_trailing_stop(&mut self, order_id: &str, current_price: Decimal, config: &StopLossConfig) -> Result<bool> {
+    pub fn update_trailing_stop(
+        &mut self,
+        order_id: &str,
+        current_price: Decimal,
+        config: &StopLossConfig,
+    ) -> Result<bool> {
         if let Some(order) = self.orders.get(order_id) {
             if order.stop_type != StopLossType::Trailing {
                 return Ok(false);
@@ -277,7 +292,7 @@ impl StopLossManager {
             }
 
             let breakeven = order.entry_price;
-            
+
             // Only move if it improves the stop
             let should_move = if order.is_long {
                 breakeven > order.stop_price
@@ -467,11 +482,17 @@ mod tests {
             .unwrap();
 
         // Price at stop should trigger
-        assert!(manager.check_trigger(&order_id, Decimal::from(90)).is_some());
+        assert!(manager
+            .check_trigger(&order_id, Decimal::from(90))
+            .is_some());
         // Price below stop should trigger
-        assert!(manager.check_trigger(&order_id, Decimal::from(89)).is_some());
+        assert!(manager
+            .check_trigger(&order_id, Decimal::from(89))
+            .is_some());
         // Price above stop should not trigger
-        assert!(manager.check_trigger(&order_id, Decimal::from(91)).is_none());
+        assert!(manager
+            .check_trigger(&order_id, Decimal::from(91))
+            .is_none());
     }
 
     #[test]
@@ -496,18 +517,25 @@ mod tests {
             .unwrap();
 
         // Initial stop at 95
-        assert_eq!(manager.get_order(&order_id).unwrap().stop_price, Decimal::from(95));
+        assert_eq!(
+            manager.get_order(&order_id).unwrap().stop_price,
+            Decimal::from(95)
+        );
 
         // Price rises to 110, trailing stop should update to 104.5
-        let updated = manager.update_trailing_stop(&order_id, Decimal::from(110), &config).unwrap();
+        let updated = manager
+            .update_trailing_stop(&order_id, Decimal::from(110), &config)
+            .unwrap();
         assert!(updated);
-        
+
         let new_stop = manager.get_order(&order_id).unwrap().stop_price;
         // 110 * 0.95 = 104.5
         assert_eq!(new_stop, Decimal::try_from(104.5).unwrap());
 
         // Price drops, stop should not move down
-        let updated = manager.update_trailing_stop(&order_id, Decimal::from(105), &config).unwrap();
+        let updated = manager
+            .update_trailing_stop(&order_id, Decimal::from(105), &config)
+            .unwrap();
         assert!(!updated);
         assert_eq!(manager.get_order(&order_id).unwrap().stop_price, new_stop);
     }
@@ -534,12 +562,14 @@ mod tests {
             .unwrap();
 
         // Set initial stop lower
-        manager.update_stop_price(&order_id, Decimal::from(90)).unwrap();
-        
+        manager
+            .update_stop_price(&order_id, Decimal::from(90))
+            .unwrap();
+
         // Move to breakeven
         let moved = manager.move_to_breakeven(&order_id).unwrap();
         assert!(moved);
-        
+
         let order = manager.get_order(&order_id).unwrap();
         assert_eq!(order.stop_price, Decimal::from(100)); // Entry price
         assert!(order.breakeven_triggered);
@@ -568,12 +598,8 @@ mod tests {
         let entry = Decimal::from(100);
 
         // Price hits 103, should trigger first target
-        let triggered = StopLossManager::check_take_profit(
-            Decimal::from(103),
-            entry,
-            true,
-            &config,
-        );
+        let triggered =
+            StopLossManager::check_take_profit(Decimal::from(103), entry, true, &config);
 
         assert_eq!(triggered.len(), 1);
         assert_eq!(triggered[0].0, Decimal::try_from(0.25).unwrap()); // 25% to close

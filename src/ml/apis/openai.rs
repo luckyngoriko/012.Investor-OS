@@ -22,10 +22,10 @@ impl OpenAIClient {
     }
 }
 
-
 impl OpenAIClient {
     pub async fn generate(&self, prompt: &str) -> Result<String, LLMError> {
-        let response = self.client
+        let response = self
+            .client
             .post("https://api.openai.com/v1/chat/completions")
             .header("Authorization", format!("Bearer {}", self.api_key))
             .json(&json!({
@@ -37,22 +37,26 @@ impl OpenAIClient {
             .send()
             .await
             .map_err(|e| LLMError::ApiError(e.to_string()))?;
-        
-        let result: serde_json::Value = response.json().await
+
+        let result: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| LLMError::ApiError(e.to_string()))?;
-        
+
         result["choices"][0]["message"]["content"]
             .as_str()
             .map(|s| s.to_string())
             .ok_or_else(|| LLMError::ApiError("Invalid response".to_string()))
     }
-    
 }
 
 /// Analyze earnings call transcript
-pub async fn analyze_earnings(transcript: &str, api_key: &str) -> Result<EarningsAnalysis, LLMError> {
+pub async fn analyze_earnings(
+    transcript: &str,
+    api_key: &str,
+) -> Result<EarningsAnalysis, LLMError> {
     let client = OpenAIClient::new(api_key.to_string());
-    
+
     let prompt = format!(
         "Analyze this earnings call transcript:\n\n{}\n\n\
         Provide structured analysis with:\n\
@@ -63,9 +67,9 @@ pub async fn analyze_earnings(transcript: &str, api_key: &str) -> Result<Earning
         - Red flags or concerns",
         &transcript[..transcript.len().min(15000)]
     );
-    
+
     let text = client.generate(&prompt).await?;
-    
+
     // Parse structured response
     Ok(EarningsAnalysis {
         sentiment: extract_sentiment(&text),

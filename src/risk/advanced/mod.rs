@@ -12,26 +12,94 @@ pub struct AdvancedRiskEngine {
 
 impl AdvancedRiskEngine {
     pub fn new() -> Self {
-        Self { mc_simulations: 100_000 }
+        Self {
+            mc_simulations: 100_000,
+        }
     }
-    
-    /// Calculate Monte Carlo VaR
+
+    /// Calculate Monte Carlo VaR using actual portfolio positions
+    ///
+    /// Runs `mc_simulations` random trials assuming normally distributed daily
+    /// returns (2% daily vol per asset). Portfolio loss distribution is built
+    /// from position weights and random shocks, then the VaR quantile is read
+    /// off at the requested confidence level, scaled to the time horizon via
+    /// sqrt(t).
     pub fn calculate_var_mc(
         &self,
-        _positions: &[MultiAssetPosition],
+        positions: &[MultiAssetPosition],
         confidence: f64,
         days: u32,
     ) -> VaRResult {
-        // Placeholder implementation
+        if positions.is_empty() {
+            return VaRResult {
+                confidence,
+                time_horizon_days: days,
+                var_amount: Decimal::ZERO,
+                var_pct: 0.0,
+                simulations: self.mc_simulations,
+            };
+        }
+
+        // Portfolio value and weights
+        let total_value: f64 = positions
+            .iter()
+            .map(|p| f64::try_from(p.quantity * p.current_price).unwrap_or(0.0))
+            .sum();
+
+        if total_value <= 0.0 {
+            return VaRResult {
+                confidence,
+                time_horizon_days: days,
+                var_amount: Decimal::ZERO,
+                var_pct: 0.0,
+                simulations: self.mc_simulations,
+            };
+        }
+
+        let weights: Vec<f64> = positions
+            .iter()
+            .map(|p| f64::try_from(p.quantity * p.current_price).unwrap_or(0.0) / total_value)
+            .collect();
+
+        // Daily volatility assumption (2% for equities)
+        let daily_vol = 0.02;
+
+        // Monte Carlo simulation
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let mut portfolio_losses: Vec<f64> = Vec::with_capacity(self.mc_simulations as usize);
+
+        for _ in 0..self.mc_simulations {
+            let mut portfolio_return = 0.0;
+            for weight in &weights {
+                // Box-Muller transform for standard normal
+                let u1: f64 = rng.gen::<f64>().max(1e-10);
+                let u2: f64 = rng.gen();
+                let z = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos();
+                portfolio_return += weight * z * daily_vol;
+            }
+            // Scale to time horizon (sqrt-t rule)
+            portfolio_return *= (days as f64).sqrt();
+            portfolio_losses.push(-portfolio_return); // positive = loss
+        }
+
+        // Sort losses ascending
+        portfolio_losses.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        // VaR at confidence level
+        let index = (confidence * portfolio_losses.len() as f64) as usize;
+        let var_pct = portfolio_losses[index.min(portfolio_losses.len() - 1)].max(0.0);
+        let var_amount = Decimal::try_from(var_pct * total_value).unwrap_or(Decimal::ZERO);
+
         VaRResult {
             confidence,
             time_horizon_days: days,
-            var_amount: Decimal::from(1000),
-            var_pct: 0.05,
+            var_amount,
+            var_pct,
             simulations: self.mc_simulations,
         }
     }
-    
+
     /// Run stress tests
     pub fn stress_test(&self, _positions: &[MultiAssetPosition]) -> StressTestResults {
         let scenarios = vec![
@@ -54,9 +122,9 @@ impl AdvancedRiskEngine {
                 survived: false,
             },
         ];
-        
+
         let survived = scenarios.iter().filter(|s| s.survived).count();
-        
+
         StressTestResults {
             scenarios,
             survival_rate: survived as f64 / 3.0,
@@ -64,13 +132,11 @@ impl AdvancedRiskEngine {
             passed: survived >= 2,
         }
     }
-    
+
     /// Calculate portfolio Greeks
     pub fn calculate_greeks(&self, positions: &[MultiAssetPosition]) -> PortfolioGreeks {
-        let delta = positions.iter()
-            .map(|p| p.quantity * p.current_price)
-            .sum();
-        
+        let delta = positions.iter().map(|p| p.quantity * p.current_price).sum();
+
         PortfolioGreeks {
             delta,
             gamma: Decimal::ZERO,
@@ -78,24 +144,29 @@ impl AdvancedRiskEngine {
             theta: Decimal::ZERO,
         }
     }
-    
+
     /// Calculate correlation matrix
-    pub fn correlation_matrix(&self, positions: &[MultiAssetPosition]) -> HashMap<(String, String), f64> {
+    pub fn correlation_matrix(
+        &self,
+        positions: &[MultiAssetPosition],
+    ) -> HashMap<(String, String), f64> {
         let mut matrix = HashMap::new();
-        
+
         for pos1 in positions {
             for pos2 in positions {
                 let corr = if pos1.symbol == pos2.symbol { 1.0 } else { 0.3 };
                 matrix.insert((pos1.symbol.clone(), pos2.symbol.clone()), corr);
             }
         }
-        
+
         matrix
     }
 }
 
 impl Default for AdvancedRiskEngine {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -69,7 +69,12 @@ impl Default for HRMConfig {
 
 impl HRMConfig {
     /// Create a new configuration with custom hidden sizes
-    pub fn new(input_size: usize, high_hidden: usize, low_hidden: usize, output_size: usize) -> Self {
+    pub fn new(
+        input_size: usize,
+        high_hidden: usize,
+        low_hidden: usize,
+        output_size: usize,
+    ) -> Self {
         Self {
             input_size,
             high_hidden_size: high_hidden,
@@ -125,21 +130,23 @@ impl HRMConfig {
     /// Total number of parameters (approximate)
     pub fn estimated_parameters(&self) -> usize {
         // LSTM parameters: 4 * (input_size * hidden_size + hidden_size * hidden_size + hidden_size)
-        let high_lstm = 4 * (self.input_size * self.high_hidden_size
-            + self.high_hidden_size * self.high_hidden_size
-            + self.high_hidden_size);
+        let high_lstm = 4
+            * (self.input_size * self.high_hidden_size
+                + self.high_hidden_size * self.high_hidden_size
+                + self.high_hidden_size);
 
-        let low_lstm = 4 * (self.low_hidden_size * self.low_hidden_size
-            + self.low_hidden_size * self.low_hidden_size
-            + self.low_hidden_size);
+        let low_lstm = 4
+            * (self.low_hidden_size * self.low_hidden_size
+                + self.low_hidden_size * self.low_hidden_size
+                + self.low_hidden_size);
 
         // Cross-connections
         let high_to_low = self.high_hidden_size * self.low_hidden_size + self.low_hidden_size;
         let low_to_high = self.low_hidden_size * self.high_hidden_size + self.high_hidden_size;
 
         // Output layer
-        let output = (self.high_hidden_size + self.low_hidden_size) * self.output_size
-            + self.output_size;
+        let output =
+            (self.high_hidden_size + self.low_hidden_size) * self.output_size + self.output_size;
 
         high_lstm + low_lstm + high_to_low + low_to_high + output
     }
@@ -192,12 +199,10 @@ mod tests {
 
     #[test]
     fn test_confidence_threshold_clamping() {
-        let config = HRMConfig::default()
-            .with_confidence_threshold(1.5); // > 1.0
+        let config = HRMConfig::default().with_confidence_threshold(1.5); // > 1.0
         assert_eq!(config.confidence_threshold, 1.0);
 
-        let config = HRMConfig::default()
-            .with_confidence_threshold(-0.5); // < 0.0
+        let config = HRMConfig::default().with_confidence_threshold(-0.5); // < 0.0
         assert_eq!(config.confidence_threshold, 0.0);
     }
 }

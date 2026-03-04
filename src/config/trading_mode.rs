@@ -18,7 +18,7 @@ pub enum TradingMode {
     /// - Human must manually enter all trades
     /// - Best for: Learning, testing strategies, maximum control
     Manual,
-    
+
     /// Semi-automatic mode: AI proposes, human confirms, AI executes
     /// - AI generates proposals with CQ scores
     /// - Human reviews and confirms/rejects each proposal
@@ -26,7 +26,7 @@ pub enum TradingMode {
     /// - Best for: Most users, balance of control and convenience
     #[default]
     SemiAuto,
-    
+
     /// Fully automatic mode: AI proposes and executes within limits
     /// - AI generates proposals with CQ scores
     /// - Auto-executes if CQ >= threshold and within risk limits
@@ -44,16 +44,18 @@ impl TradingMode {
             TradingMode::FullyAuto => "Fully Auto",
         }
     }
-    
+
     /// Get description for UI
     pub fn description(&self) -> &'static str {
         match self {
             TradingMode::Manual => "You make all trading decisions. AI provides analysis only.",
-            TradingMode::SemiAuto => "AI proposes trades, you confirm. AI executes confirmed trades.",
+            TradingMode::SemiAuto => {
+                "AI proposes trades, you confirm. AI executes confirmed trades."
+            }
             TradingMode::FullyAuto => "AI trades automatically within your risk limits.",
         }
     }
-    
+
     /// Get detailed description
     pub fn detailed_description(&self) -> &'static str {
         match self {
@@ -83,22 +85,22 @@ impl TradingMode {
             }
         }
     }
-    
+
     /// Check if AI can auto-execute trades
     pub fn can_auto_execute(&self) -> bool {
         matches!(self, TradingMode::SemiAuto | TradingMode::FullyAuto)
     }
-    
+
     /// Check if human confirmation is required
     pub fn requires_human_confirmation(&self) -> bool {
         matches!(self, TradingMode::Manual | TradingMode::SemiAuto)
     }
-    
+
     /// Check if AI can execute without confirmation
     pub fn can_execute_without_confirmation(&self) -> bool {
         matches!(self, TradingMode::FullyAuto)
     }
-    
+
     /// Get icon name for UI
     pub fn icon(&self) -> &'static str {
         match self {
@@ -107,7 +109,7 @@ impl TradingMode {
             TradingMode::FullyAuto => "robot",
         }
     }
-    
+
     /// Get color for UI
     pub fn color(&self) -> &'static str {
         match self {
@@ -116,7 +118,7 @@ impl TradingMode {
             TradingMode::FullyAuto => "emerald",
         }
     }
-    
+
     /// Get security level (1-3, higher is more autonomous)
     pub fn autonomy_level(&self) -> u8 {
         match self {
@@ -125,7 +127,7 @@ impl TradingMode {
             TradingMode::FullyAuto => 3,
         }
     }
-    
+
     /// Get recommended for text
     pub fn recommended_for(&self) -> &'static str {
         match self {
@@ -135,7 +137,6 @@ impl TradingMode {
         }
     }
 }
-
 
 impl fmt::Display for TradingMode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -207,27 +208,26 @@ impl TradingModeConfig {
             ..Default::default()
         }
     }
-    
+
     /// Check if a trade can be auto-executed
     pub fn can_auto_execute(&self, cq_score: u8, trade_value: f64) -> bool {
         if !self.mode.can_auto_execute() {
             return false;
         }
-        
-        cq_score >= self.auto_execute_cq_threshold 
-            && trade_value <= self.max_auto_trade_value
+
+        cq_score >= self.auto_execute_cq_threshold && trade_value <= self.max_auto_trade_value
     }
-    
+
     /// Validate configuration
     pub fn validate(&self) -> Result<(), String> {
         if self.auto_execute_cq_threshold > 100 {
             return Err("CQ threshold must be between 0 and 100".to_string());
         }
-        
+
         if self.max_auto_trade_value <= 0.0 {
             return Err("Max auto trade value must be positive".to_string());
         }
-        
+
         Ok(())
     }
 }
@@ -241,42 +241,42 @@ mod tests {
         assert!(!TradingMode::Manual.can_auto_execute());
         assert!(TradingMode::SemiAuto.can_auto_execute());
         assert!(TradingMode::FullyAuto.can_auto_execute());
-        
+
         assert!(TradingMode::Manual.requires_human_confirmation());
         assert!(TradingMode::SemiAuto.requires_human_confirmation());
         assert!(!TradingMode::FullyAuto.requires_human_confirmation());
-        
+
         assert!(!TradingMode::Manual.can_execute_without_confirmation());
         assert!(!TradingMode::SemiAuto.can_execute_without_confirmation());
         assert!(TradingMode::FullyAuto.can_execute_without_confirmation());
     }
-    
+
     #[test]
     fn test_config_can_auto_execute() {
         let config = TradingModeConfig::new(TradingMode::FullyAuto);
-        
+
         // High CQ, low value - should execute
         assert!(config.can_auto_execute(85, 5000.0));
-        
+
         // Low CQ - should not execute
         assert!(!config.can_auto_execute(70, 5000.0));
-        
+
         // High value - should not execute
         assert!(!config.can_auto_execute(85, 15000.0));
-        
+
         // Manual mode - should never execute
         let manual_config = TradingModeConfig::new(TradingMode::Manual);
         assert!(!manual_config.can_auto_execute(100, 100.0));
     }
-    
+
     #[test]
     fn test_config_validation() {
         let mut config = TradingModeConfig::default();
         assert!(config.validate().is_ok());
-        
+
         config.auto_execute_cq_threshold = 150;
         assert!(config.validate().is_err());
-        
+
         config.auto_execute_cq_threshold = 80;
         config.max_auto_trade_value = -100.0;
         assert!(config.validate().is_err());

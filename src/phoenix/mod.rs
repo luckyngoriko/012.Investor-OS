@@ -13,22 +13,27 @@
 //! - Sprint 7: ML pipeline (features)
 
 pub mod assessment;
+pub mod engine;
 pub mod graduation;
+pub mod graph_integration;
 pub mod memory;
 pub mod simulator;
 pub mod strategist;
-pub mod engine;
-pub mod graph_integration;
 
 // Re-export main components
 pub use assessment::GraduationAssessor;
+pub use engine::{EngineStats, PhoenixEngine, TrainingResult};
 pub use graduation::GraduationAssessment;
 pub use graduation::*;
-pub use memory::{RagMemory, MemoryStats, RegimeInsight, TradingExperience, ExperienceQuery, OutcomeFilter};
-pub use simulator::{PaperTradingSimulator, SimulatorConfig, MarketDataPoint};
-pub use strategist::{LlmStrategist, StrategistConfig, Sentiment, DecisionContext};
-pub use engine::{PhoenixEngine, TrainingResult, EngineStats};
-pub use graph_integration::{PhoenixGraphEngine, CollectSignalsNode, DetectRegimeNode, ApplyStrategyNode, RiskCheckNode, MakeDecisionNode};
+pub use graph_integration::{
+    ApplyStrategyNode, CollectSignalsNode, DetectRegimeNode, MakeDecisionNode, PhoenixGraphEngine,
+    RiskCheckNode,
+};
+pub use memory::{
+    ExperienceQuery, MemoryStats, OutcomeFilter, RagMemory, RegimeInsight, TradingExperience,
+};
+pub use simulator::{MarketDataPoint, PaperTradingSimulator, SimulatorConfig};
+pub use strategist::{DecisionContext, LlmStrategist, Sentiment, StrategistConfig};
 
 use rust_decimal::Decimal;
 use std::collections::HashMap;

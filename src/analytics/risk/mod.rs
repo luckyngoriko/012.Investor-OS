@@ -12,22 +12,23 @@ use crate::analytics::{AnalyticsError, Result};
 pub struct RiskAnalyzer {
     returns: Vec<Decimal>,
     risk_free_rate: Decimal, // Annual rate
+    benchmark_returns: Option<Vec<Decimal>>,
 }
 
 /// Risk metrics result
 #[derive(Debug, Clone)]
 pub struct RiskMetrics {
-    pub var_95: Decimal,          // Value at Risk (95% confidence)
-    pub var_99: Decimal,          // Value at Risk (99% confidence)
-    pub cvar_95: Decimal,         // Conditional VaR / Expected Shortfall
-    pub sharpe_ratio: Decimal,    // Sharpe ratio
-    pub sortino_ratio: Decimal,   // Sortino ratio
-    pub max_drawdown: Decimal,    // Maximum drawdown
-    pub calmar_ratio: Decimal,    // Calmar ratio
-    pub volatility: Decimal,      // Annualized volatility
+    pub var_95: Decimal,        // Value at Risk (95% confidence)
+    pub var_99: Decimal,        // Value at Risk (99% confidence)
+    pub cvar_95: Decimal,       // Conditional VaR / Expected Shortfall
+    pub sharpe_ratio: Decimal,  // Sharpe ratio
+    pub sortino_ratio: Decimal, // Sortino ratio
+    pub max_drawdown: Decimal,  // Maximum drawdown
+    pub calmar_ratio: Decimal,  // Calmar ratio
+    pub volatility: Decimal,    // Annualized volatility
     pub downside_deviation: Decimal,
-    pub beta: Option<Decimal>,    // Beta to market
-    pub alpha: Option<Decimal>,   // Jensen's alpha
+    pub beta: Option<Decimal>,  // Beta to market
+    pub alpha: Option<Decimal>, // Jensen's alpha
     pub information_ratio: Option<Decimal>,
 }
 
@@ -37,16 +38,25 @@ impl RiskAnalyzer {
         Self {
             returns,
             risk_free_rate,
+            benchmark_returns: None,
         }
+    }
+
+    /// Set benchmark returns for beta, alpha, and information ratio calculation
+    pub fn with_benchmark(mut self, benchmark_returns: Vec<Decimal>) -> Self {
+        self.benchmark_returns = Some(benchmark_returns);
+        self
     }
 
     /// Calculate all risk metrics
     pub fn calculate_all(&self) -> Result<RiskMetrics> {
         if self.returns.len() < 30 {
             return Err(AnalyticsError::InsufficientData(
-                "Need at least 30 returns for risk calculation".to_string()
+                "Need at least 30 returns for risk calculation".to_string(),
             ));
         }
+
+        let (beta, alpha, information_ratio) = self.calculate_benchmark_metrics();
 
         Ok(RiskMetrics {
             var_95: self.var(Decimal::from(95) / Decimal::from(100)),
@@ -58,14 +68,14 @@ impl RiskAnalyzer {
             calmar_ratio: self.calmar_ratio(),
             volatility: self.volatility(),
             downside_deviation: self.downside_deviation(),
-            beta: None, // Would need market returns
-            alpha: None,
-            information_ratio: None,
+            beta,
+            alpha,
+            information_ratio,
         })
     }
 
     /// Value at Risk (historical simulation)
-    /// 
+    ///
     /// VaR at confidence level (e.g., 0.95) represents the potential loss
     /// that will not be exceeded with the given confidence level.
     pub fn var(&self, confidence: Decimal) -> Decimal {
@@ -80,15 +90,15 @@ impl RiskAnalyzer {
         let index = ((Decimal::ONE - confidence) * Decimal::from(sorted_returns.len() as i32))
             .try_into()
             .unwrap_or(0i64) as usize;
-        
+
         let idx = index.min(sorted_returns.len() - 1);
-        
+
         // VaR is typically expressed as a positive number (loss)
         -sorted_returns[idx]
     }
 
     /// Conditional VaR (Expected Shortfall)
-    /// 
+    ///
     /// CVaR is the average of returns worse than VaR.
     pub fn cvar(&self, confidence: Decimal) -> Decimal {
         if self.returns.is_empty() {
@@ -97,7 +107,8 @@ impl RiskAnalyzer {
 
         let var_threshold = -self.var(confidence); // Convert back to return
 
-        let tail_returns: Vec<Decimal> = self.returns
+        let tail_returns: Vec<Decimal> = self
+            .returns
             .iter()
             .filter(|r| **r <= var_threshold)
             .copied()
@@ -112,7 +123,7 @@ impl RiskAnalyzer {
     }
 
     /// Sharpe ratio
-    /// 
+    ///
     /// Measures risk-adjusted return. Higher is better.
     /// Formula: (Mean Return - Risk Free Rate) / Standard Deviation
     pub fn sharpe_ratio(&self) -> Decimal {
@@ -131,7 +142,7 @@ impl RiskAnalyzer {
     }
 
     /// Sortino ratio
-    /// 
+    ///
     /// Similar to Sharpe but only penalizes downside volatility.
     pub fn sortino_ratio(&self) -> Decimal {
         let mean_return = self.mean_return();
@@ -148,7 +159,7 @@ impl RiskAnalyzer {
     }
 
     /// Maximum drawdown
-    /// 
+    ///
     /// Largest peak-to-trough decline.
     pub fn max_drawdown(&self) -> Decimal {
         // Convert returns to cumulative values (starting at 1.0)
@@ -158,7 +169,7 @@ impl RiskAnalyzer {
 
         for ret in &self.returns {
             cumulative *= Decimal::ONE + ret;
-            
+
             if cumulative > peak {
                 peak = cumulative;
             }
@@ -175,7 +186,7 @@ impl RiskAnalyzer {
     }
 
     /// Calmar ratio
-    /// 
+    ///
     /// Return per unit of max drawdown.
     pub fn calmar_ratio(&self) -> Decimal {
         let annual_return = self.mean_return() * Decimal::from(252);
@@ -198,7 +209,8 @@ impl RiskAnalyzer {
     pub fn downside_deviation(&self) -> Decimal {
         let target = self.risk_free_rate / Decimal::from(252); // Daily target
 
-        let downside_returns: Vec<Decimal> = self.returns
+        let downside_returns: Vec<Decimal> = self
+            .returns
             .iter()
             .filter(|r| **r < target)
             .map(|r| (target - r) * (target - r))
@@ -208,10 +220,63 @@ impl RiskAnalyzer {
             return Decimal::ZERO;
         }
 
-        let mean_downside = downside_returns.iter().sum::<Decimal>() 
-            / Decimal::from(downside_returns.len() as i32);
-        
+        let mean_downside =
+            downside_returns.iter().sum::<Decimal>() / Decimal::from(downside_returns.len() as i32);
+
         mean_downside.sqrt().unwrap_or(Decimal::ZERO)
+    }
+
+    /// Calculate beta, alpha, and information ratio against benchmark returns
+    fn calculate_benchmark_metrics(&self) -> (Option<Decimal>, Option<Decimal>, Option<Decimal>) {
+        let benchmark = match &self.benchmark_returns {
+            Some(b) if b.len() >= 30 => b,
+            _ => return (None, None, None),
+        };
+
+        let n = self.returns.len().min(benchmark.len());
+        let port_mean = self.mean_return();
+        let bench_returns = &benchmark[..n];
+        let bench_mean = bench_returns.iter().copied().sum::<Decimal>() / Decimal::from(n as i32);
+
+        // Beta = cov(portfolio, benchmark) / var(benchmark)
+        let mut cov_sum = Decimal::ZERO;
+        let mut bench_var_sum = Decimal::ZERO;
+        for i in 0..n {
+            let port_dev = self.returns[i] - port_mean;
+            let bench_dev = bench_returns[i] - bench_mean;
+            cov_sum += port_dev * bench_dev;
+            bench_var_sum += bench_dev * bench_dev;
+        }
+
+        if bench_var_sum == Decimal::ZERO {
+            return (None, None, None);
+        }
+
+        let beta = cov_sum / bench_var_sum;
+
+        // Jensen's Alpha = annualized(port_mean - rf_daily - beta * (bench_mean - rf_daily))
+        let rf_daily = self.risk_free_rate / Decimal::from(252);
+        let alpha = (port_mean - rf_daily - beta * (bench_mean - rf_daily)) * Decimal::from(252);
+
+        // Information Ratio = annualized excess return / annualized tracking error
+        let excess: Vec<Decimal> = (0..n).map(|i| self.returns[i] - bench_returns[i]).collect();
+        let excess_mean = excess.iter().copied().sum::<Decimal>() / Decimal::from(n as i32);
+        let excess_var = excess
+            .iter()
+            .map(|e| (*e - excess_mean) * (*e - excess_mean))
+            .sum::<Decimal>()
+            / Decimal::from(n as i32);
+        let tracking_error = excess_var.sqrt().unwrap_or(Decimal::ZERO);
+
+        let information_ratio = if tracking_error > Decimal::ZERO {
+            let annual_excess = excess_mean * Decimal::from(252);
+            let annual_te = tracking_error * Decimal::from(252).sqrt().unwrap_or(Decimal::ONE);
+            Some(annual_excess / annual_te)
+        } else {
+            None
+        };
+
+        (Some(beta), Some(alpha), information_ratio)
     }
 
     // Private helper methods
@@ -230,10 +295,13 @@ impl RiskAnalyzer {
         }
 
         let mean = self.mean_return();
-        
-        let variance = self.returns.iter()
+
+        let variance = self
+            .returns
+            .iter()
             .map(|r| (*r - mean) * (*r - mean))
-            .sum::<Decimal>() / Decimal::from(self.returns.len() as i32);
+            .sum::<Decimal>()
+            / Decimal::from(self.returns.len() as i32);
 
         variance.sqrt().unwrap_or(Decimal::ZERO)
     }
@@ -257,7 +325,7 @@ impl PortfolioRiskTracker {
     /// Add a daily return
     pub fn add_return(&mut self, date: DateTime<Utc>, return_pct: Decimal) {
         self.daily_returns.push((date, return_pct));
-        
+
         // Keep only lookback period
         while self.daily_returns.len() > self.lookback_days {
             self.daily_returns.remove(0);
@@ -266,9 +334,7 @@ impl PortfolioRiskTracker {
 
     /// Calculate current VaR
     pub fn current_var(&self, confidence: Decimal) -> Decimal {
-        let returns: Vec<Decimal> = self.daily_returns.iter()
-            .map(|(_, r)| *r)
-            .collect();
+        let returns: Vec<Decimal> = self.daily_returns.iter().map(|(_, r)| *r).collect();
 
         let analyzer = RiskAnalyzer::new(returns, Decimal::from(2) / Decimal::from(100));
         analyzer.var(confidence)
@@ -306,7 +372,7 @@ mod tests {
         let analyzer = RiskAnalyzer::new(returns, Decimal::from(2) / Decimal::from(100));
 
         let var_95 = analyzer.var(Decimal::from(95) / Decimal::from(100));
-        
+
         // VaR should be positive (loss)
         assert!(var_95 >= Decimal::ZERO);
     }
@@ -317,7 +383,7 @@ mod tests {
         let analyzer = RiskAnalyzer::new(returns, Decimal::from(2) / Decimal::from(100));
 
         let sharpe = analyzer.sharpe_ratio();
-        
+
         // Sharpe should be a reasonable number (Decimal doesn't have is_finite())
         assert!(sharpe > Decimal::MIN && sharpe < Decimal::MAX);
     }
@@ -328,7 +394,7 @@ mod tests {
         let analyzer = RiskAnalyzer::new(returns, Decimal::ZERO);
 
         let max_dd = analyzer.max_drawdown();
-        
+
         // Max drawdown should be negative or zero
         assert!(max_dd <= Decimal::ZERO);
     }

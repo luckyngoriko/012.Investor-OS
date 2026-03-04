@@ -32,27 +32,46 @@ impl WebScraper {
             SecFiling {
                 ticker: ticker.to_string(),
                 form_type: "8-K".to_string(),
-                filing_date: (now - chrono::Duration::days(2)).format("%Y-%m-%d").to_string(),
+                filing_date: (now - chrono::Duration::days(2))
+                    .format("%Y-%m-%d")
+                    .to_string(),
                 description: "Current Report".to_string(),
-                url: format!("https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={}&type=8-K", ticker),
+                url: format!(
+                    "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={}&type=8-K",
+                    ticker
+                ),
                 period_ending: None,
                 material_change: true,
             },
             SecFiling {
                 ticker: ticker.to_string(),
                 form_type: "10-Q".to_string(),
-                filing_date: (now - chrono::Duration::days(15)).format("%Y-%m-%d").to_string(),
+                filing_date: (now - chrono::Duration::days(15))
+                    .format("%Y-%m-%d")
+                    .to_string(),
                 description: "Quarterly Report".to_string(),
-                url: format!("https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={}&type=10-Q", ticker),
-                period_ending: Some((now - chrono::Duration::days(30)).format("%Y-%m-%d").to_string()),
+                url: format!(
+                    "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={}&type=10-Q",
+                    ticker
+                ),
+                period_ending: Some(
+                    (now - chrono::Duration::days(30))
+                        .format("%Y-%m-%d")
+                        .to_string(),
+                ),
                 material_change: false,
             },
             SecFiling {
                 ticker: ticker.to_string(),
                 form_type: "4".to_string(),
-                filing_date: (now - chrono::Duration::days(5)).format("%Y-%m-%d").to_string(),
+                filing_date: (now - chrono::Duration::days(5))
+                    .format("%Y-%m-%d")
+                    .to_string(),
                 description: "Insider Trading Report".to_string(),
-                url: format!("https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={}&type=4", ticker),
+                url: format!(
+                    "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={}&type=4",
+                    ticker
+                ),
                 period_ending: None,
                 material_change: true,
             },
@@ -60,7 +79,10 @@ impl WebScraper {
     }
 
     /// Get insider trading activity
-    pub async fn get_insider_trades(&self, ticker: &str) -> Result<Vec<InsiderTrade>, ScraperError> {
+    pub async fn get_insider_trades(
+        &self,
+        ticker: &str,
+    ) -> Result<Vec<InsiderTrade>, ScraperError> {
         // Would scrape from SEC Form 4 filings
         let now = chrono::Utc::now();
 
@@ -73,7 +95,9 @@ impl WebScraper {
                 shares: 10000,
                 price_per_share: 150.0,
                 total_value: 1_500_000.0,
-                transaction_date: (now - chrono::Duration::days(3)).format("%Y-%m-%d").to_string(),
+                transaction_date: (now - chrono::Duration::days(3))
+                    .format("%Y-%m-%d")
+                    .to_string(),
                 ownership_type: OwnershipType::Direct,
             },
             InsiderTrade {
@@ -84,24 +108,31 @@ impl WebScraper {
                 shares: 5000,
                 price_per_share: 155.0,
                 total_value: 775_000.0,
-                transaction_date: (now - chrono::Duration::days(5)).format("%Y-%m-%d").to_string(),
+                transaction_date: (now - chrono::Duration::days(5))
+                    .format("%Y-%m-%d")
+                    .to_string(),
                 ownership_type: OwnershipType::Indirect,
             },
         ])
     }
 
     /// Calculate insider sentiment from recent trades
-    pub async fn get_insider_sentiment(&self, ticker: &str) -> Result<InsiderSentiment, ScraperError> {
+    pub async fn get_insider_sentiment(
+        &self,
+        ticker: &str,
+    ) -> Result<InsiderSentiment, ScraperError> {
         let trades = self.get_insider_trades(ticker).await?;
 
-        let (buy_count, sell_count, buy_value, sell_value) = trades.iter().fold(
-            (0, 0, 0.0, 0.0),
-            |(bc, sc, bv, sv), trade| match trade.transaction_type {
-                TransactionType::Purchase => (bc + 1, sc, bv + trade.total_value, sv),
-                TransactionType::Sale => (bc, sc + 1, bv, sv + trade.total_value),
-                _ => (bc, sc, bv, sv),
-            },
-        );
+        let (buy_count, sell_count, buy_value, sell_value) =
+            trades
+                .iter()
+                .fold((0, 0, 0.0, 0.0), |(bc, sc, bv, sv), trade| {
+                    match trade.transaction_type {
+                        TransactionType::Purchase => (bc + 1, sc, bv + trade.total_value, sv),
+                        TransactionType::Sale => (bc, sc + 1, bv, sv + trade.total_value),
+                        _ => (bc, sc, bv, sv),
+                    }
+                });
 
         let total_value = buy_value + sell_value;
         let sentiment_score = if total_value > 0.0 {
@@ -129,7 +160,10 @@ impl WebScraper {
     }
 
     /// Get earnings transcript highlights
-    pub async fn get_earnings_highlights(&self, ticker: &str) -> Result<EarningsHighlights, ScraperError> {
+    pub async fn get_earnings_highlights(
+        &self,
+        ticker: &str,
+    ) -> Result<EarningsHighlights, ScraperError> {
         // Would scrape from earnings call transcripts
         Ok(EarningsHighlights {
             ticker: ticker.to_string(),
@@ -148,13 +182,21 @@ impl WebScraper {
                 "Cloud growth accelerating".to_string(),
             ],
             sentiment: EarningsSentiment::Positive,
-            transcript_url: format!("https://seekingalpha.com/symbol/{}/earnings/transcripts", ticker),
-            call_date: (chrono::Utc::now() - chrono::Duration::days(10)).format("%Y-%m-%d").to_string(),
+            transcript_url: format!(
+                "https://seekingalpha.com/symbol/{}/earnings/transcripts",
+                ticker
+            ),
+            call_date: (chrono::Utc::now() - chrono::Duration::days(10))
+                .format("%Y-%m-%d")
+                .to_string(),
         })
     }
 
     /// Get institutional holdings changes
-    pub async fn get_institutional_changes(&self, ticker: &str) -> Result<Vec<InstitutionalHolding>, ScraperError> {
+    pub async fn get_institutional_changes(
+        &self,
+        ticker: &str,
+    ) -> Result<Vec<InstitutionalHolding>, ScraperError> {
         // Would scrape from 13F filings
         Ok(vec![
             InstitutionalHolding {
@@ -164,7 +206,9 @@ impl WebScraper {
                 previous_shares: 145_000_000,
                 change_pct: 3.45,
                 portfolio_weight: 5.2,
-                filing_date: (chrono::Utc::now() - chrono::Duration::days(20)).format("%Y-%m-%d").to_string(),
+                filing_date: (chrono::Utc::now() - chrono::Duration::days(20))
+                    .format("%Y-%m-%d")
+                    .to_string(),
             },
             InstitutionalHolding {
                 ticker: ticker.to_string(),
@@ -173,34 +217,45 @@ impl WebScraper {
                 previous_shares: 118_000_000,
                 change_pct: 1.69,
                 portfolio_weight: 4.8,
-                filing_date: (chrono::Utc::now() - chrono::Duration::days(18)).format("%Y-%m-%d").to_string(),
+                filing_date: (chrono::Utc::now() - chrono::Duration::days(18))
+                    .format("%Y-%m-%d")
+                    .to_string(),
             },
         ])
     }
 
     /// Get corporate events calendar
-    pub async fn get_corporate_events(&self, ticker: &str) -> Result<Vec<CorporateEvent>, ScraperError> {
+    pub async fn get_corporate_events(
+        &self,
+        ticker: &str,
+    ) -> Result<Vec<CorporateEvent>, ScraperError> {
         let now = chrono::Utc::now();
 
         Ok(vec![
             CorporateEvent {
                 ticker: ticker.to_string(),
                 event_type: EventType::Earnings,
-                event_date: (now + chrono::Duration::days(25)).format("%Y-%m-%d").to_string(),
+                event_date: (now + chrono::Duration::days(25))
+                    .format("%Y-%m-%d")
+                    .to_string(),
                 description: "Q4 2024 Earnings Release".to_string(),
                 estimated: true,
             },
             CorporateEvent {
                 ticker: ticker.to_string(),
                 event_type: EventType::Dividend,
-                event_date: (now + chrono::Duration::days(10)).format("%Y-%m-%d").to_string(),
+                event_date: (now + chrono::Duration::days(10))
+                    .format("%Y-%m-%d")
+                    .to_string(),
                 description: "Quarterly Dividend Ex-Date".to_string(),
                 estimated: false,
             },
             CorporateEvent {
                 ticker: ticker.to_string(),
                 event_type: EventType::Conference,
-                event_date: (now + chrono::Duration::days(40)).format("%Y-%m-%d").to_string(),
+                event_date: (now + chrono::Duration::days(40))
+                    .format("%Y-%m-%d")
+                    .to_string(),
                 description: "Tech Conference Presentation".to_string(),
                 estimated: true,
             },
@@ -219,7 +274,10 @@ impl WebScraper {
     }
 
     /// Get comprehensive corporate intelligence
-    pub async fn get_corporate_intelligence(&self, ticker: &str) -> Result<CorporateIntelligence, ScraperError> {
+    pub async fn get_corporate_intelligence(
+        &self,
+        ticker: &str,
+    ) -> Result<CorporateIntelligence, ScraperError> {
         let filings = self.get_sec_filings(ticker).await?;
         let insider_sentiment = self.get_insider_sentiment(ticker).await?;
         let earnings = self.get_earnings_highlights(ticker).await?;

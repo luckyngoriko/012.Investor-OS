@@ -34,7 +34,10 @@ impl TrendsCollector {
         }
 
         let current = historical.last().map(|p| p.value).unwrap_or(50);
-        let previous = historical.get(historical.len().saturating_sub(8)).map(|p| p.value).unwrap_or(40);
+        let previous = historical
+            .get(historical.len().saturating_sub(8))
+            .map(|p| p.value)
+            .unwrap_or(40);
 
         Ok(TrendData {
             ticker: ticker.to_string(),
@@ -190,7 +193,13 @@ impl TrendsCollector {
         let trends = self.get_trends(ticker).await?;
 
         let short_term = if trends.historical.len() >= 7 {
-            let recent: u32 = trends.historical.iter().rev().take(7).map(|p| p.value).sum();
+            let recent: u32 = trends
+                .historical
+                .iter()
+                .rev()
+                .take(7)
+                .map(|p| p.value)
+                .sum();
             let previous: u32 = trends
                 .historical
                 .iter()
@@ -310,10 +319,10 @@ pub struct SearchSentiment {
 /// Attention trend classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AttentionTrend {
-    Surging,   // >20% increase
-    Rising,    // 5-20% increase
-    Stable,    // -5% to 5%
-    Falling,   // -20% to -5%
+    Surging,    // >20% increase
+    Rising,     // 5-20% increase
+    Stable,     // -5% to 5%
+    Falling,    // -20% to -5%
     Collapsing, // <-20%
 }
 
@@ -334,7 +343,7 @@ impl AttentionTrend {
 #[derive(Debug, Clone)]
 pub struct TrendMomentum {
     pub ticker: String,
-    pub short_term: f64, // 7-day change %
+    pub short_term: f64,  // 7-day change %
     pub medium_term: f64, // 30-day change %
     pub direction: TrendDirection,
     pub strength: f64, // 0-1

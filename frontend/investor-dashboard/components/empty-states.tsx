@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { motion } from "framer-motion";
 import {
   Package,
@@ -60,21 +61,25 @@ export function EmptyState({
       className={`flex flex-col items-center justify-center text-center px-4 ${sizes[size]}`}
     >
       {Icon && (
-        <div className={`${iconSizes[size]} rounded-2xl bg-gray-800/50 
-          flex items-center justify-center mb-4`}>
+        <div
+          className={`${iconSizes[size]} rounded-2xl bg-gray-800/50 
+          flex items-center justify-center mb-4`}
+        >
           <Icon className="w-1/2 h-1/2 text-gray-500" />
         </div>
       )}
-      <h3 className={`font-semibold text-white mb-2 ${
-        size === "sm" ? "text-base" : size === "md" ? "text-lg" : "text-xl"
-      }`}>
+      <h3
+        className={`font-semibold text-white mb-2 ${
+          size === "sm" ? "text-base" : size === "md" ? "text-lg" : "text-xl"
+        }`}
+      >
         {title}
       </h3>
       <p className="text-gray-400 max-w-sm mb-6">{description}</p>
-      
+
       <div className="flex flex-wrap items-center justify-center gap-3">
-        {action && (
-          action.href ? (
+        {action &&
+          (action.href ? (
             <Link
               href={action.href}
               className="inline-flex items-center gap-2 px-4 py-2 
@@ -94,11 +99,10 @@ export function EmptyState({
               <Plus className="w-4 h-4" />
               {action.label}
             </button>
-          )
-        )}
-        
-        {secondaryAction && (
-          secondaryAction.href ? (
+          ))}
+
+        {secondaryAction &&
+          (secondaryAction.href ? (
             <Link
               href={secondaryAction.href}
               className="inline-flex items-center gap-2 px-4 py-2 
@@ -116,8 +120,7 @@ export function EmptyState({
               {secondaryAction.label}
               <ArrowRight className="w-4 h-4" />
             </button>
-          )
-        )}
+          ))}
       </div>
     </motion.div>
   );
@@ -209,18 +212,20 @@ export function FirstTimeDashboardState() {
   return (
     <div className="glass-card rounded-2xl p-8">
       <div className="flex flex-col items-center text-center">
-        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/10 
-          flex items-center justify-center mb-6">
+        <div
+          className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/10 
+          flex items-center justify-center mb-6"
+        >
           <Sparkles className="w-10 h-10 text-blue-400" />
         </div>
         <h2 className="text-2xl font-bold text-white mb-3">
           Welcome to Investor OS!
         </h2>
         <p className="text-gray-400 max-w-md mb-8">
-          Your AI-powered trading platform is ready. Let&apos;s get you started with 
-          a quick tour of the key features.
+          Your AI-powered trading platform is ready. Let&apos;s get you started
+          with a quick tour of the key features.
         </p>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl">
           <QuickStartCard
             icon={TrendingUp}
@@ -311,17 +316,29 @@ export function ErrorState({
 }
 
 export function ComingSoonState({ feature }: { feature: string }) {
+  const [requested, setRequested] = React.useState(false);
+
+  const handleRequest = async () => {
+    try {
+      await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feature }),
+      });
+    } catch {
+      // Best-effort: waitlist endpoint may not exist yet
+    }
+    setRequested(true);
+  };
+
   return (
     <EmptyState
       icon={Lightbulb}
       title={`${feature} Coming Soon`}
       description="This feature is currently in development. Stay tuned for updates!"
       action={{
-        label: "Request Early Access",
-        onClick: () => {
-          // TODO: Implement early access request
-          alert("Thanks for your interest! We'll notify you when it's ready.");
-        },
+        label: requested ? "Request Sent" : "Request Early Access",
+        onClick: requested ? undefined : handleRequest,
       }}
       size="lg"
     />

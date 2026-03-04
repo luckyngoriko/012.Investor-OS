@@ -2,10 +2,10 @@
 //!
 //! Full neural network with weight loading from Python.
 
-use super::{DeviceConfig, HRMConfig, HRMError, InferenceResult, MarketRegime, Result};
 use super::inference::InferenceEngine;
 use super::lstm::HRMNetwork;
 use super::weights::{ModelWeights, WeightLoader};
+use super::{DeviceConfig, HRMConfig, HRMError, InferenceResult, MarketRegime, Result};
 
 use burn::prelude::*;
 use burn_ndarray::NdArray;
@@ -20,6 +20,7 @@ pub struct HRM {
     engine: InferenceEngine,
     network: Option<HRMNetwork<HRMBackend>>,
     weights: Option<ModelWeights>,
+    initialization_warning: Option<String>,
 }
 
 impl HRM {
@@ -28,23 +29,35 @@ impl HRM {
         config.validate()?;
 
         let engine = InferenceEngine::new()
-            .with_gpu(matches!(config.device, DeviceConfig::Cuda | DeviceConfig::Auto))
+            .with_gpu(matches!(
+                config.device,
+                DeviceConfig::Cuda | DeviceConfig::Auto
+            ))
             .with_timeout(5000);
 
         // Load network if weights provided
-        let (network, weights) = if let Some(ref path) = config.weights_path {
+        let (network, weights, initialization_warning) = if let Some(ref path) = config.weights_path
+        {
             match Self::load_network(path, config) {
                 Ok((net, w)) => {
                     println!("✅ Loaded HRM network from: {}", path);
-                    (Some(net), Some(w))
+                    (Some(net), Some(w), None)
                 }
                 Err(e) => {
-                    eprintln!("⚠️  Failed to load weights: {}. Using placeholder.", e);
-                    (None, None)
+                    let warning = format!(
+                        "Failed to load weights from '{}': {}. Using deterministic policy fallback.",
+                        path, e
+                    );
+                    eprintln!("⚠️  {}", warning);
+                    (None, None, Some(warning))
                 }
             }
         } else {
-            (None, None)
+            (
+                None,
+                None,
+                Some("No weights configured. Using deterministic policy fallback.".to_string()),
+            )
         };
 
         Ok(Self {
@@ -52,6 +65,11 @@ impl HRM {
             engine,
             network,
             weights,
+            initialization_warning,
+        })
+        .map(|hrm| {
+            crate::monitoring::metrics::set_hrm_model_loaded(hrm.network.is_some());
+            hrm
         })
     }
 
@@ -65,24 +83,23 @@ impl HRM {
         loader.verify_compatibility(&weights, _config)?;
 
         let device = <HRMBackend as Backend>::Device::default();
-        
+
         // Create network from loaded weights
-        let network = HRMNetwork::from_weights(&weights, &device)
-            .map_err(HRMError::WeightLoadError)?;
+        let network =
+            HRMNetwork::from_weights(&weights, &device).map_err(HRMError::WeightLoadError)?;
 
         Ok((network, weights))
     }
 
     /// Load weights
     pub fn load_weights<P: AsRef<std::path::Path>>(&mut self, path: P) -> Result<()> {
-        let (network, weights) = Self::load_network(
-            path.as_ref().to_str().unwrap(),
-            &self.config
-        )?;
-        
+        let (network, weights) = Self::load_network(path.as_ref().to_str().unwrap(), &self.config)?;
+
         self.network = Some(network);
         self.weights = Some(weights);
-        
+        self.initialization_warning = None;
+        crate::monitoring::metrics::set_hrm_model_loaded(true);
+
         Ok(())
     }
 
@@ -102,41 +119,42 @@ impl HRM {
         signals: &[f32],
     ) -> Result<InferenceResult> {
         use std::time::Instant;
-        
+
         let start = Instant::now();
-        
+
         if signals.len() != 6 {
             return Err(HRMError::InvalidInputShape {
                 expected: 6,
                 actual: signals.len(),
             });
         }
-        
+
         // Convert to tensor [1, 6]
         let device = <HRMBackend as Backend>::Device::default();
         let input_vec: Vec<f32> = signals.to_vec();
         let input_1d = Tensor::<HRMBackend, 1>::from_data(input_vec.as_slice(), &device);
         let input: Tensor<HRMBackend, 2> = input_1d.reshape([1, 6]);
-        
+
         // Forward pass
         let output = network.infer(input);
-        
+
         // Extract values
         let output_data = output.to_data();
-        let values: Vec<f32> = output_data.to_vec()
+        let values: Vec<f32> = output_data
+            .to_vec()
             .map_err(|e| HRMError::InferenceError(format!("Tensor error: {:?}", e)))?;
-        
+
         if values.len() < 3 {
             return Err(HRMError::InferenceError("Invalid output size".to_string()));
         }
-        
+
         let elapsed = start.elapsed().as_micros() as u64;
-        
+
         // Output is already sigmoid-activated
         let conviction = values[0];
         let confidence = values[1];
         let regime = classify_regime(values[2]);
-        
+
         Ok(InferenceResult {
             conviction,
             confidence,
@@ -162,6 +180,12 @@ impl HRM {
 
     /// Get stats
     pub fn stats(&self) -> HRMStats {
+        let runtime_mode = if self.network.is_some() {
+            "network"
+        } else {
+            "deterministic_policy"
+        };
+
         HRMStats {
             parameters: if let Some(ref w) = self.weights {
                 w.parameter_count()
@@ -173,6 +197,9 @@ impl HRM {
             input_size: self.config.input_size,
             output_size: self.config.output_size,
             gpu_enabled: cfg!(feature = "cuda"),
+            runtime_mode: runtime_mode.to_string(),
+            fallback_policy: "deterministic_policy_until_weights_loaded".to_string(),
+            initialization_warning: self.initialization_warning.clone(),
         }
     }
 
@@ -191,6 +218,9 @@ pub struct HRMStats {
     pub input_size: usize,
     pub output_size: usize,
     pub gpu_enabled: bool,
+    pub runtime_mode: String,
+    pub fallback_policy: String,
+    pub initialization_warning: Option<String>,
 }
 
 /// Builder

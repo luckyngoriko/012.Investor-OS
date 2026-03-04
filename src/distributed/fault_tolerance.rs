@@ -40,11 +40,11 @@ impl CircuitBreaker {
             last_failure: Mutex::new(None),
         }
     }
-    
+
     /// Check if request can proceed
     pub fn can_execute(&self) -> bool {
         let mut state = self.state.lock().unwrap();
-        
+
         match *state {
             BreakerState::Closed => true,
             BreakerState::Open => {
@@ -61,11 +61,11 @@ impl CircuitBreaker {
             BreakerState::HalfOpen => true,
         }
     }
-    
+
     /// Record successful request
     pub fn record_success(&self) {
         let mut state = self.state.lock().unwrap();
-        
+
         match *state {
             BreakerState::HalfOpen => {
                 let successes = self.successes.fetch_add(1, Ordering::Relaxed) + 1;
@@ -82,14 +82,14 @@ impl CircuitBreaker {
             _ => {}
         }
     }
-    
+
     /// Record failed request
     pub fn record_failure(&self) {
         let failures = self.failures.fetch_add(1, Ordering::Relaxed) + 1;
         *self.last_failure.lock().unwrap() = Some(Instant::now());
-        
+
         let mut state = self.state.lock().unwrap();
-        
+
         match *state {
             BreakerState::Closed => {
                 if failures >= self.failure_threshold {
@@ -103,12 +103,12 @@ impl CircuitBreaker {
             _ => {}
         }
     }
-    
+
     /// Get current state
     pub fn state(&self) -> BreakerState {
         *self.state.lock().unwrap()
     }
-    
+
     /// Check if breaker is open
     pub fn is_open(&self) -> bool {
         self.state() == BreakerState::Open
@@ -143,20 +143,20 @@ impl RetryPolicy {
             ..Default::default()
         }
     }
-    
+
     /// Calculate delay for attempt
     pub fn delay_for_attempt(&self, attempt: u32) -> Duration {
         if attempt == 0 {
             return Duration::ZERO;
         }
-        
-        let delay_ms = self.initial_delay.as_millis() as f64 
+
+        let delay_ms = self.initial_delay.as_millis() as f64
             * self.backoff_multiplier.powi(attempt as i32 - 1);
-        
+
         let delay = Duration::from_millis(delay_ms as u64);
         delay.min(self.max_delay)
     }
-    
+
     /// Execute function with retry
     pub async fn retry<F, Fut, T, E>(&self, f: F) -> Result<T, E>
     where
@@ -164,19 +164,19 @@ impl RetryPolicy {
         Fut: std::future::Future<Output = Result<T, E>>,
     {
         let mut last_error = None;
-        
+
         for attempt in 0..self.max_attempts {
             if attempt > 0 {
                 let delay = self.delay_for_attempt(attempt);
                 tokio::time::sleep(delay).await;
             }
-            
+
             match f().await {
                 Ok(result) => return Ok(result),
                 Err(e) => last_error = Some(e),
             }
         }
-        
+
         Err(last_error.unwrap())
     }
 }
@@ -210,12 +210,13 @@ impl NodeCircuitBreakers {
             default_config: CircuitBreakerConfig::default(),
         }
     }
-    
+
     /// Get or create breaker for node
     pub fn get(&self, node_id: &str) -> Arc<CircuitBreaker> {
         let mut breakers = self.breakers.lock().unwrap();
-        
-        breakers.entry(node_id.to_string())
+
+        breakers
+            .entry(node_id.to_string())
             .or_insert_with(|| {
                 Arc::new(CircuitBreaker::new(
                     self.default_config.failure_threshold,
@@ -224,7 +225,7 @@ impl NodeCircuitBreakers {
             })
             .clone()
     }
-    
+
     /// Remove breaker for node
     pub fn remove(&self, node_id: &str) {
         let mut breakers = self.breakers.lock().unwrap();
@@ -241,46 +242,46 @@ impl Default for NodeCircuitBreakers {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_circuit_breaker_closed_to_open() {
         let cb = CircuitBreaker::new(3, Duration::from_secs(30));
-        
+
         assert_eq!(cb.state(), BreakerState::Closed);
         assert!(cb.can_execute());
-        
+
         // Record failures
         cb.record_failure();
         cb.record_failure();
         assert_eq!(cb.state(), BreakerState::Closed);
-        
+
         cb.record_failure();
         assert_eq!(cb.state(), BreakerState::Open);
         assert!(!cb.can_execute());
     }
-    
+
     #[test]
     fn test_circuit_breaker_success_resets() {
         let cb = CircuitBreaker::new(5, Duration::from_secs(30));
-        
+
         cb.record_failure();
         cb.record_failure();
         assert_eq!(cb.failures.load(Ordering::Relaxed), 2);
-        
+
         cb.record_success();
         assert_eq!(cb.failures.load(Ordering::Relaxed), 0);
     }
-    
+
     #[test]
     fn test_retry_policy_delay() {
         let policy = RetryPolicy::default();
-        
+
         assert_eq!(policy.delay_for_attempt(0), Duration::ZERO);
         assert_eq!(policy.delay_for_attempt(1), Duration::from_millis(100));
         assert_eq!(policy.delay_for_attempt(2), Duration::from_millis(200));
         assert_eq!(policy.delay_for_attempt(3), Duration::from_millis(400));
     }
-    
+
     #[test]
     fn test_retry_policy_max_delay() {
         let policy = RetryPolicy {
@@ -289,7 +290,7 @@ mod tests {
             max_delay: Duration::from_secs(5),
             backoff_multiplier: 10.0,
         };
-        
+
         // Should be capped at max_delay
         assert_eq!(policy.delay_for_attempt(10), Duration::from_secs(5));
     }

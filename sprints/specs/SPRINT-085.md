@@ -3,7 +3,7 @@
 ## Metadata
 
 - Sprint ID: 85
-- Status: in_progress
+- Status: done
 - Gate: G32
 - Owner: Backend + Frontend + Security
 - Dependencies: 84

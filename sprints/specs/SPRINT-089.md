@@ -3,7 +3,7 @@
 ## Metadata
 
 - Sprint ID: 89
-- Status: queued
+- Status: done
 - Gate: G36
 - Owner: Backend + Database
 - Dependencies: 88

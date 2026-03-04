@@ -69,7 +69,7 @@ impl AuditLogger {
         explanation: &str,
     ) -> Result<AIDecisionLog, AuditError> {
         let input_hash = self.hash_input(input_data);
-        
+
         let log_entry = AIDecisionLog {
             id: Uuid::new_v4(),
             timestamp: Utc::now(),
@@ -106,10 +106,7 @@ impl AuditLogger {
         signals: &crate::hrm::HrmInput,
         output: &crate::hrm::HrmOutput,
     ) -> Result<AIDecisionLog, AuditError> {
-        let system_id = Uuid::new_v5(
-            &Uuid::NAMESPACE_DNS,
-            b"investor-os-hrm",
-        );
+        let system_id = Uuid::new_v5(&Uuid::NAMESPACE_DNS, b"investor-os-hrm");
 
         let input_data = json!({
             "pegy": signals.pegy,
@@ -137,7 +134,8 @@ impl AuditLogger {
             &output_data,
             output.confidence,
             &explanation,
-        ).await
+        )
+        .await
     }
 
     /// Log risk assessment decision
@@ -147,10 +145,7 @@ impl AuditLogger {
         risk_metrics: &serde_json::Value,
         assessment: &str,
     ) -> Result<AIDecisionLog, AuditError> {
-        let system_id = Uuid::new_v5(
-            &Uuid::NAMESPACE_DNS,
-            b"investor-os-risk",
-        );
+        let system_id = Uuid::new_v5(&Uuid::NAMESPACE_DNS, b"investor-os-risk");
 
         let input_data = json!({
             "portfolio_value": portfolio_value,
@@ -171,7 +166,8 @@ impl AuditLogger {
             &output_data,
             0.95,
             &explanation,
-        ).await
+        )
+        .await
     }
 
     /// Add human oversight decision to existing log entry
@@ -197,7 +193,7 @@ impl AuditLogger {
                     human_decision = $1,
                     updated_at = NOW()
                 WHERE id = $2
-                "#
+                "#,
             )
             .bind(sqlx::types::Json(&human_decision))
             .bind(log_id)
@@ -206,10 +202,7 @@ impl AuditLogger {
             .map_err(AuditError::Database)?;
         }
 
-        info!(
-            "Human decision added to log {}: {:?}",
-            log_id, decision
-        );
+        info!("Human decision added to log {}: {:?}", log_id, decision);
 
         Ok(())
     }
@@ -231,7 +224,7 @@ impl AuditLogger {
                      output_data, confidence, explanation, human_reviewed)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                     ON CONFLICT (id) DO NOTHING
-                    "#
+                    "#,
                 )
                 .bind(log.id)
                 .bind(log.timestamp)
@@ -269,7 +262,17 @@ impl AuditLogger {
         let mut logs = Vec::new();
 
         if let Some(ref pool) = self.db_pool {
-            let records: Vec<(Uuid, chrono::DateTime<Utc>, Uuid, String, String, serde_json::Value, f64, String, bool)> = sqlx::query_as(
+            let records: Vec<(
+                Uuid,
+                chrono::DateTime<Utc>,
+                Uuid,
+                String,
+                String,
+                serde_json::Value,
+                f64,
+                String,
+                bool,
+            )> = sqlx::query_as(
                 r#"
                 SELECT id, timestamp, system_id, decision_type, input_data_hash,
                        output_data, confidence, explanation, human_reviewed
@@ -280,7 +283,7 @@ impl AuditLogger {
                   AND ($4::timestamptz IS NULL OR timestamp <= $4)
                 ORDER BY timestamp DESC
                 LIMIT $5 OFFSET $6
-                "#
+                "#,
             )
             .bind(system_id)
             .bind(decision_type.map(|dt| format!("{:?}", dt)))
@@ -292,7 +295,18 @@ impl AuditLogger {
             .await
             .map_err(AuditError::Database)?;
 
-            for (id, timestamp, system_id, decision_type, input_hash, output, confidence, explanation, human_reviewed) in records {
+            for (
+                id,
+                timestamp,
+                system_id,
+                decision_type,
+                input_hash,
+                output,
+                confidence,
+                explanation,
+                human_reviewed,
+            ) in records
+            {
                 let decision_type = match decision_type.as_str() {
                     "TradingSignal" => DecisionType::TradingSignal,
                     "RiskAssessment" => DecisionType::RiskAssessment,
@@ -322,7 +336,17 @@ impl AuditLogger {
     /// Get logs requiring human review (for high-risk decisions)
     pub async fn get_pending_review(&self) -> Result<Vec<AIDecisionLog>, AuditError> {
         if let Some(ref pool) = self.db_pool {
-            let records: Vec<(Uuid, chrono::DateTime<Utc>, Uuid, String, String, serde_json::Value, f64, String, bool)> = sqlx::query_as(
+            let records: Vec<(
+                Uuid,
+                chrono::DateTime<Utc>,
+                Uuid,
+                String,
+                String,
+                serde_json::Value,
+                f64,
+                String,
+                bool,
+            )> = sqlx::query_as(
                 r#"
                 SELECT id, timestamp, system_id, decision_type, input_data_hash,
                        output_data, confidence, explanation, human_reviewed
@@ -332,14 +356,25 @@ impl AuditLogger {
                   AND confidence < 0.8
                 ORDER BY timestamp DESC
                 LIMIT 100
-                "#
+                "#,
             )
             .fetch_all(pool)
             .await
             .map_err(AuditError::Database)?;
 
             let mut logs = Vec::new();
-            for (id, timestamp, system_id, decision_type, input_hash, output, confidence, explanation, human_reviewed) in records {
+            for (
+                id,
+                timestamp,
+                system_id,
+                decision_type,
+                input_hash,
+                output,
+                confidence,
+                explanation,
+                human_reviewed,
+            ) in records
+            {
                 let decision_type = match decision_type.as_str() {
                     "TradingSignal" => DecisionType::TradingSignal,
                     "RiskAssessment" => DecisionType::RiskAssessment,
@@ -382,13 +417,13 @@ impl AuditLogger {
 pub enum AuditError {
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
-    
+
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
-    
+
     #[error("Buffer overflow")]
     BufferOverflow,
-    
+
     #[error("Log entry not found: {0}")]
     NotFound(Uuid),
 }
@@ -401,8 +436,8 @@ pub mod handlers {
         http::StatusCode,
         Json,
     };
-    use serde::Deserialize;
     use chrono::{DateTime, Utc};
+    use serde::Deserialize;
     use std::sync::Arc;
 
     #[derive(Deserialize)]
@@ -431,7 +466,7 @@ pub mod handlers {
         Json(req): Json<LogEventRequest>,
     ) -> Result<Json<serde_json::Value>, StatusCode> {
         let mut logger = AuditLogger::new_without_db();
-        
+
         let decision_type = match req.decision_type.as_str() {
             "trading_signal" => DecisionType::TradingSignal,
             "risk_assessment" => DecisionType::RiskAssessment,
@@ -440,14 +475,17 @@ pub mod handlers {
             _ => DecisionType::Other,
         };
 
-        match logger.log_decision(
-            req.system_id,
-            decision_type,
-            &req.input_data,
-            &req.output_data,
-            req.confidence,
-            &req.explanation,
-        ).await {
+        match logger
+            .log_decision(
+                req.system_id,
+                decision_type,
+                &req.input_data,
+                &req.output_data,
+                req.confidence,
+                &req.explanation,
+            )
+            .await
+        {
             Ok(log) => Ok(Json(json!({
                 "success": true,
                 "data": {
@@ -476,14 +514,17 @@ pub mod handlers {
             _ => None,
         });
 
-        match logger.query_logs(
-            params.system_id,
-            decision_type,
-            params.start_date,
-            params.end_date,
-            params.limit.unwrap_or(100),
-            params.offset.unwrap_or(0),
-        ).await {
+        match logger
+            .query_logs(
+                params.system_id,
+                decision_type,
+                params.start_date,
+                params.end_date,
+                params.limit.unwrap_or(100),
+                params.offset.unwrap_or(0),
+            )
+            .await
+        {
             Ok(logs) => Ok(Json(json!({
                 "success": true,
                 "data": {
@@ -513,19 +554,21 @@ mod tests {
     #[tokio::test]
     async fn test_log_decision() {
         let mut logger = AuditLogger::new_without_db();
-        
+
         let system_id = Uuid::new_v4();
         let input = json!({"test": "input"});
         let output = json!({"test": "output"});
 
-        let result = logger.log_decision(
-            system_id,
-            DecisionType::TradingSignal,
-            &input,
-            &output,
-            0.85,
-            "Test decision",
-        ).await;
+        let result = logger
+            .log_decision(
+                system_id,
+                DecisionType::TradingSignal,
+                &input,
+                &output,
+                0.85,
+                "Test decision",
+            )
+            .await;
 
         assert!(result.is_ok());
         let log = result.unwrap();
@@ -538,13 +581,13 @@ mod tests {
     fn test_hash_input() {
         let logger = AuditLogger::new_without_db();
         let input = json!({"key": "value"});
-        
+
         let hash1 = logger.hash_input(&input);
         let hash2 = logger.hash_input(&input);
-        
+
         // Same input should produce same hash
         assert_eq!(hash1, hash2);
-        
+
         // Different input should produce different hash
         let different_input = json!({"key": "different"});
         let hash3 = logger.hash_input(&different_input);

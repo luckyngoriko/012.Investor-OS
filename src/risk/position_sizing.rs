@@ -3,11 +3,10 @@
 use rust_decimal::Decimal;
 use tracing::{debug, info};
 
-use super::{RiskError, Result};
+use super::{Result, RiskError};
 
 /// Position sizing method
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum SizingMethod {
     /// Fixed fractional sizing (risk fixed % of capital per trade)
     #[default]
@@ -19,7 +18,6 @@ pub enum SizingMethod {
     /// Fixed dollar amount per position
     FixedAmount,
 }
-
 
 /// Position sizing configuration
 #[derive(Debug, Clone)]
@@ -67,7 +65,7 @@ impl PositionSizer {
     }
 
     /// Calculate position size for a trade
-    /// 
+    ///
     /// # Arguments
     /// * `available_capital` - Total available capital
     /// * `entry_price` - Entry price for the trade
@@ -94,9 +92,7 @@ impl PositionSizer {
             SizingMethod::VolatilityBased => {
                 self.volatility_based_size(available_capital, entry_price, volatility)
             }
-            SizingMethod::FixedAmount => {
-                self.fixed_amount_size(entry_price)
-            }
+            SizingMethod::FixedAmount => self.fixed_amount_size(entry_price),
         }?;
 
         // Apply min/max constraints
@@ -113,7 +109,7 @@ impl PositionSizer {
     }
 
     /// Fixed fractional sizing: risk fixed % of capital per trade
-    /// 
+    ///
     /// Formula: position_size = (capital * risk_percent) / |entry - stop_loss|
     fn fixed_fractional_size(
         &self,
@@ -122,7 +118,9 @@ impl PositionSizer {
         stop_loss: Option<Decimal>,
     ) -> Result<Decimal> {
         let stop = stop_loss.ok_or_else(|| {
-            RiskError::CalculationError("Stop loss required for fixed fractional sizing".to_string())
+            RiskError::CalculationError(
+                "Stop loss required for fixed fractional sizing".to_string(),
+            )
         })?;
 
         if stop.is_zero() || stop == entry_price {
@@ -139,14 +137,17 @@ impl PositionSizer {
 
         info!(
             "Fixed fractional: capital={}, risk={}%, risk_amount={}, position_value={}",
-            capital, self.config.risk_percent * Decimal::from(100), risk_amount, position_value
+            capital,
+            self.config.risk_percent * Decimal::from(100),
+            risk_amount,
+            position_value
         );
 
         Ok(shares)
     }
 
     /// Kelly Criterion sizing for optimal growth
-    /// 
+    ///
     /// Formula: f* = (p * b - q) / b
     /// where p = win rate, q = loss rate (1-p), b = avg win / avg loss
     fn kelly_size(
@@ -199,7 +200,7 @@ impl PositionSizer {
     }
 
     /// Volatility-based sizing using ATR
-    /// 
+    ///
     /// Formula: position_size = (capital * risk_percent) / (ATR * multiplier)
     fn volatility_based_size(
         &self,
@@ -296,7 +297,14 @@ mod tests {
         let win_loss_ratio = Decimal::try_from(2.0).unwrap(); // 2:1 reward/risk
 
         let size = sizer
-            .calculate_size(capital, Decimal::ONE, None, None, Some(win_rate), Some(win_loss_ratio))
+            .calculate_size(
+                capital,
+                Decimal::ONE,
+                None,
+                None,
+                Some(win_rate),
+                Some(win_loss_ratio),
+            )
             .unwrap();
 
         // Kelly = (0.55 * 2 - 0.45) / 2 = 0.325

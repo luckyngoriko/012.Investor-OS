@@ -7,17 +7,17 @@
 //! S7-GP-05: Anomaly Detection
 //! S7-GP-06: Performance Attribution
 
+use chrono::{Duration, Utc};
 use investor_os::analytics::{
-    backtest::{Backtest, BacktestConfig, SlippageModel},
-    risk::RiskAnalyzer,
     attribution::AttributionAnalyzer,
-    ml::{AnomalyDetector, CQPredictor, FeaturePipeline, AnomalyResult},
+    backtest::{Backtest, BacktestConfig, SlippageModel},
+    ml::{AnomalyDetector, AnomalyResult, CQPredictor, FeaturePipeline},
+    risk::RiskAnalyzer,
     MarketData, PriceBar, Signal, SignalDirection, Strategy,
 };
-use investor_os::signals::{TickerSignals, QualityScore};
+use investor_os::signals::{QualityScore, TickerSignals};
 use rust_decimal::Decimal;
 use std::collections::HashMap;
-use chrono::{Utc, Duration};
 
 // S7-GP-01: Backtest Returns Calculation
 #[tokio::test]
@@ -69,9 +69,9 @@ fn test_var_calculation() {
     .collect();
 
     let analyzer = RiskAnalyzer::new(returns, Decimal::from(2) / Decimal::from(100));
-    
+
     let var_95 = analyzer.var(Decimal::from(95) / Decimal::from(100));
-    
+
     // VaR should be positive (represents loss)
     assert!(var_95 >= Decimal::ZERO);
     // Worst return was -3%, so VaR should be >= 0% and <= 3%
@@ -92,9 +92,9 @@ fn test_sharpe_ratio() {
         .collect();
 
     let analyzer = RiskAnalyzer::new(returns, Decimal::from(2) / Decimal::from(100));
-    
+
     let sharpe = analyzer.sharpe_ratio();
-    
+
     // Expected: (0.10 - 0.02) / 0.15 = ~0.53
     // Allow wide range due to simplified calculation
     assert!(sharpe > Decimal::ZERO);
@@ -105,22 +105,22 @@ fn test_sharpe_ratio() {
 #[test]
 fn test_cq_prediction_model() {
     let predictor = CQPredictor::new();
-    
+
     // Create feature vector
     let features = vec![0.8; 19]; // All features at 0.8 (strong signals)
-    
+
     let score = predictor.predict(&features).unwrap();
-    
+
     // Score should be in [0, 1]
     assert!(score >= 0.0 && score <= 1.0);
-    
+
     // With high features (0.8), score should be > 0.5
     assert!(score > 0.5);
-    
+
     // Test prediction with confidence
     let (score, confidence) = predictor.predict_with_confidence(&features).unwrap();
     assert!(confidence >= 0.0 && confidence <= 1.0);
-    
+
     // High score should suggest trading
     let should_trade = predictor.should_trade(&features).unwrap();
     assert!(should_trade);
@@ -130,16 +130,16 @@ fn test_cq_prediction_model() {
 #[test]
 fn test_regime_change_detection() {
     let mut detector = AnomalyDetector::new(2.0, 20);
-    
+
     // Simulate regime change (high vol period followed by low vol)
     // Use varying values to establish a proper baseline
     let normal_period: Vec<f64> = (0..100).map(|i| 0.001 + (i as f64 * 0.0001)).collect();
     detector.set_baseline(&normal_period);
-    
+
     // Normal value (within 2 std devs)
     let result = detector.detect(0.005);
     assert!(matches!(result, AnomalyResult::Normal));
-    
+
     // Anomalous value (far from mean)
     let result = detector.detect(0.5);
     assert!(matches!(result, AnomalyResult::Anomaly { .. }));
@@ -150,23 +150,36 @@ fn test_regime_change_detection() {
 fn test_performance_attribution() {
     let portfolio_weights: HashMap<String, Decimal> = [
         ("tech".to_string(), Decimal::from(60) / Decimal::from(100)),
-        ("finance".to_string(), Decimal::from(40) / Decimal::from(100)),
-    ].into();
+        (
+            "finance".to_string(),
+            Decimal::from(40) / Decimal::from(100),
+        ),
+    ]
+    .into();
 
     let benchmark_weights: HashMap<String, Decimal> = [
         ("tech".to_string(), Decimal::from(50) / Decimal::from(100)),
-        ("finance".to_string(), Decimal::from(50) / Decimal::from(100)),
-    ].into();
+        (
+            "finance".to_string(),
+            Decimal::from(50) / Decimal::from(100),
+        ),
+    ]
+    .into();
 
     let portfolio_returns: HashMap<String, Decimal> = [
         ("tech".to_string(), Decimal::from(15) / Decimal::from(100)),
         ("finance".to_string(), Decimal::from(8) / Decimal::from(100)),
-    ].into();
+    ]
+    .into();
 
     let benchmark_returns: HashMap<String, Decimal> = [
         ("tech".to_string(), Decimal::from(12) / Decimal::from(100)),
-        ("finance".to_string(), Decimal::from(10) / Decimal::from(100)),
-    ].into();
+        (
+            "finance".to_string(),
+            Decimal::from(10) / Decimal::from(100),
+        ),
+    ]
+    .into();
 
     let result = AttributionAnalyzer::brinson_attribution(
         &portfolio_weights,
@@ -176,16 +189,20 @@ fn test_performance_attribution() {
     );
 
     // Effects should be calculated
-    assert!(result.allocation_effect != Decimal::ZERO || 
-            result.selection_effect != Decimal::ZERO ||
-            result.interaction_effect != Decimal::ZERO);
-    
+    assert!(
+        result.allocation_effect != Decimal::ZERO
+            || result.selection_effect != Decimal::ZERO
+            || result.interaction_effect != Decimal::ZERO
+    );
+
     // Allocation + Selection + Interaction should sum to total excess return
-    let sum_effects = result.allocation_effect + result.selection_effect + result.interaction_effect;
+    let sum_effects =
+        result.allocation_effect + result.selection_effect + result.interaction_effect;
     // Portfolio return: 0.6 * 0.15 + 0.4 * 0.08 = 0.122
     // Benchmark return: 0.5 * 0.12 + 0.5 * 0.10 = 0.11
     // Excess return: 0.012
-    let expected_excess = Decimal::from(122) / Decimal::from(1000) - Decimal::from(11) / Decimal::from(100);
+    let expected_excess =
+        Decimal::from(122) / Decimal::from(1000) - Decimal::from(11) / Decimal::from(100);
     let diff = (sum_effects - expected_excess).abs();
     assert!(diff < Decimal::from(1) / Decimal::from(1000)); // Small tolerance
 }
@@ -213,9 +230,9 @@ fn test_feature_engineering() {
         rsi_14: 55.0,
         macd_signal: 0.02,
     };
-    
+
     let features = FeaturePipeline::generate_features("AAPL", &signals);
-    
+
     // Should have 19 features
     assert_eq!(features.features.len(), 19);
     assert_eq!(features.feature_names.len(), 19);
@@ -236,9 +253,9 @@ fn test_max_drawdown() {
     ];
 
     let analyzer = RiskAnalyzer::new(returns, Decimal::ZERO);
-    
+
     let max_dd = analyzer.max_drawdown();
-    
+
     // Max drawdown should be negative
     assert!(max_dd <= Decimal::ZERO);
     // Should be substantial due to the -15%, -10%, -5% sequence
@@ -260,10 +277,10 @@ fn test_sortino_ratio() {
     .collect();
 
     let analyzer = RiskAnalyzer::new(returns, Decimal::from(2) / Decimal::from(100));
-    
+
     let sortino = analyzer.sortino_ratio();
     let sharpe = analyzer.sharpe_ratio();
-    
+
     // Sortino should generally be >= Sharpe (only penalizes downside)
     assert!(sortino >= sharpe || sortino == Decimal::ZERO);
 }
@@ -274,13 +291,13 @@ fn generate_test_prices(start: chrono::DateTime<Utc>, end: chrono::DateTime<Utc>
     let mut prices = Vec::new();
     let mut current = start;
     let mut price = 100.0;
-    
+
     while current < end {
         // Random walk
         let change = (current.timestamp() % 5) as f64 - 2.0;
         price += change;
         price = price.max(10.0); // Floor at $10
-        
+
         prices.push(PriceBar {
             timestamp: current,
             open: price - 1.0,
@@ -289,10 +306,10 @@ fn generate_test_prices(start: chrono::DateTime<Utc>, end: chrono::DateTime<Utc>
             close: price,
             volume: 1000000,
         });
-        
+
         current += Duration::days(1);
     }
-    
+
     prices
 }
 
@@ -303,16 +320,19 @@ impl Strategy for TestStrategy {
     fn name(&self) -> &str {
         "Test Strategy"
     }
-    
+
     async fn generate_signals(&self, data: &MarketData) -> Vec<Signal> {
-        data.prices.keys().map(|ticker| Signal {
-            ticker: ticker.clone(),
-            direction: SignalDirection::Long,
-            strength: 0.5,
-            confidence: 0.7,
-        }).collect()
+        data.prices
+            .keys()
+            .map(|ticker| Signal {
+                ticker: ticker.clone(),
+                direction: SignalDirection::Long,
+                strength: 0.5,
+                confidence: 0.7,
+            })
+            .collect()
     }
-    
+
     fn position_size(&self, _signal: &Signal, portfolio_value: Decimal) -> Decimal {
         // Invest 10% in each signal
         portfolio_value / Decimal::from(10)

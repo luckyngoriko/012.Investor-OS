@@ -20,16 +20,16 @@ use uuid::Uuid;
 pub enum RagError {
     #[error("Parser error: {0}")]
     Parser(String),
-    
+
     #[error("Embedding generation failed: {0}")]
     Embedding(String),
-    
+
     #[error("Search error: {0}")]
     Search(String),
-    
+
     #[error("Database error: {0}")]
     Database(String),
-    
+
     #[error("External API error: {0}")]
     ExternalApi(String),
 }
@@ -190,7 +190,7 @@ impl RagService {
         let document_search = search::DocumentSearch::new(database_url).await?;
         let sec_parser = parsers::SecParser::new();
         let earnings_parser = parsers::EarningsParser::new();
-        
+
         Ok(Self {
             embedding_generator,
             document_search,
@@ -198,7 +198,7 @@ impl RagService {
             earnings_parser,
         })
     }
-    
+
     /// Process and index an SEC filing
     pub async fn process_sec_filing(
         &self,
@@ -210,14 +210,18 @@ impl RagService {
         // Parse the filing
         let chunks = match document_type {
             DocumentType::Form10K | DocumentType::Form10Q | DocumentType::Form8K => {
-                self.sec_parser.parse(content, document_type, ticker, filing_date).await?
+                self.sec_parser
+                    .parse(content, document_type, ticker, filing_date)
+                    .await?
             }
-            _ => return Err(RagError::Parser(format!(
-                "Document type {:?} not supported for SEC parsing", 
-                document_type
-            ))),
+            _ => {
+                return Err(RagError::Parser(format!(
+                    "Document type {:?} not supported for SEC parsing",
+                    document_type
+                )))
+            }
         };
-        
+
         // Generate embeddings and store
         let mut chunks_with_embeddings = Vec::new();
         for chunk in chunks {
@@ -226,14 +230,16 @@ impl RagService {
                 embedding: Some(embedding),
                 ..chunk
             };
-            
-            self.document_search.store_chunk(&chunk_with_embedding).await?;
+
+            self.document_search
+                .store_chunk(&chunk_with_embedding)
+                .await?;
             chunks_with_embeddings.push(chunk_with_embedding);
         }
-        
+
         Ok(chunks_with_embeddings)
     }
-    
+
     /// Process and index an earnings call transcript
     pub async fn process_earnings_call(
         &self,
@@ -242,8 +248,11 @@ impl RagService {
         call_date: DateTime<Utc>,
     ) -> Result<Vec<DocumentChunk>> {
         // Parse the transcript
-        let chunks = self.earnings_parser.parse(transcript, ticker, call_date).await?;
-        
+        let chunks = self
+            .earnings_parser
+            .parse(transcript, ticker, call_date)
+            .await?;
+
         // Generate embeddings and store
         let mut chunks_with_embeddings = Vec::new();
         for chunk in chunks {
@@ -252,27 +261,27 @@ impl RagService {
                 embedding: Some(embedding),
                 ..chunk
             };
-            
-            self.document_search.store_chunk(&chunk_with_embedding).await?;
+
+            self.document_search
+                .store_chunk(&chunk_with_embedding)
+                .await?;
             chunks_with_embeddings.push(chunk_with_embedding);
         }
-        
+
         Ok(chunks_with_embeddings)
     }
-    
+
     /// Search documents semantically
     pub async fn search(&self, query: &SearchQuery) -> Result<Vec<SearchResult>> {
         // Generate embedding for query
         let query_embedding = self.embedding_generator.generate(&query.query).await?;
-        
+
         // Search in database
-        let results = self.document_search
-            .search(&query_embedding, query)
-            .await?;
-        
+        let results = self.document_search.search(&query_embedding, query).await?;
+
         Ok(results)
     }
-    
+
     /// Summarize documents for a ticker
     pub async fn summarize(
         &self,
@@ -281,16 +290,17 @@ impl RagService {
         date_range: Option<(DateTime<Utc>, DateTime<Utc>)>,
     ) -> Result<Vec<DocumentSummary>> {
         // Fetch relevant chunks
-        let chunks = self.document_search
+        let chunks = self
+            .document_search
             .fetch_for_ticker(ticker, document_type, date_range)
             .await?;
-        
+
         // Generate summaries (would use LLM in production)
         let summaries = self.generate_summaries(chunks).await?;
-        
+
         Ok(summaries)
     }
-    
+
     /// Semantic search on decision journal
     pub async fn search_journal(
         &self,
@@ -299,36 +309,42 @@ impl RagService {
         limit: usize,
     ) -> Result<Vec<search::JournalSearchResult>> {
         let query_embedding = self.embedding_generator.generate(query).await?;
-        
+
         self.document_search
             .search_journal(&query_embedding, portfolio_id, limit)
             .await
     }
-    
+
     async fn generate_summaries(&self, chunks: Vec<DocumentChunk>) -> Result<Vec<DocumentSummary>> {
         // Group chunks by document
         use std::collections::HashMap;
-        
-        let mut by_document: HashMap<(String, DocumentType, DateTime<Utc>), Vec<DocumentChunk>> = HashMap::new();
-        
+
+        let mut by_document: HashMap<(String, DocumentType, DateTime<Utc>), Vec<DocumentChunk>> =
+            HashMap::new();
+
         for chunk in chunks {
-            let key = (chunk.ticker.clone(), chunk.document_type, chunk.document_date);
+            let key = (
+                chunk.ticker.clone(),
+                chunk.document_type,
+                chunk.document_date,
+            );
             by_document.entry(key).or_default().push(chunk);
         }
-        
+
         // Generate summary for each document
         let mut summaries = Vec::new();
         for ((ticker, doc_type, date), doc_chunks) in by_document {
             // Sort chunks by index
             let mut sorted_chunks = doc_chunks;
             sorted_chunks.sort_by_key(|c| c.chunk_index);
-            
+
             // Combine content
-            let _full_content: String = sorted_chunks.iter()
+            let _full_content: String = sorted_chunks
+                .iter()
                 .map(|c| c.content.as_str())
                 .collect::<Vec<_>>()
                 .join("\n\n");
-            
+
             // Generate summary (simplified - would use LLM)
             let summary = format!(
                 "Summary of {} {} filing from {} ({} chunks)",
@@ -337,7 +353,7 @@ impl RagService {
                 date.format("%Y-%m-%d"),
                 sorted_chunks.len()
             );
-            
+
             summaries.push(DocumentSummary {
                 ticker,
                 document_type: doc_type,
@@ -349,7 +365,7 @@ impl RagService {
                 opportunities: vec![],
             });
         }
-        
+
         Ok(summaries)
     }
 }

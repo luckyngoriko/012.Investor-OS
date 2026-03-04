@@ -29,7 +29,7 @@ impl Message {
             metadata: None,
         }
     }
-    
+
     pub fn user(content: impl Into<String>) -> Self {
         Self {
             role: Role::User,
@@ -37,7 +37,7 @@ impl Message {
             metadata: None,
         }
     }
-    
+
     pub fn assistant(content: impl Into<String>) -> Self {
         Self {
             role: Role::Assistant,
@@ -58,41 +58,42 @@ impl PromptTemplate {
     pub fn new(template: impl Into<String>) -> Self {
         let template = template.into();
         let required_variables = Self::extract_variables(&template);
-        
+
         Self {
             template,
             required_variables,
         }
     }
-    
+
     /// Рендерира template с предоставени стойности
     pub fn render(&self, variables: &HashMap<String, String>) -> Result<String, super::ChainError> {
         // Проверяваме дали всички required променливи са налични
         for var in &self.required_variables {
             if !variables.contains_key(var) {
-                return Err(super::ChainError::ExecutionError(
-                    format!("Missing required variable: {}", var)
-                ));
+                return Err(super::ChainError::ExecutionError(format!(
+                    "Missing required variable: {}",
+                    var
+                )));
             }
         }
-        
+
         // Replace всички {variable} със стойностите
         let mut result = self.template.clone();
         for (key, value) in variables {
             result = result.replace(&format!("{{{}}}", key), value);
         }
-        
+
         Ok(result)
     }
-    
+
     /// Рендерира template с conversation history
     pub fn render_with_history(
-        &self, 
+        &self,
         variables: &HashMap<String, String>,
-        history: &[Message]
+        history: &[Message],
     ) -> Result<String, super::ChainError> {
         let mut full_prompt = String::new();
-        
+
         // Добавяме history
         for msg in history {
             let prefix = match msg.role {
@@ -103,19 +104,19 @@ impl PromptTemplate {
             };
             full_prompt.push_str(&format!("{}{}\n", prefix, msg.content));
         }
-        
+
         // Добавяме текущия prompt
         let current = self.render(variables)?;
         full_prompt.push_str(&format!("Human: {}\nAssistant: ", current));
-        
+
         Ok(full_prompt)
     }
-    
+
     /// Извлича променливите от template
     fn extract_variables(template: &str) -> Vec<String> {
         let mut variables = vec![];
         let mut chars = template.chars().peekable();
-        
+
         while let Some(ch) = chars.next() {
             if ch == '{' {
                 let mut var_name = String::new();
@@ -132,10 +133,10 @@ impl PromptTemplate {
                 }
             }
         }
-        
+
         variables
     }
-    
+
     pub fn required_variables(&self) -> &[String] {
         &self.required_variables
     }
@@ -144,10 +145,11 @@ impl PromptTemplate {
 /// Преддефинирани prompt-ове за Investor OS
 pub mod trading_prompts {
     use super::*;
-    
+
     /// Анализ на SEC filing
     pub fn sec_analysis() -> PromptTemplate {
-        PromptTemplate::new(r#"You are a financial analyst. Analyze this SEC filing for {ticker}.
+        PromptTemplate::new(
+            r#"You are a financial analyst. Analyze this SEC filing for {ticker}.
 
 Filing Content:
 {filing_content}
@@ -163,12 +165,14 @@ Provide analysis in this JSON format:
     "risk_score": 0.0-1.0,
     "opportunity_score": 0.0-1.0,
     "summary": "brief summary"
-}}"#)
+}}"#,
+        )
     }
-    
+
     /// Генериране на trading signal
     pub fn trading_signal() -> PromptTemplate {
-        PromptTemplate::new(r#"Based on the following data, generate a trading signal.
+        PromptTemplate::new(
+            r#"Based on the following data, generate a trading signal.
 
 Ticker: {ticker}
 Current Price: {price}
@@ -194,12 +198,14 @@ Provide signal as JSON:
     "position_size_suggestion": "small|medium|large",
     "rationale": "explanation",
     "risk_factors": ["factor1"]
-}}"#)
+}}"#,
+        )
     }
-    
+
     /// Phoenix стратегия generation
     pub fn strategy_generation() -> PromptTemplate {
-        PromptTemplate::new(r#"You are the Phoenix Strategist. Generate a trading strategy based on market conditions.
+        PromptTemplate::new(
+            r#"You are the Phoenix Strategist. Generate a trading strategy based on market conditions.
 
 Market Regime: {regime}
 Volatility Environment: {volatility}
@@ -222,12 +228,14 @@ Generate a strategy configuration as JSON:
     "position_sizing": {{"type": "...", "params": {{}}}},
     "max_positions": 5,
     "risk_per_trade": 0.01
-}}"#)
+}}"#,
+        )
     }
-    
+
     /// Decision journal analysis
     pub fn decision_journal() -> PromptTemplate {
-        PromptTemplate::new(r#"Analyze this trading decision from the journal:
+        PromptTemplate::new(
+            r#"Analyze this trading decision from the journal:
 
 Decision Date: {date}
 Ticker: {ticker}
@@ -246,31 +254,32 @@ Provide lessons learned:
     "bias_detected": "confirmation|overconfidence|loss_aversion|none",
     "lessons": ["lesson1"],
     "improvement_suggestions": ["suggestion1"]
-}}"#)
+}}"#,
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_prompt_template() {
         let template = PromptTemplate::new("Hello {name}, your score is {score}!");
-        
+
         let mut vars = HashMap::new();
         vars.insert("name".to_string(), "Alice".to_string());
         vars.insert("score".to_string(), "95".to_string());
-        
+
         let result = template.render(&vars).unwrap();
         assert_eq!(result, "Hello Alice, your score is 95!");
     }
-    
+
     #[test]
     fn test_missing_variable() {
         let template = PromptTemplate::new("Hello {name}!");
         let vars = HashMap::new();
-        
+
         assert!(template.render(&vars).is_err());
     }
 }

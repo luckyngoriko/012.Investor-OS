@@ -1,8 +1,6 @@
 //! S5-GP-07: Semantic search returns relevant results
 
-use investor_os::rag::{
-    DocumentType, SearchQuery, 
-};
+use investor_os::rag::{DocumentType, SearchQuery};
 
 #[test]
 fn test_search_query_construction() {
@@ -23,7 +21,7 @@ fn test_search_query_construction() {
 #[test]
 fn test_search_query_default_limit() {
     let query = SearchQuery::default();
-    
+
     assert_eq!(query.limit, 10);
     assert!(query.query.is_empty());
     assert!(query.ticker.is_none());
@@ -50,18 +48,29 @@ fn test_document_type_as_str() {
 async fn test_search_result_ranking() {
     // This is a conceptual test - in practice would use real search
     // Results should be ordered by similarity score (highest first)
-    
+
     // Mock search results
     let results = vec![
-        MockResult { score: 0.95, text: "Apple revenue was $100B".to_string() },
-        MockResult { score: 0.87, text: "Revenue increased to $100B".to_string() },
-        MockResult { score: 0.72, text: "Other company had revenue".to_string() },
+        MockResult {
+            score: 0.95,
+            text: "Apple revenue was $100B".to_string(),
+        },
+        MockResult {
+            score: 0.87,
+            text: "Revenue increased to $100B".to_string(),
+        },
+        MockResult {
+            score: 0.72,
+            text: "Other company had revenue".to_string(),
+        },
     ];
 
     // Verify scores are in descending order
     for i in 1..results.len() {
-        assert!(results[i-1].score >= results[i].score,
-            "Results should be ordered by score descending");
+        assert!(
+            results[i - 1].score >= results[i].score,
+            "Results should be ordered by score descending"
+        );
     }
 }
 

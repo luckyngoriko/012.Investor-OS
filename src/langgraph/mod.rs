@@ -6,15 +6,18 @@
 //! - State: Споделено състояние
 //! - Conditional edges: Адаптивна логика
 
+pub mod edges;
 pub mod graph;
 pub mod nodes;
-pub mod edges;
 pub mod state;
 
+pub use edges::{ConditionalEdge, Edge, EdgeCondition};
 pub use graph::{Graph, GraphBuilder, GraphExecutor};
-pub use nodes::{Node, NodeOutput, NodeError};
-pub use edges::{Edge, EdgeCondition, ConditionalEdge};
-pub use state::{SharedState, StateSnapshot, StateBuilder, MarketRegime, TradingAction, ExecutionStatus, RiskCheck};
+pub use nodes::{Node, NodeError, NodeOutput};
+pub use state::{
+    ExecutionStatus, MarketRegime, RiskCheck, SharedState, StateBuilder, StateSnapshot,
+    TradingAction,
+};
 
 use std::sync::Arc;
 
@@ -33,19 +36,21 @@ impl LangGraphEngine {
             telemetry: None,
         }
     }
-    
+
     pub fn register_graph(&mut self, name: impl Into<String>, graph: Arc<dyn Graph>) {
         self.graphs.insert(name.into(), graph);
     }
-    
+
     pub async fn execute(
-        &self, 
-        graph_name: &str, 
-        initial_state: SharedState
+        &self,
+        graph_name: &str,
+        initial_state: SharedState,
     ) -> Result<SharedState, GraphError> {
-        let graph = self.graphs.get(graph_name)
+        let graph = self
+            .graphs
+            .get(graph_name)
             .ok_or(GraphError::GraphNotFound(graph_name.to_string()))?;
-        
+
         let executor = GraphExecutor::new(graph.clone(), self.telemetry.clone());
         executor.run(initial_state).await
     }
@@ -87,11 +92,11 @@ pub enum GraphError {
 //     .add_node("cq_calc", CQCalculationNode)
 //     .add_node("risk_check", RiskCheckNode::new(risk_service))
 //     .add_node("execute", ExecutionNode::new(broker_service))
-//     
+//
 //     // Linear edges
 //     .add_edge("start", "collect_data")
 //     .add_edge("collect_data", "detect_regime")
-//     
+//
 //     // Conditional based on regime
 //     .add_conditional_edge(
 //         "detect_regime",
@@ -99,7 +104,7 @@ pub enum GraphError {
 //         "breakout"
 //     )
 //     .add_conditional_edge(
-//         "detect_regime", 
+//         "detect_regime",
 //         |state| matches!(state.regime, MarketRegime::RangeBound),
 //         "mean_rev"
 //     )
@@ -108,25 +113,25 @@ pub enum GraphError {
 //         |state| matches!(state.regime, MarketRegime::Volatile),
 //         "risk_check"  // Skip to risk check in volatile
 //     )
-//     
+//
 //     // Merge back
 //     .add_edge("breakout", "cq_calc")
 //     .add_edge("mean_rev", "cq_calc")
-//     
+//
 //     // Risk gate
 //     .add_edge("cq_calc", "risk_check")
-//     
+//
 //     .add_conditional_edge(
 //         "risk_check",
 //         |state| state.risk_approved && state.cq.value() >= 0.7,
 //         "execute"
 //     )
-//     
+//
 //     // Loop for re-evaluation
 //     .add_loop(
 //         "execute",
 //         |state| state.should_recheck(),
 //         "collect_data"
 //     )
-//     
+//
 //     .build()?;

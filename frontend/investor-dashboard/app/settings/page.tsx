@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { addNotification } from "@/components/notification-center";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -15,10 +23,18 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { AlertTriangle, Shield, AlertCircle, Loader2, Bot, User, UserCog } from "lucide-react";
+import {
+  AlertTriangle,
+  Shield,
+  AlertCircle,
+  Loader2,
+  Bot,
+  User,
+  UserCog,
+} from "lucide-react";
 import { BackButton } from "@/components/back-button";
 import { Textarea } from "@/components/ui/textarea";
-import { 
+import {
   TradingModeCard,
   ModeSettingsPanel,
   TRADING_MODES,
@@ -35,10 +51,11 @@ export default function SettingsPage() {
   const [showKillswitchDialog, setShowKillswitchDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
-  
+
   // Trading Mode State
   const [tradingMode, setTradingMode] = useState<TradingMode>("semi_auto");
-  const [modeConfig, setModeConfig] = useState<TradingModeConfig>(DEFAULT_MODE_CONFIG);
+  const [modeConfig, setModeConfig] =
+    useState<TradingModeConfig>(DEFAULT_MODE_CONFIG);
 
   useEffect(() => {
     checkKillswitchStatus();
@@ -67,7 +84,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: killswitchReason }),
       });
-      
+
       if (res.ok) {
         setKillswitchEnabled(true);
         setShowKillswitchDialog(false);
@@ -75,9 +92,10 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error("Failed to trigger killswitch:", error);
-      // For demo purposes, enable anyway
-      setKillswitchEnabled(true);
-      setShowKillswitchDialog(false);
+      addNotification(
+        "error",
+        "Failed to trigger killswitch. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -103,8 +121,12 @@ export default function SettingsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${killswitchEnabled ? "bg-red-100" : "bg-green-100"}`}>
-                <Shield className={`w-6 h-6 ${killswitchEnabled ? "text-red-600" : "text-green-600"}`} />
+              <div
+                className={`p-2 rounded-lg ${killswitchEnabled ? "bg-red-100" : "bg-green-100"}`}
+              >
+                <Shield
+                  className={`w-6 h-6 ${killswitchEnabled ? "text-red-600" : "text-green-600"}`}
+                />
               </div>
               <div>
                 <CardTitle>Kill Switch</CardTitle>
@@ -113,7 +135,7 @@ export default function SettingsPage() {
                 </CardDescription>
               </div>
             </div>
-            <Badge 
+            <Badge
               variant={killswitchEnabled ? "destructive" : "default"}
               className={!killswitchEnabled ? "bg-green-500" : ""}
             >
@@ -127,7 +149,8 @@ export default function SettingsPage() {
               <div className="space-y-0.5">
                 <Label className="text-base">Emergency Stop</Label>
                 <p className="text-sm text-slate-500">
-                  When triggered, all new trades are blocked and the system enters safe mode
+                  When triggered, all new trades are blocked and the system
+                  enters safe mode
                 </p>
               </div>
               <Button
@@ -136,7 +159,9 @@ export default function SettingsPage() {
                 disabled={killswitchEnabled}
               >
                 <AlertTriangle className="w-4 h-4 mr-2" />
-                {killswitchEnabled ? "Already Triggered" : "Trigger Kill Switch"}
+                {killswitchEnabled
+                  ? "Already Triggered"
+                  : "Trigger Kill Switch"}
               </Button>
             </div>
 
@@ -145,13 +170,17 @@ export default function SettingsPage() {
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-red-900">System is in Safe Mode</h4>
+                    <h4 className="font-semibold text-red-900">
+                      System is in Safe Mode
+                    </h4>
                     <p className="text-sm text-red-700 mt-1">
-                      The kill switch has been triggered. No new trades will be executed until manually reset.
+                      The kill switch has been triggered. No new trades will be
+                      executed until manually reset.
                     </p>
                     {killswitchReason && (
                       <p className="text-sm text-red-600 mt-2">
-                        <span className="font-medium">Reason:</span> {killswitchReason}
+                        <span className="font-medium">Reason:</span>{" "}
+                        {killswitchReason}
                       </p>
                     )}
                   </div>
@@ -207,13 +236,23 @@ export default function SettingsPage() {
         <CardFooter className="bg-slate-50 border-t">
           <div className="flex items-center justify-between w-full">
             <p className="text-sm text-slate-500">
-              Current Mode: <span className="font-medium text-slate-700">{TRADING_MODES[tradingMode].name}</span>
+              Current Mode:{" "}
+              <span className="font-medium text-slate-700">
+                {TRADING_MODES[tradingMode].name}
+              </span>
             </p>
-            <Button 
+            <Button
               onClick={() => {
                 // Save to localStorage or API
-                localStorage.setItem("trading-mode", JSON.stringify(modeConfig));
-                alert("Trading mode settings saved!");
+                localStorage.setItem(
+                  "trading-mode",
+                  JSON.stringify(modeConfig),
+                );
+                addNotification({
+                  type: "success",
+                  title: "Settings Saved",
+                  message: "Trading mode settings have been saved.",
+                });
               }}
             >
               Save Settings
@@ -233,10 +272,10 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid gap-2">
             <Label htmlFor="api-url">API Base URL</Label>
-            <Input 
-              id="api-url" 
-              value={API_URL} 
-              disabled 
+            <Input
+              id="api-url"
+              value={API_URL}
+              disabled
               className="bg-slate-50"
             />
             <p className="text-xs text-slate-500">
@@ -263,14 +302,19 @@ export default function SettingsPage() {
             </div>
             <div className="flex justify-between py-2 border-b border-slate-100">
               <span className="text-slate-500">Last Deployed</span>
-              <span className="font-medium">{new Date().toLocaleDateString()}</span>
+              <span className="font-medium">
+                {new Date().toLocaleDateString()}
+              </span>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Killswitch Confirmation Dialog */}
-      <Dialog open={showKillswitchDialog} onOpenChange={setShowKillswitchDialog}>
+      <Dialog
+        open={showKillswitchDialog}
+        onOpenChange={setShowKillswitchDialog}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -292,11 +336,14 @@ export default function SettingsPage() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowKillswitchDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowKillswitchDialog(false)}
+            >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleTriggerKillswitch}
               disabled={!killswitchReason.trim() || isLoading}
             >

@@ -102,10 +102,7 @@ impl DlpIntegration {
         };
 
         if has_violations {
-            warn!(
-                "DLP scan found {} violations",
-                findings.len()
-            );
+            warn!("DLP scan found {} violations", findings.len());
         }
 
         Ok(DlpScanResult {
@@ -141,8 +138,11 @@ impl DlpIntegration {
         if let Some(pos) = content.find('@') {
             // Simple email detection
             let start = content[..pos].rfind(' ').map(|i| i + 1).unwrap_or(0);
-            let end = content[pos..].find(' ').map(|i| pos + i).unwrap_or(content.len());
-            
+            let end = content[pos..]
+                .find(' ')
+                .map(|i| pos + i)
+                .unwrap_or(content.len());
+
             if end - start > 5 {
                 findings.push(DlpFinding {
                     finding_type: "EMAIL".to_string(),
@@ -154,12 +154,7 @@ impl DlpIntegration {
         }
 
         // Check for API keys (simple patterns)
-        let api_key_patterns = [
-            "sk-",
-            "api_key",
-            "apikey",
-            "api-key",
-        ];
+        let api_key_patterns = ["sk-", "api_key", "apikey", "api-key"];
 
         for pattern in &api_key_patterns {
             if let Some(pos) = content.to_lowercase().find(pattern) {
@@ -210,7 +205,7 @@ impl DlpIntegration {
     /// Sanitize content by redacting findings
     fn sanitize(&self, content: &str, findings: &[DlpFinding]) -> String {
         let mut result = content.to_string();
-        
+
         // Sort by position in reverse order to avoid offset issues
         let mut sorted_findings: Vec<_> = findings.iter().collect();
         sorted_findings.sort_by_key(|f| std::cmp::Reverse(f.position.0));
@@ -246,15 +241,18 @@ impl DlpIntegration {
     /// Validate that content is safe (no violations above threshold)
     pub async fn validate(&self, content: &str) -> Result<(), DlpError> {
         let result = self.scan(content).await?;
-        
-        let critical_count = result.findings.iter()
+
+        let critical_count = result
+            .findings
+            .iter()
             .filter(|f| f.severity == FindingSeverity::Critical)
             .count();
 
         if critical_count > 0 {
-            return Err(DlpError::CriticalDataDetected(
-                format!("{} critical violations found", critical_count)
-            ));
+            return Err(DlpError::CriticalDataDetected(format!(
+                "{} critical violations found",
+                critical_count
+            )));
         }
 
         Ok(())
@@ -266,16 +264,16 @@ impl DlpIntegration {
 pub enum DlpError {
     #[error("HTTP error: {0}")]
     Http(#[from] reqwest::Error),
-    
+
     #[error("Critical data detected: {0}")]
     CriticalDataDetected(String),
-    
+
     #[error("Sanitization failed: {0}")]
     SanitizationFailed(String),
-    
+
     #[error("Service unavailable")]
     ServiceUnavailable,
-    
+
     #[error("Regex error: {0}")]
     Regex(#[from] regex::Error),
 }
@@ -296,14 +294,14 @@ impl DlpMiddleware {
         body: &serde_json::Value,
     ) -> Result<serde_json::Value, DlpError> {
         let result = self.dlp.scan_trading_data(body).await?;
-        
+
         if result.has_violations {
             if let Some(sanitized) = result.sanitized_content {
                 return serde_json::from_str(&sanitized)
                     .map_err(|e| DlpError::SanitizationFailed(e.to_string()));
             }
         }
-        
+
         Ok(body.clone())
     }
 }
@@ -326,7 +324,7 @@ mod tests {
             ..Default::default()
         };
         let dlp = DlpIntegration::new(config);
-        
+
         let result = dlp.scan("test@example.com").await.unwrap();
         assert!(!result.has_violations);
     }
@@ -335,9 +333,12 @@ mod tests {
     async fn test_local_scan_email() {
         let config = DlpConfig::default();
         let dlp = DlpIntegration::new(config);
-        
-        let result = dlp.scan("Contact us at support@investor-os.com").await.unwrap();
-        
+
+        let result = dlp
+            .scan("Contact us at support@investor-os.com")
+            .await
+            .unwrap();
+
         if result.has_violations {
             assert!(result.findings.iter().any(|f| f.finding_type == "EMAIL"));
         }
@@ -347,7 +348,7 @@ mod tests {
     fn test_sanitize() {
         let config = DlpConfig::default();
         let dlp = DlpIntegration::new(config);
-        
+
         let content = "Email: test@example.com";
         let findings = vec![DlpFinding {
             finding_type: "EMAIL".to_string(),
@@ -355,7 +356,7 @@ mod tests {
             severity: FindingSeverity::Medium,
             description: "Email".to_string(),
         }];
-        
+
         let sanitized = dlp.sanitize(content, &findings);
         assert!(sanitized.contains("[EMAIL_REDACTED]"));
         assert!(!sanitized.contains("test@example.com"));

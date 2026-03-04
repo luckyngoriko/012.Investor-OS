@@ -38,34 +38,34 @@ use uuid::Uuid;
 pub enum BrokerError {
     #[error("Connection error: {0}")]
     Connection(String),
-    
+
     #[error("Authentication failed: {0}")]
     Authentication(String),
-    
+
     #[error("Order rejected: {0}")]
     OrderRejected(String),
-    
+
     #[error("Invalid order: {0}")]
     InvalidOrder(String),
-    
+
     #[error("Risk check failed: {0}")]
     RiskCheckFailed(String),
-    
+
     #[error("Position not found: {0}")]
     PositionNotFound(String),
-    
+
     #[error("External API error: {0}")]
     ExternalApi(String),
-    
+
     #[error("Rate limit exceeded")]
     RateLimit,
-    
+
     #[error("Market closed")]
     MarketClosed,
-    
+
     #[error("Insufficient funds")]
     InsufficientFunds,
-    
+
     #[error("Market data error: {0}")]
     MarketData(String),
 }
@@ -135,7 +135,7 @@ impl OrderSide {
             OrderSide::Sell => "SELL",
         }
     }
-    
+
     /// Reverse the side (buy -> sell, sell -> buy)
     pub fn reverse(&self) -> Self {
         match self {
@@ -181,7 +181,6 @@ pub enum TimeInForce {
     OpG, // Opening
     Cls, // Closing
 }
-
 
 /// Order status
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -254,42 +253,42 @@ impl Order {
             notes: None,
         }
     }
-    
+
     /// Set limit price
     pub fn with_limit_price(mut self, price: Decimal) -> Self {
         self.limit_price = Some(price);
         self
     }
-    
+
     /// Set stop price
     pub fn with_stop_price(mut self, price: Decimal) -> Self {
         self.stop_price = Some(price);
         self
     }
-    
+
     /// Set time in force
     pub fn with_time_in_force(mut self, tif: TimeInForce) -> Self {
         self.time_in_force = tif;
         self
     }
-    
+
     /// Link to proposal
     pub fn with_proposal(mut self, proposal_id: Uuid) -> Self {
         self.proposal_id = Some(proposal_id);
         self
     }
-    
+
     /// Add notes
     pub fn with_notes(mut self, notes: impl Into<String>) -> Self {
         self.notes = Some(notes.into());
         self
     }
-    
+
     /// Calculate remaining quantity to fill
     pub fn remaining_quantity(&self) -> Decimal {
         self.quantity - self.filled_quantity
     }
-    
+
     /// Check if order is active
     pub fn is_active(&self) -> bool {
         matches!(
@@ -300,7 +299,7 @@ impl Order {
                 | OrderStatus::PartiallyFilled
         )
     }
-    
+
     /// Check if order is filled
     pub fn is_filled(&self) -> bool {
         self.status == OrderStatus::Filled
@@ -328,12 +327,11 @@ impl Position {
     pub fn market_value(&self) -> Option<Decimal> {
         self.market_price.map(|price| price * self.quantity)
     }
-    
+
     /// Calculate unrealized P&L
     pub fn unrealized_pnl(&self) -> Option<Decimal> {
-        self.market_price.map(|price| {
-            (price - self.avg_cost) * self.quantity
-        })
+        self.market_price
+            .map(|price| (price - self.avg_cost) * self.quantity)
     }
 }
 
@@ -370,37 +368,42 @@ pub struct Execution {
 pub trait Broker: Send + Sync {
     /// Connect to broker
     async fn connect(&mut self) -> Result<()>;
-    
+
     /// Disconnect from broker
     async fn disconnect(&mut self) -> Result<()>;
-    
+
     /// Check if connected
     fn is_connected(&self) -> bool;
-    
+
     /// Get account information
     async fn get_account_info(&self) -> Result<AccountInfo>;
-    
+
     /// Get positions
     async fn get_positions(&self) -> Result<Vec<Position>>;
-    
+
     /// Get position for specific ticker
     async fn get_position(&self, ticker: &str) -> Result<Option<Position>>;
-    
+
     /// Place an order
     async fn place_order(&self, order: &mut Order) -> Result<()>;
-    
+
     /// Cancel an order
     async fn cancel_order(&self, order: &mut Order) -> Result<()>;
-    
+
     /// Modify an order
-    async fn modify_order(&self, order: &mut Order, new_quantity: Option<Decimal>, new_price: Option<Decimal>) -> Result<()>;
-    
+    async fn modify_order(
+        &self,
+        order: &mut Order,
+        new_quantity: Option<Decimal>,
+        new_price: Option<Decimal>,
+    ) -> Result<()>;
+
     /// Get order status
     async fn get_order_status(&self, order: &mut Order) -> Result<OrderStatus>;
-    
+
     /// Get executions for an order
     async fn get_executions(&self, order_id: Uuid) -> Result<Vec<Execution>>;
-    
+
     /// Get market price for ticker
     async fn get_market_price(&self, ticker: &str) -> Result<Decimal>;
 }
@@ -437,11 +440,17 @@ mod tests {
     #[test]
     fn test_order_is_active() {
         let portfolio_id = Uuid::new_v4();
-        let mut order = Order::new("AAPL", OrderSide::Buy, Decimal::from(100), OrderType::Market, portfolio_id);
-        
+        let mut order = Order::new(
+            "AAPL",
+            OrderSide::Buy,
+            Decimal::from(100),
+            OrderType::Market,
+            portfolio_id,
+        );
+
         order.status = OrderStatus::Submitted;
         assert!(order.is_active());
-        
+
         order.status = OrderStatus::Filled;
         assert!(!order.is_active());
     }

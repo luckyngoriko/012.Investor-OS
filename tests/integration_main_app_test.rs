@@ -30,7 +30,7 @@ fn test_all_sprint_modules_exist() {
     let _temporal = true; // temporal module
     let _config = true; // config module
     let _data_sources = true; // data_sources module (new)
-    
+
     // All modules present
     assert!(true, "All modules are integrated");
 }
@@ -41,100 +41,112 @@ fn test_all_sprint_modules_exist() {
 
 #[test]
 fn test_sprint26_ai_safety_integration() {
-    use investor_os::safety::{KillSwitch, CircuitBreaker};
-    
+    use investor_os::safety::{CircuitBreaker, KillSwitch};
+
     let kill_switch = KillSwitch::new();
-    assert!(!kill_switch.is_triggered(), "Kill switch should start inactive");
-    
+    assert!(
+        !kill_switch.is_triggered(),
+        "Kill switch should start inactive"
+    );
+
     let circuit_breaker = CircuitBreaker::new(
         Decimal::from(5000), // daily loss limit
         Decimal::from(10),   // drawdown limit
     );
-    assert!(circuit_breaker.is_active(), "Circuit breaker should be active");
+    assert!(
+        circuit_breaker.is_active(),
+        "Circuit breaker should be active"
+    );
 }
 
 #[test]
 fn test_sprint27_global_exchanges_integration() {
     use investor_os::global::{ExchangeId, GlobalMarketCoordinator};
-    
+
     let mut coordinator = GlobalMarketCoordinator::new();
     coordinator.register_exchange(ExchangeId::NYSE);
     coordinator.register_exchange(ExchangeId::LSE);
-    
+
     assert_eq!(coordinator.exchange_count(), 2, "Should have 2 exchanges");
 }
 
 #[test]
 fn test_sprint28_prime_brokerage_integration() {
     use investor_os::prime_broker::{PrimeBrokerRegistry, SmartOrderRouter};
-    
+
     let registry = PrimeBrokerRegistry::default();
     let router = SmartOrderRouter::new(registry);
-    
+
     assert!(router.is_initialized(), "Router should be initialized");
 }
 
 #[test]
 fn test_sprint29_trading_scheduler_integration() {
-    use investor_os::scheduler::{TradingScheduler, MarketSchedule};
-    
+    use investor_os::scheduler::{MarketSchedule, TradingScheduler};
+
     let scheduler = TradingScheduler::new();
     let schedule = MarketSchedule::us_equity();
-    
+
     assert!(schedule.is_valid(), "Schedule should be valid");
 }
 
 #[test]
 fn test_sprint30_tax_compliance_integration() {
     use investor_os::tax::{TaxEngine, TaxJurisdiction};
-    
+
     let engine = TaxEngine::new(TaxJurisdiction::USA);
     let opportunities = engine.find_harvest_opportunities();
-    
-    assert!(opportunities.is_empty(), "Should have no opportunities initially");
+
+    assert!(
+        opportunities.is_empty(),
+        "Should have no opportunities initially"
+    );
 }
 
 #[test]
 fn test_sprint31_strategy_selector_integration() {
-    use investor_os::ml::strategy_selector::{StrategyRecommender, MarketRegime};
-    
+    use investor_os::ml::strategy_selector::{MarketRegime, StrategyRecommender};
+
     let recommender = StrategyRecommender::default();
     let recommendation = recommender.recommend(&MarketRegime::Trending, None);
-    
+
     assert!(!recommendation.is_empty(), "Should have recommendation");
 }
 
 #[test]
 fn test_sprint32_portfolio_optimization_integration() {
-    use investor_os::portfolio_opt::{PortfolioOptimizer, OptimizationConfig};
-    
+    use investor_os::portfolio_opt::{OptimizationConfig, PortfolioOptimizer};
+
     let optimizer = PortfolioOptimizer::new(OptimizationConfig::default());
     let allocations = vec![
         ("AAPL".to_string(), Decimal::from(50)),
         ("MSFT".to_string(), Decimal::from(50)),
     ];
-    
+
     let optimized = optimizer.optimize(&allocations);
-    assert!(!optimized.is_empty(), "Should produce optimized allocations");
+    assert!(
+        !optimized.is_empty(),
+        "Should produce optimized allocations"
+    );
 }
 
 #[test]
 fn test_sprint33_monitoring_integration() {
-    use investor_os::monitoring::{MonitoringSystem, AlertConfig};
-    
+    use investor_os::monitoring::{AlertConfig, MonitoringSystem};
+
     let config = AlertConfig::default();
     let monitoring = MonitoringSystem::new(config);
-    
+
     assert!(monitoring.is_active(), "Monitoring should be active");
 }
 
 #[test]
 fn test_sprint34_security_integration() {
     use investor_os::security::{AuditLogger, SecurityPolicy};
-    
+
     let policy = SecurityPolicy::default();
     let audit = AuditLogger::new();
-    
+
     assert!(policy.is_valid(), "Policy should be valid");
     assert!(audit.is_initialized(), "Audit logger should be initialized");
 }
@@ -142,10 +154,10 @@ fn test_sprint34_security_integration() {
 #[test]
 fn test_sprint35_deployment_integration() {
     use investor_os::deployment::DeploymentConfig;
-    
+
     let config = DeploymentConfig::default();
     let valid = config.validate();
-    
+
     assert!(valid.is_ok(), "Deployment config should be valid");
 }
 
@@ -168,7 +180,7 @@ fn test_api_routes_integration() {
         "/api/monitoring/dashboard",
         "/api/deployment/status",
     ];
-    
+
     assert!(!expected_routes.is_empty(), "API routes should be defined");
 }
 
@@ -187,8 +199,11 @@ fn test_database_schema_integration() {
         "ml_datasets",
         "data_source_usage_logs",
     ];
-    
-    assert!(!expected_tables.is_empty(), "Database tables should be defined");
+
+    assert!(
+        !expected_tables.is_empty(),
+        "Database tables should be defined"
+    );
 }
 
 // ============================================================================
@@ -198,10 +213,10 @@ fn test_database_schema_integration() {
 #[test]
 fn test_configuration_integration() {
     use investor_os::config::Config;
-    
+
     // Config should be loadable
     let _config = Config::default();
-    
+
     assert!(true, "Configuration loads successfully");
 }
 
@@ -219,6 +234,6 @@ fn test_feature_flags_integration() {
         "risk_management_enabled",
         "multi_agent_enabled",
     ];
-    
+
     assert_eq!(features.len(), 5, "All features should be listed");
 }

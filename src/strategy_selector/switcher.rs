@@ -19,23 +19,23 @@ pub struct StrategySwitcher {
 /// Switch configuration
 #[derive(Debug, Clone)]
 pub struct SwitchConfig {
-    pub min_score_improvement: f32,     // Minimum score improvement to switch
-    pub min_hold_period_seconds: i64,   // Minimum time before switching again
-    pub confidence_threshold: f32,      // Minimum confidence in new strategy
-    pub max_switches_per_day: u32,      // Rate limiting
-    pub require_regime_change: bool,    // Only switch if regime changed
-    pub momentum_penalty: f32,          // Penalty for switching too often
+    pub min_score_improvement: f32, // Minimum score improvement to switch
+    pub min_hold_period_seconds: i64, // Minimum time before switching again
+    pub confidence_threshold: f32,  // Minimum confidence in new strategy
+    pub max_switches_per_day: u32,  // Rate limiting
+    pub require_regime_change: bool, // Only switch if regime changed
+    pub momentum_penalty: f32,      // Penalty for switching too often
 }
 
 impl Default for SwitchConfig {
     fn default() -> Self {
         Self {
-            min_score_improvement: 0.10,     // 10% better
-            min_hold_period_seconds: 300,    // 5 minutes
-            confidence_threshold: 0.70,      // 70% confidence
+            min_score_improvement: 0.10,  // 10% better
+            min_hold_period_seconds: 300, // 5 minutes
+            confidence_threshold: 0.70,   // 70% confidence
             max_switches_per_day: 10,
             require_regime_change: false,
-            momentum_penalty: 0.05,          // 5% penalty
+            momentum_penalty: 0.05, // 5% penalty
         }
     }
 }
@@ -61,13 +61,9 @@ impl StrategySwitcher {
             last_switch_time: None,
         }
     }
-    
+
     /// Determine if should switch strategy
-    pub fn should_switch(
-        &self,
-        current: &SelectionScore,
-        candidate: &SelectionScore,
-    ) -> bool {
+    pub fn should_switch(&self, current: &SelectionScore, candidate: &SelectionScore) -> bool {
         // Check minimum hold period
         if let Some(last_switch) = self.last_switch_time {
             let elapsed = (Utc::now() - last_switch).num_seconds();
@@ -79,7 +75,7 @@ impl StrategySwitcher {
                 return false;
             }
         }
-        
+
         // Check confidence threshold
         if candidate.confidence < self.config.confidence_threshold {
             debug!(
@@ -88,11 +84,11 @@ impl StrategySwitcher {
             );
             return false;
         }
-        
+
         // Calculate effective scores
         let current_score = self.apply_penalties(current);
         let candidate_score = candidate.overall_score;
-        
+
         // Check minimum improvement
         let improvement = candidate_score - current_score;
         if improvement < self.config.min_score_improvement {
@@ -102,42 +98,36 @@ impl StrategySwitcher {
             );
             return false;
         }
-        
+
         // Check daily switch limit
         if self.daily_switch_count() >= self.config.max_switches_per_day {
             warn!("Daily switch limit reached");
             return false;
         }
-        
+
         info!(
             "Switch approved: {} -> {} (improvement: {:.2})",
             current.overall_score, candidate_score, improvement
         );
-        
+
         true
     }
-    
+
     /// Apply penalties to current score based on switch history
     fn apply_penalties(&self, score: &SelectionScore) -> f32 {
         let base_score = score.overall_score;
-        
+
         // Apply momentum penalty for recent switches
         let recent_switches = self.recent_switch_count(3600); // Last hour
         let penalty = recent_switches as f32 * self.config.momentum_penalty;
-        
+
         (base_score - penalty).max(0.0)
     }
-    
+
     /// Record a switch
-    pub fn record_switch(
-        &mut self,
-        to_strategy: Uuid,
-        regime: MarketRegime,
-        reason: String,
-    ) {
-        let from_strategy = self.switch_history.last()
-            .map(|r| r.to_strategy);
-        
+    pub fn record_switch(&mut self, to_strategy: Uuid, regime: MarketRegime, reason: String) {
+        let from_strategy = self.switch_history.last().map(|r| r.to_strategy);
+
         let record = SwitchRecord {
             id: Uuid::new_v4(),
             from_strategy,
@@ -147,13 +137,16 @@ impl StrategySwitcher {
             reason,
             score_delta: 0.0, // Would be calculated from actual scores
         };
-        
+
         self.switch_history.push(record);
         self.last_switch_time = Some(Utc::now());
-        
-        info!("Strategy switch recorded: {:?} -> {}", from_strategy, to_strategy);
+
+        info!(
+            "Strategy switch recorded: {:?} -> {}",
+            from_strategy, to_strategy
+        );
     }
-    
+
     /// Get daily switch count
     fn daily_switch_count(&self) -> u32 {
         let today = Utc::now().date_naive();
@@ -162,7 +155,7 @@ impl StrategySwitcher {
             .filter(|r| r.timestamp.date_naive() == today)
             .count() as u32
     }
-    
+
     /// Get recent switch count (within seconds)
     fn recent_switch_count(&self, seconds: i64) -> u32 {
         let cutoff = Utc::now() - chrono::Duration::seconds(seconds);
@@ -171,22 +164,23 @@ impl StrategySwitcher {
             .filter(|r| r.timestamp > cutoff)
             .count() as u32
     }
-    
+
     /// Get switch history
     pub fn get_history(&self) -> &[SwitchRecord] {
         &self.switch_history
     }
-    
+
     /// Get last switch time
     pub fn last_switch_time(&self) -> Option<DateTime<Utc>> {
         self.last_switch_time
     }
-    
+
     /// Get time since last switch
     pub fn time_since_last_switch(&self) -> Option<i64> {
-        self.last_switch_time.map(|t| (Utc::now() - t).num_seconds())
+        self.last_switch_time
+            .map(|t| (Utc::now() - t).num_seconds())
     }
-    
+
     /// Can switch now (hold period met)
     pub fn can_switch_now(&self) -> bool {
         if let Some(last) = self.last_switch_time {
@@ -196,7 +190,7 @@ impl StrategySwitcher {
             true // No previous switch
         }
     }
-    
+
     /// Get remaining hold time
     pub fn remaining_hold_seconds(&self) -> i64 {
         if let Some(last) = self.last_switch_time {
@@ -206,7 +200,7 @@ impl StrategySwitcher {
             0
         }
     }
-    
+
     /// Get switches by regime
     pub fn switches_by_regime(&self, regime: MarketRegime) -> Vec<&SwitchRecord> {
         self.switch_history
@@ -214,23 +208,23 @@ impl StrategySwitcher {
             .filter(|r| r.regime == regime)
             .collect()
     }
-    
+
     /// Get total switch count
     pub fn total_switches(&self) -> usize {
         self.switch_history.len()
     }
-    
+
     /// Clean old history (keep last N days)
     pub fn clean_history(&mut self, days: i64) {
         let cutoff = Utc::now() - chrono::Duration::days(days);
         self.switch_history.retain(|r| r.timestamp > cutoff);
     }
-    
+
     /// Update config
     pub fn update_config(&mut self, config: SwitchConfig) {
         self.config = config;
     }
-    
+
     /// Get current config
     pub fn config(&self) -> &SwitchConfig {
         &self.config
@@ -246,9 +240,13 @@ impl Default for StrategySwitcher {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::strategy_selector::{StrategyType};
+    use crate::strategy_selector::StrategyType;
 
-    fn create_test_score(strategy_type: StrategyType, overall: f32, confidence: f32) -> SelectionScore {
+    fn create_test_score(
+        strategy_type: StrategyType,
+        overall: f32,
+        confidence: f32,
+    ) -> SelectionScore {
         SelectionScore {
             strategy_id: Uuid::new_v4(),
             strategy_type,
@@ -271,10 +269,10 @@ mod tests {
     #[test]
     fn test_should_switch_improvement() {
         let switcher = StrategySwitcher::new(SwitchConfig::default());
-        
+
         let current = create_test_score(StrategyType::Momentum, 0.7, 0.8);
         let candidate = create_test_score(StrategyType::MeanReversion, 0.9, 0.8);
-        
+
         // Should switch (20% improvement > 10% threshold)
         assert!(switcher.should_switch(&current, &candidate));
     }
@@ -282,10 +280,10 @@ mod tests {
     #[test]
     fn test_should_not_switch_insufficient_improvement() {
         let switcher = StrategySwitcher::new(SwitchConfig::default());
-        
+
         let current = create_test_score(StrategyType::Momentum, 0.85, 0.8);
         let candidate = create_test_score(StrategyType::MeanReversion, 0.90, 0.8);
-        
+
         // Should not switch (5% improvement < 10% threshold)
         assert!(!switcher.should_switch(&current, &candidate));
     }
@@ -293,10 +291,10 @@ mod tests {
     #[test]
     fn test_should_not_switch_low_confidence() {
         let switcher = StrategySwitcher::new(SwitchConfig::default());
-        
+
         let current = create_test_score(StrategyType::Momentum, 0.5, 0.8);
         let candidate = create_test_score(StrategyType::MeanReversion, 0.9, 0.5); // Low confidence
-        
+
         // Should not switch (confidence 0.5 < 0.7 threshold)
         assert!(!switcher.should_switch(&current, &candidate));
     }
@@ -305,9 +303,13 @@ mod tests {
     fn test_record_switch() {
         let mut switcher = StrategySwitcher::new(SwitchConfig::default());
         let strategy_id = Uuid::new_v4();
-        
-        switcher.record_switch(strategy_id, MarketRegime::Trending, "Better performance".to_string());
-        
+
+        switcher.record_switch(
+            strategy_id,
+            MarketRegime::Trending,
+            "Better performance".to_string(),
+        );
+
         assert_eq!(switcher.total_switches(), 1);
         assert!(!switcher.can_switch_now()); // Hold period not met
     }
@@ -320,29 +322,29 @@ mod tests {
             ..Default::default()
         };
         let mut switcher = StrategySwitcher::new(config);
-        
+
         // Record max switches
         switcher.record_switch(Uuid::new_v4(), MarketRegime::Trending, "Test1".to_string());
         switcher.record_switch(Uuid::new_v4(), MarketRegime::Ranging, "Test2".to_string());
-        
+
         // Try to switch again
         let current = create_test_score(StrategyType::Momentum, 0.5, 0.9);
         let candidate = create_test_score(StrategyType::MeanReversion, 0.9, 0.9);
-        
+
         assert!(!switcher.should_switch(&current, &candidate));
     }
 
     #[test]
     fn test_switches_by_regime() {
         let mut switcher = StrategySwitcher::new(SwitchConfig::default());
-        
+
         switcher.record_switch(Uuid::new_v4(), MarketRegime::Trending, "T1".to_string());
         switcher.record_switch(Uuid::new_v4(), MarketRegime::Trending, "T2".to_string());
         switcher.record_switch(Uuid::new_v4(), MarketRegime::Ranging, "R1".to_string());
-        
+
         let trending_switches = switcher.switches_by_regime(MarketRegime::Trending);
         assert_eq!(trending_switches.len(), 2);
-        
+
         let ranging_switches = switcher.switches_by_regime(MarketRegime::Ranging);
         assert_eq!(ranging_switches.len(), 1);
     }

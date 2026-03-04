@@ -10,11 +10,11 @@
 //! S5-GP-08: RAG API endpoints respond correctly
 
 // Test modules
-mod test_indexes;
+mod test_api;
 mod test_compression;
-mod test_materialized_views;
-mod test_sec_parsing;
 mod test_earnings_parsing;
 mod test_embeddings;
+mod test_indexes;
+mod test_materialized_views;
 mod test_search;
-mod test_api;
+mod test_sec_parsing;

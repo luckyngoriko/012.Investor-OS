@@ -4,8 +4,8 @@
 //! Run with: `cargo test --test golden_path hrm_`
 
 use investor_os::hrm::{
-    DeviceConfig, HRMConfig, HRMError, HRM, InferenceEngine, InferenceResult,
-    MarketRegime, WeightLoader,
+    DeviceConfig, HRMConfig, HRMError, InferenceEngine, InferenceResult, MarketRegime,
+    WeightLoader, HRM,
 };
 
 // =============================================================================
@@ -154,12 +154,12 @@ fn test_hrm_010_inference_output_ranges() {
     // Test multiple random-ish inputs
     for i in 0..10 {
         let signals = vec![
-            (i as f32) * 0.1,      // PEGY
-            (i as f32) * 0.1,      // Insider
-            (i as f32) * 0.1,      // Sentiment
+            (i as f32) * 0.1,        // PEGY
+            (i as f32) * 0.1,        // Insider
+            (i as f32) * 0.1,        // Sentiment
             10.0 + (i as f32) * 5.0, // VIX
-            (i % 4) as f32,        // Regime
-            0.5,                   // Time
+            (i % 4) as f32,          // Regime
+            0.5,                     // Time
         ];
 
         let result = engine.infer(&signals).expect("Inference should succeed");
@@ -231,7 +231,10 @@ fn test_hrm_014_invalid_input_size() {
     assert!(
         matches!(
             result,
-            Err(HRMError::InvalidInputShape { expected: 6, actual: 2 })
+            Err(HRMError::InvalidInputShape {
+                expected: 6,
+                actual: 2
+            })
         ),
         "Should return InvalidInputShape for wrong input size"
     );
@@ -257,7 +260,10 @@ fn test_hrm_016_too_many_inputs() {
     assert!(
         matches!(
             result,
-            Err(HRMError::InvalidInputShape { expected: 6, actual: 10 })
+            Err(HRMError::InvalidInputShape {
+                expected: 6,
+                actual: 10
+            })
         ),
         "Should return InvalidInputShape for too many inputs"
     );
@@ -277,7 +283,9 @@ fn test_hrm_017_batch_inference() {
         vec![0.3, 0.4, 0.2, 35.0, 2.0, 0.7],
     ];
 
-    let results = engine.infer_batch(&batch).expect("Batch inference should succeed");
+    let results = engine
+        .infer_batch(&batch)
+        .expect("Batch inference should succeed");
     assert_eq!(results.len(), 3, "Should return 3 results for 3 inputs");
 
     for result in results {
@@ -320,7 +328,10 @@ fn test_hrm_020_model_stats() {
     assert_eq!(stats.input_size, 6);
     assert_eq!(stats.output_size, 3);
     assert!(!stats.weights_loaded);
-    assert!(stats.parameters > 50000, "Should have reasonable parameter count");
+    assert!(
+        stats.parameters > 50000,
+        "Should have reasonable parameter count"
+    );
 }
 
 #[test]
@@ -343,7 +354,10 @@ fn test_hrm_022_parameter_estimation() {
     let small_params = small_config.estimated_parameters();
     let large_params = large_config.estimated_parameters();
 
-    assert!(large_params > small_params, "Larger model should have more parameters");
+    assert!(
+        large_params > small_params,
+        "Larger model should have more parameters"
+    );
 }
 
 // =============================================================================
@@ -368,12 +382,10 @@ fn test_hrm_023_device_config_variants() {
 #[test]
 fn test_hrm_024_confidence_threshold_clamping() {
     //! Confidence thresholds are properly clamped
-    let config = HRMConfig::default()
-        .with_confidence_threshold(1.5);
+    let config = HRMConfig::default().with_confidence_threshold(1.5);
     assert_eq!(config.confidence_threshold, 1.0);
 
-    let config = HRMConfig::default()
-        .with_confidence_threshold(-0.5);
+    let config = HRMConfig::default().with_confidence_threshold(-0.5);
     assert_eq!(config.confidence_threshold, 0.0);
 }
 

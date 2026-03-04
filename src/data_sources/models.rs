@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 // Note: FromRow removed due to jsonb complexity - manual mapping used
 use uuid::Uuid;
 
-use super::{AuthType, DataSourceCategory, DataSourceStatus, DatasetType, ScraperJobStatus, ScraperType, SourceType};
+use super::{
+    AuthType, DataSourceCategory, DataSourceStatus, DatasetType, ScraperJobStatus, ScraperType,
+    SourceType,
+};
 
 // ============================================
 // DATABASE MODELS
@@ -369,7 +372,7 @@ impl From<DataSourceRow> for DataSourceSummary {
             (Some(reqs), Some(window)) => Some(format!("{}/{} requests", reqs, window)),
             _ => None,
         };
-        
+
         Self {
             id: row.id,
             name: row.name,

@@ -15,7 +15,7 @@ impl Worker {
             task_queue: task_queue.into(),
         }
     }
-    
+
     pub async fn run(&self) -> Result<(), TemporalError> {
         // Main polling loop
         loop {
@@ -38,7 +38,7 @@ impl TestWorker {
             workflow_results: std::sync::Mutex::new(HashMap::new()),
         }
     }
-    
+
     /// Execute a workflow and return the result
     pub async fn execute_workflow<W: Workflow>(
         &self,
@@ -49,12 +49,12 @@ impl TestWorker {
         let ctx = WorkflowContext::new(workflow_id, uuid::Uuid::new_v4().to_string());
         workflow.run(ctx, input).await
     }
-    
+
     /// Simulate a crash during workflow execution
     pub async fn simulate_crash(&self) {
         // For testing crash recovery
     }
-    
+
     /// Recover workflows after crash
     pub async fn recover(&self) {
         // Restore workflow state and resume

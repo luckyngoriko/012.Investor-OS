@@ -28,7 +28,7 @@ impl WorkflowContext {
             continued_from: None,
         }
     }
-    
+
     /// Execute an activity
     pub async fn activity<A: Activity>(
         &self,
@@ -38,7 +38,7 @@ impl WorkflowContext {
         let executor = super::activity::ActivityExecutor::new(RetryPolicy::default());
         executor.execute(&activity, input).await
     }
-    
+
     /// Execute an activity with custom retry policy
     pub async fn activity_with_retry<A: Activity>(
         &self,
@@ -49,12 +49,12 @@ impl WorkflowContext {
         let executor = super::activity::ActivityExecutor::new(retry_policy);
         executor.execute(&activity, input).await
     }
-    
+
     /// Sleep for a duration
     pub async fn sleep(&self, duration: std::time::Duration) {
         tokio::time::sleep(duration).await;
     }
-    
+
     /// Sleep until a specific time
     pub async fn sleep_until(&self, deadline: DateTime<Utc>) {
         let now = Utc::now();
@@ -63,18 +63,16 @@ impl WorkflowContext {
             tokio::time::sleep(duration).await;
         }
     }
-    
+
     /// Wait for a signal
     pub async fn wait_for_signal<T: DeserializeOwned>(
         &self,
         signal_name: &str,
     ) -> Result<T, TemporalError> {
-        // Would integrate with actual signal system
-        // For now, this is a placeholder
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        // In this lightweight runtime, signal delivery is external to this context.
         Err(TemporalError::SignalNotReceived(signal_name.to_string()))
     }
-    
+
     /// Wait for a signal with timeout
     pub async fn wait_for_signal_with_timeout<T: DeserializeOwned>(
         &self,
@@ -83,7 +81,7 @@ impl WorkflowContext {
     ) -> Result<Option<T>, TemporalError> {
         // Would use tokio::time::timeout with actual signal system
         let result = tokio::time::timeout(timeout, self.wait_for_signal::<T>(signal_name)).await;
-        
+
         match result {
             Ok(Ok(value)) => Ok(Some(value)),
             Ok(Err(TemporalError::SignalNotReceived(_))) => Ok(None),
@@ -91,18 +89,15 @@ impl WorkflowContext {
             Err(_) => Ok(None), // Timeout
         }
     }
-    
+
     /// Query external state
-    pub async fn query<T: DeserializeOwned>(
-        &self,
-        query_type: &str,
-    ) -> Result<T, TemporalError> {
-        // Would query workflow state
-        Err(TemporalError::QueryFailed(format!(
-            "Query '{}' not implemented", query_type
-        )))
+    pub async fn query<T: DeserializeOwned>(&self, query_type: &str) -> Result<T, TemporalError> {
+        let _ = query_type;
+        Err(TemporalError::QueryFailed(
+            "query execution is unavailable in this local context".to_string(),
+        ))
     }
-    
+
     /// Start a child workflow
     pub async fn child_workflow<W: Workflow>(
         &self,
@@ -113,10 +108,10 @@ impl WorkflowContext {
             format!("{}-child-{}", self.workflow_id, uuid::Uuid::new_v4()),
             uuid::Uuid::new_v4().to_string(),
         );
-        
+
         workflow.run(child_ctx, input).await
     }
-    
+
     /// Execute a side effect (non-deterministic operation)
     pub async fn side_effect<T, F>(&self, f: F) -> T
     where
@@ -125,24 +120,24 @@ impl WorkflowContext {
         // In real Temporal, this would be recorded and replayed
         f()
     }
-    
+
     /// Get current time (workflow-safe)
     pub fn now(&self) -> DateTime<Utc> {
         // In real Temporal, this returns the workflow's current time
         Utc::now()
     }
-    
+
     /// Check if workflow is being cancelled
     pub fn is_cancelling(&self) -> bool {
         // Would check cancellation state
         false
     }
-    
+
     /// Record a heartbeat (for long-running activities)
     pub async fn heartbeat(&self, _details: &[u8]) {
         tracing::debug!(workflow_id = %self.workflow_id, "Heartbeat");
     }
-    
+
     /// Get elapsed time since workflow start
     pub fn elapsed(&self) -> std::time::Duration {
         let now = Utc::now();
@@ -187,18 +182,18 @@ impl ActivityContext {
             },
         }
     }
-    
+
     /// Check if this is a retry
     pub fn is_retry(&self) -> bool {
         self.attempt > 1
     }
-    
+
     /// Get elapsed time
     pub fn elapsed(&self) -> std::time::Duration {
         let now = Utc::now();
         (now - self.started_at).to_std().unwrap_or_default()
     }
-    
+
     /// Check if deadline is approaching
     pub fn is_deadline_near(&self, buffer: std::time::Duration) -> bool {
         match self.deadline {
@@ -210,7 +205,7 @@ impl ActivityContext {
             None => false,
         }
     }
-    
+
     /// Record a heartbeat
     pub async fn heartbeat(&self, _details: &[u8]) {
         tracing::debug!(
@@ -219,13 +214,13 @@ impl ActivityContext {
             "Activity heartbeat"
         );
     }
-    
+
     /// Check if activity has been cancelled
     pub fn is_cancelled(&self) -> bool {
         // Would check cancellation state
         false
     }
-    
+
     /// Get time remaining before deadline
     pub fn time_remaining(&self) -> Option<std::time::Duration> {
         self.deadline.map(|deadline| {

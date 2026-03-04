@@ -68,10 +68,7 @@ pub struct PaperTradingStats {
 
 impl PaperTradingEngine {
     /// Create new paper trading engine
-    pub fn new(
-        config: PaperTradingConfig,
-        broker: Arc<PaperBroker>,
-    ) -> Self {
+    pub fn new(config: PaperTradingConfig, broker: Arc<PaperBroker>) -> Self {
         Self {
             config,
             broker,
@@ -85,7 +82,7 @@ impl PaperTradingEngine {
         info!("Starting paper trading engine...");
 
         *self.running.write().await = true;
-        
+
         let mut stats = self.stats.write().await;
         stats.start_time = Some(Utc::now());
         drop(stats);
@@ -93,10 +90,10 @@ impl PaperTradingEngine {
         // Start market data processing
         let _broker = self.broker.clone();
         let running = self.running.clone();
-        
+
         tokio::spawn(async move {
             debug!("Market data processor started");
-            
+
             while *running.read().await {
                 tokio::time::sleep(Duration::from_millis(100)).await;
             }
@@ -107,19 +104,19 @@ impl PaperTradingEngine {
         let config = self.config.clone();
         let running = self.running.clone();
         let stats = self.stats.clone();
-        
+
         tokio::spawn(async move {
             debug!("Signal processor started");
-            
+
             // Create signal channel
             let (tx, mut rx) = mpsc::channel::<Signal>(100);
             drop(tx); // Will be used by external signal source
-            
+
             while *running.read().await {
                 match tokio::time::timeout(Duration::from_millis(100), rx.recv()).await {
                     Ok(Some(signal)) => {
                         stats.write().await.signals_received += 1;
-                        
+
                         if config.auto_trade {
                             if let Err(e) = Self::process_signal(&broker, &config, signal).await {
                                 warn!("Signal processing error: {}", e);
@@ -139,21 +136,23 @@ impl PaperTradingEngine {
         let broker = self.broker.clone();
         let config = self.config.clone();
         let running = self.running.clone();
-        
+
         tokio::spawn(async move {
             let mut ticker = interval(Duration::from_secs(config.log_interval_secs));
-            
+
             while *running.read().await {
                 ticker.tick().await;
-                
+
                 let portfolio = broker.get_portfolio().await;
-                let prices = HashMap::new(); // Would get from streaming
+                let prices = broker.get_current_prices().await;
                 let summary = portfolio.summary(&prices);
-                
+
                 info!(
                     "Paper Portfolio - Equity: ${}, Return: {:.2}%, Positions: {}, Trades: {}",
-                    summary.equity, summary.total_return_pct, 
-                    summary.position_count, summary.trade_count
+                    summary.equity,
+                    summary.total_return_pct,
+                    summary.position_count,
+                    summary.trade_count
                 );
             }
         });
@@ -166,11 +165,11 @@ impl PaperTradingEngine {
     pub async fn stop(&self) -> Result<(), String> {
         info!("Stopping paper trading engine...");
         *self.running.write().await = false;
-        
+
         // Print final stats
         let stats = self.stats.read().await.clone();
         info!("Paper Trading Stats: {:?}", stats);
-        
+
         Ok(())
     }
 
@@ -184,16 +183,17 @@ impl PaperTradingEngine {
 
         // Get current portfolio
         let portfolio = broker.get_portfolio().await;
-        
+
         // Check max positions
         if portfolio.positions().len() >= config.max_positions
-            && portfolio.get_position(&signal.ticker).is_none() {
-                return Err("Max positions reached".to_string());
-            }
+            && portfolio.get_position(&signal.ticker).is_none()
+        {
+            return Err("Max positions reached".to_string());
+        }
 
         // Calculate position size
         let position_value = portfolio.cash_balance() * config.position_size_pct;
-        
+
         // Get current price from order book
         let quantity = if let Some(book) = broker.get_order_book(&signal.ticker).await {
             let price = match signal.direction {
@@ -201,7 +201,7 @@ impl PaperTradingEngine {
                 SignalDirection::Short => book.best_bid().map(|l| l.price),
                 _ => None,
             };
-            
+
             price.map(|p| position_value / p).unwrap_or(Decimal::ZERO)
         } else {
             Decimal::ZERO
@@ -226,15 +226,22 @@ impl PaperTradingEngine {
                     let portfolio_id = Uuid::new_v4();
                     let mut close_order = Order::new(
                         signal.ticker.clone(),
-                        if pos.is_long() { OrderSide::Sell } else { OrderSide::Buy },
+                        if pos.is_long() {
+                            OrderSide::Sell
+                        } else {
+                            OrderSide::Buy
+                        },
                         pos.quantity.abs(),
                         OrderType::Market,
                         portfolio_id,
-                    ).with_notes("Close position");
-                    
-                    broker.place_order(&mut close_order).await
+                    )
+                    .with_notes("Close position");
+
+                    broker
+                        .place_order(&mut close_order)
+                        .await
                         .map_err(|e| format!("Close order failed: {}", e))?;
-                    
+
                     info!("Closed position for {}: {:?}", signal.ticker, pos);
                 }
                 _ => {} // Same direction, add to position
@@ -249,11 +256,14 @@ impl PaperTradingEngine {
             quantity,
             OrderType::Market,
             portfolio_id,
-        ).with_notes(format!("Signal confidence: {}", signal.confidence));
+        )
+        .with_notes(format!("Signal confidence: {}", signal.confidence));
 
-        broker.place_order(&mut order).await
+        broker
+            .place_order(&mut order)
+            .await
             .map_err(|e| format!("Order failed: {}", e))?;
-        
+
         info!(
             "Executed paper trade for {}: {:?} {} (confidence: {})",
             signal.ticker, side, quantity, signal.confidence

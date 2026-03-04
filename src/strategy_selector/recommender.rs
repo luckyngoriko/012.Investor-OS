@@ -49,7 +49,7 @@ impl RiskLevel {
             _ => RiskLevel::VeryHigh,
         }
     }
-    
+
     pub fn name(&self) -> &'static str {
         match self {
             RiskLevel::VeryLow => "Very Low",
@@ -59,7 +59,7 @@ impl RiskLevel {
             RiskLevel::VeryHigh => "Very High",
         }
     }
-    
+
     pub fn is_compatible_with(&self, tolerance: RiskTolerance) -> bool {
         match tolerance {
             RiskTolerance::Conservative => matches!(self, RiskLevel::VeryLow | RiskLevel::Low),
@@ -78,7 +78,7 @@ impl StrategyRecommender {
             diversification_target: 3,
         }
     }
-    
+
     /// Generate recommendations
     pub fn recommend(
         &self,
@@ -88,25 +88,25 @@ impl StrategyRecommender {
     ) -> Vec<Recommendation> {
         let mut recommendations = Vec::new();
         let mut rank = 1u32;
-        
+
         for strategy in strategies {
             // Check capital requirement
             if strategy.min_capital > capital {
                 continue;
             }
-            
+
             // Check risk compatibility
             let risk_level = RiskLevel::from_max_drawdown(strategy.max_drawdown);
             if !risk_level.is_compatible_with(risk_tolerance) {
                 continue;
             }
-            
+
             // Calculate suitability
             let suitability = self.calculate_suitability(strategy, capital, risk_tolerance);
-            
+
             // Generate reason
             let reason = self.generate_reason(strategy, risk_tolerance);
-            
+
             let rec = Recommendation {
                 strategy_id: strategy.id,
                 strategy_type: strategy.strategy_type,
@@ -119,24 +119,26 @@ impl StrategyRecommender {
                 min_capital: strategy.min_capital,
                 suitability_pct: (suitability * 100.0),
             };
-            
+
             recommendations.push(rec);
             rank += 1;
-            
+
             // Limit to top recommendations
             if recommendations.len() >= self.diversification_target as usize {
                 break;
             }
         }
-        
+
         info!(
             "Generated {} recommendations for capital={} tolerance={:?}",
-            recommendations.len(), capital, risk_tolerance
+            recommendations.len(),
+            capital,
+            risk_tolerance
         );
-        
+
         recommendations
     }
-    
+
     /// Calculate suitability score (0.0 - 1.0)
     fn calculate_suitability(
         &self,
@@ -145,56 +147,58 @@ impl StrategyRecommender {
         risk_tolerance: RiskTolerance,
     ) -> f32 {
         let mut score = 0.0;
-        
+
         // Capital efficiency (0.0 - 0.25)
-        let capital_ratio: f32 = (capital / strategy.min_capital).try_into().unwrap_or(1.0f32);
+        let capital_ratio: f32 = (capital / strategy.min_capital)
+            .try_into()
+            .unwrap_or(1.0f32);
         score += capital_ratio.min(2.0) * 0.125; // Up to 0.25
-        
+
         // Sharpe ratio component (0.0 - 0.25)
         score += (strategy.sharpe_ratio / 2.0).min(1.0) * 0.25;
-        
+
         // Win rate component (0.0 - 0.20)
         score += strategy.win_rate * 0.20;
-        
+
         // Risk match component (0.0 - 0.30)
         let risk_score = self.calculate_risk_match(strategy, risk_tolerance);
         score += risk_score * 0.30;
-        
+
         score.min(1.0)
     }
-    
+
     /// Calculate risk match score
     fn calculate_risk_match(&self, strategy: &Strategy, tolerance: RiskTolerance) -> f32 {
         let risk_level = RiskLevel::from_max_drawdown(strategy.max_drawdown);
-        
+
         match (tolerance, risk_level) {
             // Perfect matches
             (RiskTolerance::Conservative, RiskLevel::VeryLow) => 1.0,
             (RiskTolerance::Moderate, RiskLevel::Low) => 1.0,
             (RiskTolerance::Aggressive, RiskLevel::Medium) => 1.0,
             (RiskTolerance::Speculative, RiskLevel::High) => 1.0,
-            
+
             // Acceptable but not ideal
             (RiskTolerance::Conservative, RiskLevel::Low) => 0.8,
             (RiskTolerance::Moderate, RiskLevel::Medium) => 0.8,
             (RiskTolerance::Aggressive, RiskLevel::High) => 0.8,
             (RiskTolerance::Speculative, RiskLevel::VeryHigh) => 0.8,
-            
+
             // Borderline
             (RiskTolerance::Conservative, RiskLevel::Medium) => 0.5,
             (RiskTolerance::Moderate, RiskLevel::High) => 0.5,
             (RiskTolerance::Aggressive, RiskLevel::Low) => 0.6,
             (RiskTolerance::Aggressive, RiskLevel::VeryHigh) => 0.6,
-            
+
             // Mismatches
             _ => 0.2,
         }
     }
-    
+
     /// Generate recommendation reason
     fn generate_reason(&self, strategy: &Strategy, tolerance: RiskTolerance) -> String {
         let risk_level = RiskLevel::from_max_drawdown(strategy.max_drawdown);
-        
+
         let base_reason = match (tolerance, risk_level) {
             (RiskTolerance::Conservative, _) => {
                 format!(
@@ -216,10 +220,10 @@ impl StrategyRecommender {
                 )
             }
         };
-        
+
         base_reason
     }
-    
+
     /// Recommend portfolio allocation across strategies
     pub fn recommend_allocation(
         &self,
@@ -228,21 +232,21 @@ impl StrategyRecommender {
         risk_tolerance: RiskTolerance,
     ) -> Vec<(uuid::Uuid, f32)> {
         let recommendations = self.recommend(strategies, capital, risk_tolerance);
-        
+
         if recommendations.is_empty() {
             return Vec::new();
         }
-        
+
         // Simple equal weight allocation
         let count = recommendations.len() as f32;
         let weight = 1.0 / count;
-        
+
         recommendations
             .into_iter()
             .map(|r| (r.strategy_id, weight))
             .collect()
     }
-    
+
     /// Get strategy for regime
     pub fn recommend_for_regime(
         &self,
@@ -256,16 +260,16 @@ impl StrategyRecommender {
             .filter(|s| s.min_capital <= capital)
             .cloned()
             .collect();
-        
+
         if suitable.is_empty() {
             return None;
         }
-        
+
         // Pick best Sharpe ratio
         let best = suitable
             .into_iter()
             .max_by(|a, b| a.sharpe_ratio.partial_cmp(&b.sharpe_ratio).unwrap())?;
-        
+
         Some(Recommendation {
             strategy_id: best.id,
             strategy_type: best.strategy_type,
@@ -279,7 +283,7 @@ impl StrategyRecommender {
             suitability_pct: 85.0,
         })
     }
-    
+
     /// Set diversification target
     pub fn set_diversification_target(&mut self, target: u32) {
         self.diversification_target = target;
@@ -298,7 +302,12 @@ mod tests {
     use chrono::Utc;
     use uuid::Uuid;
 
-    fn create_test_strategy(name: &str, strategy_type: StrategyType, min_capital: i64, drawdown: f32) -> Strategy {
+    fn create_test_strategy(
+        name: &str,
+        strategy_type: StrategyType,
+        min_capital: i64,
+        drawdown: f32,
+    ) -> Strategy {
         Strategy {
             id: Uuid::new_v4(),
             name: name.to_string(),
@@ -320,39 +329,49 @@ mod tests {
     fn test_recommender_creation() {
         let recommender = StrategyRecommender::new();
         let strategies: Vec<&Strategy> = vec![];
-        let recs = recommender.recommend(&strategies, Decimal::from(10000), RiskTolerance::Moderate);
+        let recs =
+            recommender.recommend(&strategies, Decimal::from(10000), RiskTolerance::Moderate);
         assert!(recs.is_empty());
     }
 
     #[test]
     fn test_recommendation_filtering() {
         let recommender = StrategyRecommender::new();
-        
+
         let s1 = create_test_strategy("Low Risk", StrategyType::MeanReversion, 5000, 0.05);
         let s2 = create_test_strategy("High Risk", StrategyType::Momentum, 5000, 0.30);
-        
+
         let strategies: Vec<&Strategy> = vec![&s1, &s2];
-        
+
         // Conservative should only get low risk
-        let conservative = recommender.recommend(&strategies, Decimal::from(10000), RiskTolerance::Conservative);
+        let conservative = recommender.recommend(
+            &strategies,
+            Decimal::from(10000),
+            RiskTolerance::Conservative,
+        );
         assert_eq!(conservative.len(), 1);
         assert_eq!(conservative[0].strategy_name, "Low Risk");
-        
+
         // Speculative can get both
-        let speculative = recommender.recommend(&strategies, Decimal::from(10000), RiskTolerance::Speculative);
+        let speculative = recommender.recommend(
+            &strategies,
+            Decimal::from(10000),
+            RiskTolerance::Speculative,
+        );
         assert_eq!(speculative.len(), 2);
     }
 
     #[test]
     fn test_capital_filtering() {
         let recommender = StrategyRecommender::new();
-        
+
         let s1 = create_test_strategy("Expensive", StrategyType::Momentum, 50000, 0.10);
         let s2 = create_test_strategy("Affordable", StrategyType::MeanReversion, 5000, 0.10);
-        
+
         let strategies: Vec<&Strategy> = vec![&s1, &s2];
-        let recs = recommender.recommend(&strategies, Decimal::from(10000), RiskTolerance::Moderate);
-        
+        let recs =
+            recommender.recommend(&strategies, Decimal::from(10000), RiskTolerance::Moderate);
+
         assert_eq!(recs.len(), 1);
         assert_eq!(recs[0].strategy_name, "Affordable");
     }
@@ -376,19 +395,27 @@ mod tests {
     #[test]
     fn test_recommend_for_regime() {
         let recommender = StrategyRecommender::new();
-        
+
         let momentum = create_test_strategy("Momentum", StrategyType::Momentum, 5000, 0.15);
         let mean_rev = create_test_strategy("MeanRev", StrategyType::MeanReversion, 5000, 0.10);
-        
+
         let strategies: Vec<&Strategy> = vec![&momentum, &mean_rev];
-        
+
         // Trending regime should suggest momentum
-        let rec = recommender.recommend_for_regime(&strategies, MarketRegime::Trending, Decimal::from(10000));
+        let rec = recommender.recommend_for_regime(
+            &strategies,
+            MarketRegime::Trending,
+            Decimal::from(10000),
+        );
         assert!(rec.is_some());
         assert_eq!(rec.unwrap().strategy_type, StrategyType::Momentum);
-        
+
         // Ranging regime should suggest mean reversion
-        let rec = recommender.recommend_for_regime(&strategies, MarketRegime::Ranging, Decimal::from(10000));
+        let rec = recommender.recommend_for_regime(
+            &strategies,
+            MarketRegime::Ranging,
+            Decimal::from(10000),
+        );
         assert!(rec.is_some());
         assert_eq!(rec.unwrap().strategy_type, StrategyType::MeanReversion);
     }
@@ -396,13 +423,17 @@ mod tests {
     #[test]
     fn test_recommend_allocation() {
         let recommender = StrategyRecommender::new();
-        
+
         let s1 = create_test_strategy("S1", StrategyType::Momentum, 5000, 0.10);
         let s2 = create_test_strategy("S2", StrategyType::MeanReversion, 5000, 0.10);
-        
+
         let strategies: Vec<&Strategy> = vec![&s1, &s2];
-        let allocation = recommender.recommend_allocation(&strategies, Decimal::from(10000), RiskTolerance::Moderate);
-        
+        let allocation = recommender.recommend_allocation(
+            &strategies,
+            Decimal::from(10000),
+            RiskTolerance::Moderate,
+        );
+
         assert_eq!(allocation.len(), 2);
         assert_eq!(allocation[0].1, 0.5); // Equal weight
         assert_eq!(allocation[1].1, 0.5);

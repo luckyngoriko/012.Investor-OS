@@ -95,7 +95,10 @@ impl AlternativeDataEngine {
     }
 
     /// Get signals for multiple tickers
-    pub async fn get_signals(&self, tickers: &[String]) -> Vec<Result<AlternativeSignal, AltDataError>> {
+    pub async fn get_signals(
+        &self,
+        tickers: &[String],
+    ) -> Vec<Result<AlternativeSignal, AltDataError>> {
         let mut results = vec![];
 
         for ticker in tickers {
@@ -140,7 +143,10 @@ impl AlternativeDataEngine {
     }
 
     /// Get signals for tickers with material news
-    pub async fn get_material_news_signals(&self, tickers: &[String]) -> Result<Vec<AlternativeSignal>, AltDataError> {
+    pub async fn get_material_news_signals(
+        &self,
+        tickers: &[String],
+    ) -> Result<Vec<AlternativeSignal>, AltDataError> {
         let mut signals = vec![];
 
         for ticker in tickers {
@@ -176,7 +182,10 @@ impl AlternativeDataEngine {
     }
 
     /// Aggregate news sentiment from multiple articles
-    async fn aggregate_news_sentiment(&self, articles: &[news::NewsArticle]) -> news::SentimentScore {
+    async fn aggregate_news_sentiment(
+        &self,
+        articles: &[news::NewsArticle],
+    ) -> news::SentimentScore {
         let mut total_positive = 0.0;
         let mut total_negative = 0.0;
         let mut total_neutral = 0.0;
@@ -244,19 +253,19 @@ impl Default for AlternativeDataEngine {
 pub struct AlternativeSignal {
     pub ticker: String,
     pub timestamp: chrono::DateTime<chrono::Utc>,
-    pub composite_score: f64,        // -1 to 1
-    pub news_sentiment: f64,         // -1 to 1
-    pub social_sentiment: f64,       // -1 to 1
-    pub options_sentiment: f64,      // -1 to 1
-    pub trends_sentiment: f64,       // -1 to 1
-    pub corporate_sentiment: f64,    // -1 to 1
+    pub composite_score: f64,     // -1 to 1
+    pub news_sentiment: f64,      // -1 to 1
+    pub social_sentiment: f64,    // -1 to 1
+    pub options_sentiment: f64,   // -1 to 1
+    pub trends_sentiment: f64,    // -1 to 1
+    pub corporate_sentiment: f64, // -1 to 1
     pub news_volume: u32,
     pub social_volume: u32,
     pub options_flow_signal: bool,
     pub trending: bool,
     pub trend_momentum: f64,
     pub has_material_news: bool,
-    pub confidence: f64,             // 0 to 1
+    pub confidence: f64, // 0 to 1
     pub strength: SignalStrength,
 }
 

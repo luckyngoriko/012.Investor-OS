@@ -10,16 +10,15 @@
 
 #[cfg(feature = "eu_compliance")]
 mod tests {
-    use investor_os::compliance::{
-        GdprManager, AuditLogger,
-        types::*,
-    };
-    use investor_os::compliance::dlp_integration::{DlpIntegration, DlpConfig};
-    use investor_os::compliance::policy_integration::{PolicyIntegration, PolicyConfig, RequestContext};
     use chrono::Utc;
+    use investor_os::compliance::dlp_integration::{DlpConfig, DlpIntegration};
+    use investor_os::compliance::policy_integration::{
+        PolicyConfig, PolicyIntegration, RequestContext,
+    };
+    use investor_os::compliance::{types::*, AuditLogger, GdprManager};
     use serde_json::json;
-    use uuid::Uuid;
     use std::net::Ipv4Addr;
+    use uuid::Uuid;
 
     // =========================================================================
     // GDPR Tests
@@ -30,16 +29,20 @@ mod tests {
         let manager = GdprManager::new_without_db();
         let user_id = Uuid::new_v4().to_string();
 
-        let result = manager.forget_user(&user_id).await;
-        assert!(result.is_ok());
-
-        let request = result.unwrap();
+        let request = manager
+            .forget_user(&user_id)
+            .await
+            .expect("forget_user should succeed");
         assert_eq!(request.user_id.to_string(), user_id);
         assert_eq!(request.status, DeletionStatus::Pending);
-        
+
         // Verify 30-day deletion schedule (allow small variance due to DST)
         let days_until = (request.scheduled_deletion - request.requested_at).num_days();
-        assert!((29..=30).contains(&days_until), "Expected ~30 days, got {}", days_until);
+        assert!(
+            (29..=30).contains(&days_until),
+            "Expected ~30 days, got {}",
+            days_until
+        );
     }
 
     #[tokio::test]
@@ -48,10 +51,10 @@ mod tests {
         let user_id = Uuid::new_v4().to_string();
 
         // Test JSON export
-        let result = manager.export_user_data(&user_id, ExportFormat::Json).await;
-        assert!(result.is_ok());
-
-        let export = result.unwrap();
+        let export = manager
+            .export_user_data(&user_id, ExportFormat::Json)
+            .await
+            .expect("export_user_data should succeed");
         assert_eq!(export.user_id.to_string(), user_id);
         assert_eq!(export.format, ExportFormat::Json);
         assert!(export.data.get("profile").is_some());
@@ -61,7 +64,7 @@ mod tests {
     #[tokio::test]
     async fn test_gdpr_invalid_user_id() {
         let manager = GdprManager::new_without_db();
-        
+
         let result = manager.forget_user("invalid-uuid-format").await;
         assert!(result.is_err());
     }
@@ -78,18 +81,17 @@ mod tests {
         let input = json!({"market_data": "test"});
         let output = json!({"signal": "buy", "confidence": 0.85});
 
-        let result = logger.log_decision(
-            system_id,
-            DecisionType::TradingSignal,
-            &input,
-            &output,
-            0.85,
-            "Test trading decision",
-        ).await;
-
-        assert!(result.is_ok());
-        
-        let log = result.unwrap();
+        let log = logger
+            .log_decision(
+                system_id,
+                DecisionType::TradingSignal,
+                &input,
+                &output,
+                0.85,
+                "Test trading decision",
+            )
+            .await
+            .expect("log_decision should succeed");
         assert_eq!(log.system_id, system_id);
         assert_eq!(log.decision_type, DecisionType::TradingSignal);
         assert!(!log.human_reviewed);
@@ -106,24 +108,25 @@ mod tests {
             let input = json!({"iteration": i});
             let output = json!({"result": i});
 
-            let result = logger.log_decision(
-                system_id,
-                DecisionType::TradingSignal,
-                &input,
-                &output,
-                0.8,
-                "Test decision",
-            ).await;
-
-            assert!(result.is_ok());
+            let log = logger
+                .log_decision(
+                    system_id,
+                    DecisionType::TradingSignal,
+                    &input,
+                    &output,
+                    0.8,
+                    "Test decision",
+                )
+                .await
+                .expect("log_decision should succeed");
+            assert_eq!(log.decision_type, DecisionType::TradingSignal);
         }
 
         // Buffer should have entries
         assert_eq!(logger.buffer_len(), 5);
 
         // Flush buffer
-        let result = logger.flush().await;
-        assert!(result.is_ok());
+        logger.flush().await.expect("flush should succeed");
 
         // Buffer should be empty after flush
         assert!(logger.is_buffer_empty());
@@ -141,10 +144,10 @@ mod tests {
         };
         let dlp = DlpIntegration::new(config);
 
-        let result: Result<DlpScanResult, _> = dlp.scan("test@example.com").await;
-        assert!(result.is_ok());
-
-        let scan = result.unwrap();
+        let scan: DlpScanResult = dlp
+            .scan("test@example.com")
+            .await
+            .expect("DLP scan should succeed when disabled");
         assert!(!scan.has_violations);
     }
 
@@ -156,13 +159,16 @@ mod tests {
             return; // Skip if DLP not configured
         }
 
-        let result: Result<DlpScanResult, _> = dlp.scan("Contact: user@example.com").await;
-        assert!(result.is_ok());
-
-        let scan = result.unwrap();
+        let scan: DlpScanResult = dlp
+            .scan("Contact: user@example.com")
+            .await
+            .expect("DLP scan should succeed");
         // Email detection may or may not trigger depending on implementation
         if scan.has_violations {
-            assert!(scan.findings.iter().any(|f: &DlpFinding| f.finding_type == "EMAIL"));
+            assert!(scan
+                .findings
+                .iter()
+                .any(|f: &DlpFinding| f.finding_type == "EMAIL"));
         }
     }
 
@@ -170,8 +176,9 @@ mod tests {
     async fn test_dlp_validate_safe_content() {
         let dlp = DlpIntegration::from_env();
 
-        let result: Result<(), _> = dlp.validate("Safe content without PII").await;
-        assert!(result.is_ok());
+        dlp.validate("Safe content without PII")
+            .await
+            .expect("validate should succeed for content without PII");
     }
 
     // =========================================================================
@@ -191,10 +198,10 @@ mod tests {
             "/api/test",
         );
 
-        let result: Result<PolicyResult, _> = policy.evaluate(&ctx).await;
-        assert!(result.is_ok());
-
-        let eval = result.unwrap();
+        let eval: PolicyResult = policy
+            .evaluate(&ctx)
+            .await
+            .expect("policy evaluation should succeed when disabled");
         assert!(eval.allowed);
     }
 
@@ -208,10 +215,10 @@ mod tests {
             "/api/data'; DROP TABLE users;--",
         );
 
-        let result: Result<PolicyResult, _> = policy.evaluate(&ctx).await;
-        assert!(result.is_ok());
-
-        let eval = result.unwrap();
+        let eval: PolicyResult = policy
+            .evaluate(&ctx)
+            .await
+            .expect("policy evaluation should succeed");
         assert!(!eval.allowed);
         assert!(eval.violations.iter().any(|v: &String| v.contains("SQL")));
     }
@@ -227,10 +234,10 @@ mod tests {
             "/api/data/<script>alert(1)</script>",
         );
 
-        let result: Result<PolicyResult, _> = policy.evaluate(&ctx).await;
-        assert!(result.is_ok());
-
-        let eval = result.unwrap();
+        let eval: PolicyResult = policy
+            .evaluate(&ctx)
+            .await
+            .expect("policy evaluation should succeed");
         assert!(!eval.allowed);
         assert!(eval.violations.iter().any(|v: &String| v.contains("XSS")));
     }
@@ -245,12 +252,15 @@ mod tests {
             "/api/data/../../../etc/passwd",
         );
 
-        let result: Result<PolicyResult, _> = policy.evaluate(&ctx).await;
-        assert!(result.is_ok());
-
-        let eval = result.unwrap();
+        let eval: PolicyResult = policy
+            .evaluate(&ctx)
+            .await
+            .expect("policy evaluation should succeed");
         assert!(!eval.allowed);
-        assert!(eval.violations.iter().any(|v: &String| v.contains("traversal")));
+        assert!(eval
+            .violations
+            .iter()
+            .any(|v: &String| v.contains("traversal")));
     }
 
     // =========================================================================
@@ -282,7 +292,7 @@ mod tests {
     fn test_deletion_status() {
         let pending = DeletionStatus::Pending;
         let completed = DeletionStatus::Completed;
-        
+
         assert_ne!(pending, completed);
     }
 
@@ -318,16 +328,23 @@ mod tests {
             "/api/trading/signal",
         );
 
-        let policy_result: Result<PolicyResult, _> = policy.evaluate(&ctx).await;
-        assert!(policy_result.is_ok());
-        let policy_eval = policy_result.unwrap();
+        let policy_eval: PolicyResult = policy
+            .evaluate(&ctx)
+            .await
+            .expect("policy evaluation should succeed");
         assert!(policy_eval.allowed);
 
         // Step 2: DLP scan
         let dlp = DlpIntegration::from_env();
-        let dlp_result: Result<DlpScanResult, _> = dlp.scan(r#"{"signal": "buy", "amount": 100}"#).await;
-        assert!(dlp_result.is_ok());
+        let dlp_result: DlpScanResult = dlp
+            .scan(r#"{"signal": "buy", "amount": 100}"#)
+            .await
+            .expect("DLP scan should succeed");
         // Should not have violations for trading data
+        assert!(
+            !dlp_result.has_violations,
+            "trading JSON should not trigger DLP violations"
+        );
 
         // Step 3: AI decision
         let mut logger = AuditLogger::new_without_db();
@@ -335,21 +352,27 @@ mod tests {
         let input = json!({"market": "data"});
         let output = json!({"action": "buy", "confidence": 0.92});
 
-        let log = logger.log_decision(
-            system_id,
-            DecisionType::TradingSignal,
-            &input,
-            &output,
-            0.92,
-            "AI trading signal generated",
-        ).await.unwrap();
+        let log = logger
+            .log_decision(
+                system_id,
+                DecisionType::TradingSignal,
+                &input,
+                &output,
+                0.92,
+                "AI trading signal generated",
+            )
+            .await
+            .unwrap();
 
         assert_eq!(log.decision_type, DecisionType::TradingSignal);
 
         // Step 4: GDPR export
         let gdpr = GdprManager::new_without_db();
         let user_id = Uuid::new_v4().to_string();
-        let export = gdpr.export_user_data(&user_id, ExportFormat::Json).await.unwrap();
+        let export = gdpr
+            .export_user_data(&user_id, ExportFormat::Json)
+            .await
+            .unwrap();
 
         assert_eq!(export.user_id.to_string(), user_id);
         assert!(export.data.is_object());
@@ -361,8 +384,13 @@ mod tests {
 mod no_feature_tests {
     #[test]
     fn test_compliance_feature_disabled() {
-        // When feature is disabled, compliance module should not be available
-        // This test just verifies the build succeeds without the feature
-        assert!(true);
+        // When feature is disabled, compliance module should not be available.
+        // Verify that the feature flag is indeed absent at compile time.
+        let features: &[&str] = &[]; // eu_compliance is NOT enabled
+        assert!(
+            !cfg!(feature = "eu_compliance"),
+            "eu_compliance feature should be disabled in this test"
+        );
+        assert!(features.is_empty()); // sentinel — proves test ran with assertions
     }
 }

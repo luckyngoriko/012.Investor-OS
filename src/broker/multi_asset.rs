@@ -51,16 +51,20 @@ impl MultiAssetPortfolio {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Add position from Binance (Crypto)
-    pub fn add_crypto_positions(&mut self, balances: &[binance::Balance], prices: &HashMap<String, Decimal>) {
+    pub fn add_crypto_positions(
+        &mut self,
+        balances: &[binance::Balance],
+        prices: &HashMap<String, Decimal>,
+    ) {
         for balance in balances {
             if balance.free > Decimal::ZERO || balance.locked > Decimal::ZERO {
                 let total = balance.free + balance.locked;
                 let symbol = format!("{}USDT", balance.asset);
                 let price = prices.get(&symbol).copied().unwrap_or(Decimal::ZERO);
                 let market_value = total * price;
-                
+
                 if market_value > Decimal::ZERO {
                     self.positions.push(MultiAssetPosition {
                         symbol: balance.asset.clone(),
@@ -76,54 +80,62 @@ impl MultiAssetPortfolio {
             }
         }
     }
-    
+
     /// Add forex positions from OANDA
     pub fn add_forex_balance(&mut self, account: &oanda::AccountSummary) {
-        self.cash_balances.insert(
-            account.currency.clone(),
-            account.balance
-        );
+        self.cash_balances
+            .insert(account.currency.clone(), account.balance);
     }
-    
+
     /// Calculate total portfolio value in USD
     pub fn calculate_total_value(&mut self) {
-        self.total_value_usd = self.positions.iter()
-            .map(|p| p.market_value)
-            .sum();
-        
-        // Add cash (simplified - assumes USD or converts)
+        self.total_value_usd = self.positions.iter().map(|p| p.market_value).sum();
+
+        // Add cash balances, converting non-USD currencies at approximate FX rates
         for (currency, amount) in &self.cash_balances {
-            if currency == "USD" {
-                self.total_value_usd += *amount;
-            }
-            // TODO: Convert other currencies
+            let fx_rate = match currency.as_str() {
+                "USD" => Decimal::ONE,
+                "EUR" => Decimal::new(110, 2), // ~1.10
+                "GBP" => Decimal::new(127, 2), // ~1.27
+                "JPY" => Decimal::new(67, 4),  // ~0.0067
+                "CHF" => Decimal::new(113, 2), // ~1.13
+                other => {
+                    tracing::warn!(
+                        currency = other,
+                        "No FX rate for currency, treating as 1:1 USD"
+                    );
+                    Decimal::ONE
+                }
+            };
+            self.total_value_usd += *amount * fx_rate;
         }
     }
-    
+
     /// Get allocation by asset class
     pub fn get_allocation(&self) -> HashMap<AssetClass, Decimal> {
         let mut allocation = HashMap::new();
-        
+
         for position in &self.positions {
-            let entry = allocation.entry(position.asset_class).or_insert(Decimal::ZERO);
+            let entry = allocation
+                .entry(position.asset_class)
+                .or_insert(Decimal::ZERO);
             *entry += position.market_value;
         }
-        
+
         // Convert to percentages
         if self.total_value_usd > Decimal::ZERO {
             for value in allocation.values_mut() {
                 *value = *value / self.total_value_usd * Decimal::from(100);
             }
         }
-        
+
         allocation
     }
-    
+
     /// Get risk concentration (largest positions)
     pub fn get_top_positions(&self, n: usize) -> Vec<&MultiAssetPosition> {
-        let mut sorted = self.positions.iter()
-            .collect::<Vec<_>>();
-        
+        let mut sorted = self.positions.iter().collect::<Vec<_>>();
+
         sorted.sort_by(|a, b| b.market_value.cmp(&a.market_value));
         sorted.truncate(n);
         sorted
@@ -163,37 +175,43 @@ pub struct OrderRouter {
 }
 
 impl OrderRouter {
-    pub fn new(
-        binance: Option<binance::BinanceClient>,
-        oanda: Option<oanda::OandaClient>,
-    ) -> Self {
+    pub fn new(binance: Option<binance::BinanceClient>, oanda: Option<oanda::OandaClient>) -> Self {
         Self { binance, oanda }
     }
-    
+
     /// Route order to appropriate exchange
     pub async fn submit_order(&self, order: UnifiedOrder) -> Result<OrderResult, OrderError> {
         match order.asset_class {
             AssetClass::Crypto => {
                 if let Some(client) = &self.binance {
                     // Convert to Binance order
+                    let order_type = match order.order_type {
+                        OrderType::Market => binance::OrderType::MARKET,
+                        OrderType::Limit => binance::OrderType::LIMIT,
+                        unsupported => {
+                            return Err(OrderError::NotImplemented(format!(
+                                "Order type {:?} is not implemented for Binance",
+                                unsupported
+                            )))
+                        }
+                    };
+
                     let binance_order = binance::BinanceOrder {
                         symbol: format!("{}USDT", order.symbol),
                         side: match order.side {
                             OrderSide::Buy => binance::OrderSide::BUY,
                             OrderSide::Sell => binance::OrderSide::SELL,
                         },
-                        order_type: match order.order_type {
-                            OrderType::Market => binance::OrderType::MARKET,
-                            OrderType::Limit => binance::OrderType::LIMIT,
-                            _ => binance::OrderType::MARKET,
-                        },
+                        order_type,
                         quantity: Some(order.quantity),
                         price: order.price,
                     };
-                    
-                    let response = client.place_order(binance_order).await
+
+                    let response = client
+                        .place_order(binance_order)
+                        .await
                         .map_err(|e| OrderError::Execution(e.to_string()))?;
-                    
+
                     Ok(OrderResult {
                         order_id: response.orderId.to_string(),
                         status: response.status,
@@ -242,25 +260,31 @@ impl Rebalancer {
     pub fn new(target_allocations: HashMap<AssetClass, Decimal>) -> Self {
         Self { target_allocations }
     }
-    
+
     /// Calculate rebalancing trades needed
     pub fn calculate_trades(&self, portfolio: &MultiAssetPortfolio) -> Vec<UnifiedOrder> {
         let current_alloc = portfolio.get_allocation();
         let trades = vec![];
-        
+
         for (asset_class, target_pct) in &self.target_allocations {
-            let current_pct = current_alloc.get(asset_class).copied().unwrap_or(Decimal::ZERO);
+            let current_pct = current_alloc
+                .get(asset_class)
+                .copied()
+                .unwrap_or(Decimal::ZERO);
             let diff = target_pct - current_pct;
-            
-            if diff.abs() > Decimal::from(5) { // 5% threshold
+
+            if diff.abs() > Decimal::from(5) {
+                // 5% threshold
                 // Would calculate actual trade here
                 tracing::info!(
                     "Rebalance needed: {:?} current {}% target {}%",
-                    asset_class, current_pct, target_pct
+                    asset_class,
+                    current_pct,
+                    target_pct
                 );
             }
         }
-        
+
         trades
     }
 }

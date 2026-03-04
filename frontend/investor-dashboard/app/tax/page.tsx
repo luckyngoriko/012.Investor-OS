@@ -1,40 +1,100 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { 
-  Calculator, TrendingDown, FileText, AlertTriangle,
-  CheckCircle2, Download, RefreshCw, DollarSign
+import {
+  AlertTriangle,
+  Calculator,
+  CheckCircle2,
+  DollarSign,
+  Download,
+  FileText,
+  RefreshCw,
+  TrendingDown,
 } from "lucide-react";
 import Sidebar from "@/components/sidebar";
+import {
+  type TaxCalculationResponse,
+  type TaxStatusResponse,
+  fetchTaxCalculation,
+  fetchTaxStatus,
+} from "@/lib/domain-api";
 
-const mockTaxSummary = {
-  shortTermGains: 15000,
-  longTermGains: 25000,
-  shortTermLosses: 3000,
-  longTermLosses: 1500,
-  washSaleAdjustments: 800,
-};
+type TaxTab = "overview" | "harvesting" | "washsale" | "reports";
 
-const mockHarvestingOpportunities = [
-  { symbol: "TSLA", shares: 25, loss: 1250, replacement: "QQQ", daysToAvoid: 25 },
-  { symbol: "META", shares: 10, loss: 450, replacement: "VTI", daysToAvoid: 18 },
-];
-
-const mockWashSaleWarnings = [
-  { symbol: "AAPL", bought: "2026-01-15", sold: "2026-02-05", adjustment: 320 },
-];
+function formatCurrency(value: number): string {
+  return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+}
 
 export default function TaxPage() {
-  const [activeTab, setActiveTab] = useState<"overview" | "harvesting" | "washsale" | "reports">("overview");
+  const [activeTab, setActiveTab] = useState<TaxTab>("overview");
   const [jurisdiction, setJurisdiction] = useState("US");
+  const [statusPayload, setStatusPayload] = useState<TaxStatusResponse | null>(null);
+  const [calculationPayload, setCalculationPayload] = useState<TaxCalculationResponse | null>(
+    null,
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const netShortTerm = mockTaxSummary.shortTermGains - mockTaxSummary.shortTermLosses;
-  const netLongTerm = mockTaxSummary.longTermGains - mockTaxSummary.longTermLosses;
-  const shortTermTax = netShortTerm * 0.35;
-  const longTermTax = netLongTerm * 0.15;
-  const totalTax = shortTermTax + longTermTax;
-  const potentialSavings = mockHarvestingOpportunities.reduce((sum, o) => sum + o.loss * 0.35, 0);
+  useEffect(() => {
+    let mounted = true;
+
+    const loadTaxData = async () => {
+      setIsLoading(true);
+      setErrorMessage(null);
+      try {
+        const [status, calculation] = await Promise.all([
+          fetchTaxStatus(),
+          fetchTaxCalculation(),
+        ]);
+
+        if (!mounted) return;
+        setStatusPayload(status);
+        setCalculationPayload(calculation);
+      } catch (error) {
+        if (!mounted) return;
+        setErrorMessage(error instanceof Error ? error.message : "Failed to load tax data");
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadTaxData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const calculations = calculationPayload?.calculations;
+  const estimatedTax = calculations?.estimated_tax;
+  const shortTermGains = calculations?.short_term_gains ?? 0;
+  const longTermGains = calculations?.long_term_gains ?? 0;
+  const shortTermTax = estimatedTax?.short_term ?? 0;
+  const longTermTax = estimatedTax?.long_term ?? 0;
+  const totalTax = estimatedTax?.total ?? 0;
+
+  const potentialSavings = useMemo(() => {
+    if (!calculationPayload) return 0;
+    return calculationPayload.optimization_opportunities.reduce((sum, opportunity) => {
+      const source = opportunity.tax_savings ?? opportunity.potential_savings ?? "$0";
+      const normalized = Number.parseFloat(source.replace(/[^0-9.-]/g, ""));
+      return sum + (Number.isFinite(normalized) ? normalized : 0);
+    }, 0);
+  }, [calculationPayload]);
+
+  const harvestingFeature = statusPayload?.features.find((feature) =>
+    feature.name.includes("Tax Loss Harvesting"),
+  );
+  const washSaleFeature = statusPayload?.features.find((feature) =>
+    feature.name.includes("Wash Sale"),
+  );
+  const reportingFeature = statusPayload?.features.find((feature) =>
+    feature.name.includes("Tax Reporting"),
+  );
+  const reportFormats = reportingFeature?.formats ?? [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0f1c] via-[#111827] to-[#0a0f1c] flex">
@@ -48,10 +108,18 @@ export default function TaxPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-white">Tax & Compliance</h1>
-                <p className="text-gray-400 text-sm">Sprint 30: Tax loss harvesting, wash sale monitoring, reporting</p>
+                <p className="text-gray-400 text-sm">
+                  Backend-driven tax calculation, harvesting, and reporting visibility
+                </p>
               </div>
             </div>
           </motion.div>
+
+          {errorMessage && (
+            <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-300">
+              {errorMessage}
+            </div>
+          )}
 
           <div className="flex gap-2 p-1 bg-gray-800/30 rounded-xl w-fit">
             {[
@@ -62,9 +130,12 @@ export default function TaxPage() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all
-                  ${activeTab === tab.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white hover:bg-gray-700/50"}`}
+                onClick={() => setActiveTab(tab.id as TaxTab)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                  activeTab === tab.id
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-400 hover:text-white hover:bg-gray-700/50"
+                }`}
               >
                 <tab.icon className="w-4 h-4" />
                 <span className="text-sm font-medium">{tab.label}</span>
@@ -72,186 +143,238 @@ export default function TaxPage() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              {activeTab === "overview" && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                  <div className="glass-card rounded-2xl p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-white">Tax Summary 2026</h3>
-                      <select 
-                        value={jurisdiction}
-                        onChange={(e) => setJurisdiction(e.target.value)}
-                        className="px-3 py-1 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white"
-                      >
-                        <option value="US">United States</option>
-                        <option value="UK">United Kingdom</option>
-                        <option value="EU">European Union</option>
-                        <option value="CA">Canada</option>
-                      </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="p-4 bg-gray-800/30 rounded-xl">
-                        <p className="text-sm text-gray-400">Short-Term Gains</p>
-                        <p className="text-xl font-bold text-emerald-400">+${mockTaxSummary.shortTermGains.toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">Tax rate: 35%</p>
-                      </div>
-                      <div className="p-4 bg-gray-800/30 rounded-xl">
-                        <p className="text-sm text-gray-400">Long-Term Gains</p>
-                        <p className="text-xl font-bold text-emerald-400">+${mockTaxSummary.longTermGains.toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">Tax rate: 15%</p>
-                      </div>
-                      <div className="p-4 bg-gray-800/30 rounded-xl">
-                        <p className="text-sm text-gray-400">Short-Term Losses</p>
-                        <p className="text-xl font-bold text-rose-400">-${mockTaxSummary.shortTermLosses.toLocaleString()}</p>
-                      </div>
-                      <div className="p-4 bg-gray-800/30 rounded-xl">
-                        <p className="text-sm text-gray-400">Long-Term Losses</p>
-                        <p className="text-xl font-bold text-rose-400">-${mockTaxSummary.longTermLosses.toLocaleString()}</p>
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-white font-medium">Estimated Tax Liability</p>
-                          <p className="text-2xl font-bold text-blue-400">${totalTax.toLocaleString()}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm text-gray-400">Potential Savings</p>
-                          <p className="text-xl font-bold text-emerald-400">${potentialSavings.toFixed(0)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {activeTab === "harvesting" && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Tax Loss Harvesting Opportunities</h3>
-                  <p className="text-gray-400 text-sm mb-4">Automatic identification of positions with unrealized losses</p>
-                  
-                  {mockHarvestingOpportunities.map((opp) => (
-                    <div key={opp.symbol} className="p-4 bg-gray-800/30 rounded-xl mb-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg font-bold text-white">{opp.symbol}</span>
-                          <span className="text-sm text-gray-400">{opp.shares} shares</span>
-                        </div>
-                        <span className="text-rose-400 font-bold">-${opp.loss}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="text-gray-400">
-                          Suggested replacement: <span className="text-blue-400">{opp.replacement}</span>
-                        </div>
-                        <div className="text-gray-500">
-                          {opp.daysToAvoid} days until safe
-                        </div>
-                      </div>
-                      <button className="mt-3 w-full py-2 bg-emerald-600/20 text-emerald-400 rounded-lg hover:bg-emerald-600/30 transition-colors">
-                        Execute Harvest
-                      </button>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
-
-              {activeTab === "washsale" && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <AlertTriangle className="w-5 h-5 text-amber-400" />
-                    <h3 className="text-lg font-semibold text-white">Wash Sale Monitor</h3>
-                  </div>
-                  <p className="text-gray-400 text-sm mb-4">Tracking 30-day window to avoid wash sale violations</p>
-                  
-                  {mockWashSaleWarnings.map((warning) => (
-                    <div key={warning.symbol} className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-white font-medium">{warning.symbol}</p>
-                          <p className="text-sm text-gray-400">Bought: {warning.bought} | Sold: {warning.sold}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-amber-400 font-bold">${warning.adjustment}</p>
-                          <p className="text-xs text-gray-500">Adjustment</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  <div className="mt-4 p-4 bg-gray-800/30 rounded-xl">
-                    <p className="text-sm text-gray-300">Replacement securities suggested to maintain exposure while avoiding wash sale:</p>
-                    <div className="flex gap-2 mt-2">
-                      <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded">VOO</span>
-                      <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded">VTI</span>
-                      <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded">QQQ</span>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {activeTab === "reports" && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Tax Reports</h3>
-                  <div className="space-y-3">
-                    {[
-                      { name: "Schedule D - Capital Gains", format: "PDF", status: "ready" },
-                      { name: "Form 8949 - Sales", format: "PDF", status: "ready" },
-                      { name: "Cost Basis Report", format: "CSV", status: "ready" },
-                      { name: "TurboTax Export (TXF)", format: "TXF", status: "ready" },
-                    ].map((report) => (
-                      <div key={report.name} className="flex items-center justify-between p-4 bg-gray-800/30 rounded-xl">
-                        <div>
-                          <p className="text-white font-medium">{report.name}</p>
-                          <p className="text-sm text-gray-400">Format: {report.format}</p>
-                        </div>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-colors">
-                          <Download className="w-4 h-4" />
-                          Download
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
+          {isLoading ? (
+            <div className="glass-card rounded-2xl p-6 text-gray-300 flex items-center gap-3">
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              Loading tax data...
             </div>
+          ) : null}
 
-            <div className="space-y-6">
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="glass-card rounded-2xl p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Tax Settings</h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-400 mb-2">Cost Basis Method</p>
-                    <select className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm">
-                      <option>FIFO (First In, First Out)</option>
-                      <option>LIFO (Last In, First Out)</option>
-                      <option>HIFO (Highest In, First Out)</option>
-                      <option>Specific Identification</option>
-                    </select>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-2">Auto-Harvesting</p>
-                    <div className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg">
-                      <span className="text-sm text-white">Enabled</span>
-                      <div className="w-10 h-5 bg-emerald-500 rounded-full relative">
-                        <div className="w-4 h-4 bg-white rounded-full absolute right-0.5 top-0.5" />
+          {!isLoading && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                {activeTab === "overview" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-6"
+                  >
+                    <div className="glass-card rounded-2xl p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-white">
+                          Tax Summary {calculationPayload?.tax_year ?? new Date().getFullYear()}
+                        </h3>
+                        <select
+                          value={jurisdiction}
+                          onChange={(event) => setJurisdiction(event.target.value)}
+                          className="px-3 py-1 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white"
+                        >
+                          <option value="US">United States</option>
+                          <option value="UK">United Kingdom</option>
+                          <option value="EU">European Union</option>
+                          <option value="CA">Canada</option>
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="p-4 bg-gray-800/30 rounded-xl">
+                          <p className="text-sm text-gray-400">Short-Term Gains</p>
+                          <p className="text-xl font-bold text-emerald-400">
+                            {formatCurrency(shortTermGains)}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Tax rate: {calculations?.short_term_rate ?? "n/a"}
+                          </p>
+                        </div>
+                        <div className="p-4 bg-gray-800/30 rounded-xl">
+                          <p className="text-sm text-gray-400">Long-Term Gains</p>
+                          <p className="text-xl font-bold text-emerald-400">
+                            {formatCurrency(longTermGains)}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Tax rate: {calculations?.long_term_rate ?? "n/a"}
+                          </p>
+                        </div>
+                        <div className="p-4 bg-gray-800/30 rounded-xl">
+                          <p className="text-sm text-gray-400">Short-Term Tax</p>
+                          <p className="text-xl font-bold text-rose-400">
+                            {formatCurrency(shortTermTax)}
+                          </p>
+                        </div>
+                        <div className="p-4 bg-gray-800/30 rounded-xl">
+                          <p className="text-sm text-gray-400">Long-Term Tax</p>
+                          <p className="text-xl font-bold text-rose-400">
+                            {formatCurrency(longTermTax)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-white font-medium">Estimated Tax Liability</p>
+                            <p className="text-2xl font-bold text-blue-400">
+                              {formatCurrency(totalTax)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-400">Potential Savings</p>
+                            <p className="text-xl font-bold text-emerald-400">
+                              {formatCurrency(potentialSavings)}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
+                  </motion.div>
+                )}
+
+                {activeTab === "harvesting" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass-card rounded-2xl p-6"
+                  >
+                    <h3 className="text-lg font-semibold text-white mb-4">
+                      Tax Loss Harvesting Opportunities
+                    </h3>
+                    <p className="text-gray-400 text-sm mb-4">
+                      {harvestingFeature?.description ??
+                        "Automatic identification of loss-harvesting opportunities"}
+                    </p>
+
+                    {calculationPayload?.optimization_opportunities.length ? (
+                      calculationPayload.optimization_opportunities.map((opportunity) => (
+                        <div
+                          key={opportunity.action}
+                          className="p-4 bg-gray-800/30 rounded-xl mb-3"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-white font-medium">{opportunity.action}</p>
+                            <span className="text-emerald-400 font-bold">
+                              {opportunity.tax_savings ?? opportunity.potential_savings ?? "n/a"}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-400">
+                            {opportunity.replacement ?? opportunity.reason ?? "No extra details"}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 bg-gray-800/30 rounded-xl text-sm text-gray-400">
+                        No harvesting opportunities returned by backend.
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
+                {activeTab === "washsale" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass-card rounded-2xl p-6"
+                  >
+                    <div className="flex items-center gap-2 mb-4">
+                      <AlertTriangle className="w-5 h-5 text-amber-400" />
+                      <h3 className="text-lg font-semibold text-white">Wash Sale Monitor</h3>
+                    </div>
+                    <p className="text-gray-400 text-sm mb-4">
+                      {washSaleFeature?.description ??
+                        "Tracking 30-day window to avoid wash-sale violations"}
+                    </p>
+
+                    <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-3">
+                      <p className="text-white font-medium mb-1">Current status</p>
+                      <p className="text-sm text-gray-300">
+                        {calculationPayload?.harvesting_status ?? "No status from backend"}
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-gray-800/30 rounded-xl">
+                      <p className="text-sm text-gray-300">
+                        Replacement securities guidance:
+                      </p>
+                      <p className="text-sm text-blue-300 mt-2">
+                        {washSaleFeature?.replacement_securities ??
+                          "Use correlated alternatives to avoid wash-sale conflicts."}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {activeTab === "reports" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass-card rounded-2xl p-6"
+                  >
+                    <h3 className="text-lg font-semibold text-white mb-4">Tax Reports</h3>
+                    <div className="space-y-3">
+                      {reportFormats.length ? (
+                        reportFormats.map((format) => (
+                          <div
+                            key={format}
+                            className="flex items-center justify-between p-4 bg-gray-800/30 rounded-xl"
+                          >
+                            <div>
+                              <p className="text-white font-medium">Tax Report Export</p>
+                              <p className="text-sm text-gray-400">Format: {format}</p>
+                            </div>
+                            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-colors">
+                              <Download className="w-4 h-4" />
+                              Download
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-4 bg-gray-800/30 rounded-xl text-sm text-gray-400">
+                          No report formats available from backend.
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              <div className="space-y-6">
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="glass-card rounded-2xl p-6"
+                >
+                  <h3 className="text-lg font-semibold text-white mb-4">Tax Settings</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-gray-400 mb-2">Backend Jurisdiction</p>
+                      <p className="text-white">{statusPayload?.jurisdiction ?? "n/a"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400 mb-2">Selected Jurisdiction</p>
+                      <p className="text-white">{jurisdiction}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400 mb-2">Min Loss Threshold</p>
+                      <p className="text-white">
+                        {harvestingFeature?.min_loss_threshold ?? "n/a"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400 mb-2">Max Harvests/Month</p>
+                      <p className="text-white">
+                        {harvestingFeature?.max_harvests_per_month ?? "n/a"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 p-3 bg-emerald-500/10 rounded-lg">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span className="text-sm text-emerald-300">
+                        Tax engine connected to backend endpoints
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-2">Min Loss Threshold</p>
-                    <p className="text-white">$100</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-2">Max Harvests/Month</p>
-                    <p className="text-white">10</p>
-                  </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
     </div>

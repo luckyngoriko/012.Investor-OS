@@ -13,8 +13,9 @@ mod tests {
     async fn test_health_endpoint() {
         // This would test the actual API
         // For now, just a placeholder structure
-        let response = mock_health_check().await;
-        assert!(response.is_ok());
+        mock_health_check()
+            .await
+            .expect("health check should return Ok");
     }
 
     // Test authentication endpoints
@@ -24,7 +25,7 @@ mod tests {
             email: "test@example.com".to_string(),
             password: "password123".to_string(),
         };
-        
+
         let response = mock_login(credentials).await;
         assert!(response.token.is_some());
     }
@@ -35,7 +36,7 @@ mod tests {
             email: "test@example.com".to_string(),
             password: "wrongpassword".to_string(),
         };
-        
+
         let response = mock_login(credentials).await;
         assert!(response.error.is_some());
     }
@@ -45,17 +46,20 @@ mod tests {
     async fn test_get_portfolio() {
         let token = "valid_token";
         let portfolio = mock_get_portfolio(token).await;
-        
+
         assert!(portfolio.is_some());
         let portfolio = portfolio.unwrap();
-        assert!(portfolio.total_value > 0.0);
+        let total_value = portfolio["total_value"]
+            .as_f64()
+            .expect("total_value should be a number");
+        assert!(total_value > 0.0);
     }
 
     #[tokio::test]
     async fn test_get_portfolio_unauthorized() {
         let token = "invalid_token";
         let portfolio = mock_get_portfolio(token).await;
-        
+
         assert!(portfolio.is_none());
     }
 
@@ -73,9 +77,10 @@ mod tests {
             quantity: 100,
             price: 150.0,
         };
-        
-        let result = mock_create_position(request).await;
-        assert!(result.is_ok());
+
+        mock_create_position(request)
+            .await
+            .expect("create_position should succeed with valid input");
     }
 
     // Test AI proposal endpoints
@@ -88,18 +93,16 @@ mod tests {
     #[tokio::test]
     async fn test_confirm_proposal() {
         let proposal_id = "123";
-        let result = mock_confirm_proposal(proposal_id).await;
-        assert!(result.is_ok());
+        mock_confirm_proposal(proposal_id)
+            .await
+            .expect("confirm_proposal should succeed with valid proposal id");
     }
 
     // Test error handling
     #[tokio::test]
     async fn test_timeout_handling() {
-        let result = timeout(
-            Duration::from_secs(5),
-            mock_slow_endpoint()
-        ).await;
-        
+        let result = timeout(Duration::from_secs(5), mock_slow_endpoint()).await;
+
         // Should timeout
         assert!(result.is_err());
     }
@@ -111,11 +114,15 @@ mod tests {
         for _ in 0..10 {
             let _ = mock_get_portfolio("token").await;
         }
-        
-        // Next request should be rate limited
+
+        // Next request after rapid burst — in a real rate-limiting test this would
+        // return None (429). The mock always returns None for non-"valid_token" callers,
+        // so assert the expected mock behaviour explicitly.
         let result = mock_get_portfolio("token").await;
-        // In real test, would check for 429 status
-        assert!(result.is_some() || result.is_none());
+        assert!(
+            result.is_none(),
+            "non-valid token should return no portfolio"
+        );
     }
 
     // Mock structures (would be replaced with actual API calls)
@@ -177,9 +184,7 @@ mod tests {
     }
 
     async fn mock_get_proposals() -> Vec<serde_json::Value> {
-        vec![
-            serde_json::json!({"id": "1", "symbol": "TSLA", "action": "BUY"}),
-        ]
+        vec![serde_json::json!({"id": "1", "symbol": "TSLA", "action": "BUY"})]
     }
 
     async fn mock_confirm_proposal(_id: &str) -> Result<(), ()> {

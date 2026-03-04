@@ -31,10 +31,10 @@
 
 pub mod ai_os_net;
 pub mod audit;
-pub mod gdpr;
-pub mod types;
 pub mod dlp_integration;
+pub mod gdpr;
 pub mod policy_integration;
+pub mod types;
 
 pub use ai_os_net::ComplianceClient;
 pub use audit::AuditLogger;
@@ -54,7 +54,10 @@ pub fn routes() -> Router<Arc<crate::api::AppState>> {
         // GDPR endpoints
         .route("/gdpr/forget-me", delete(gdpr::handlers::forget_me))
         .route("/gdpr/export-data", get(gdpr::handlers::export_data))
-        .route("/gdpr/data-portability", get(gdpr::handlers::data_portability))
+        .route(
+            "/gdpr/data-portability",
+            get(gdpr::handlers::data_portability),
+        )
         // Compliance endpoints
         .route("/score", get(ai_os_net::handlers::get_compliance_score))
         .route("/report", get(ai_os_net::handlers::get_compliance_report))
@@ -74,14 +77,12 @@ pub fn is_eu_compliance_enabled() -> bool {
 
 /// Get AI-OS.NET URL from environment
 pub fn ai_os_net_url() -> String {
-    std::env::var("AI_OS_NET_URL")
-        .unwrap_or_else(|_| "http://localhost:8080".to_string())
+    std::env::var("AI_OS_NET_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())
 }
 
 /// Get AI-OS-PG URL from environment
 pub fn ai_os_pg_url() -> String {
-    std::env::var("AI_OS_PG_URL")
-        .unwrap_or_else(|_| "http://localhost:3000".to_string())
+    std::env::var("AI_OS_PG_URL").unwrap_or_else(|_| "http://localhost:3000".to_string())
 }
 
 #[cfg(test)]
@@ -93,7 +94,7 @@ mod tests {
         // Test default URLs
         std::env::remove_var("AI_OS_NET_URL");
         std::env::remove_var("AI_OS_PG_URL");
-        
+
         assert_eq!(ai_os_net_url(), "http://localhost:8080");
         assert_eq!(ai_os_pg_url(), "http://localhost:3000");
     }
@@ -102,7 +103,7 @@ mod tests {
     fn test_eu_compliance_feature_flag() {
         std::env::set_var("EU_COMPLIANCE_ENABLED", "true");
         assert!(is_eu_compliance_enabled());
-        
+
         std::env::set_var("EU_COMPLIANCE_ENABLED", "false");
         assert!(!is_eu_compliance_enabled());
     }

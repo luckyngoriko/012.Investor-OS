@@ -1,13 +1,11 @@
 //! S5-GP-08: RAG API endpoints respond correctly
 
-use investor_os::api::handlers::ApiResponse;
 use investor_os::api::handlers::rag::{
-    RagSearchRequest, RagSearchResponse,
-    RagSummarizeRequest, RagSummarizeResponse,
-    JournalSearchRequest, JournalSearchResponse,
+    EarningsRequest, EarningsResponse, JournalSearchRequest, JournalSearchResponse,
+    RagSearchRequest, RagSearchResponse, RagSummarizeRequest, RagSummarizeResponse,
     SecFilingRequest, SecFilingResponse,
-    EarningsRequest, EarningsResponse,
 };
+use investor_os::api::handlers::ApiResponse;
 
 #[test]
 fn test_api_response_success() {

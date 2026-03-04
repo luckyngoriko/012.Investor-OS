@@ -6,10 +6,12 @@
 //! - Consensus decision making
 //! - Specialized agent functionality
 
-use investor_os::agent::*;
 use investor_os::agent::agents::*;
-use investor_os::agent::consensus::{ConsensusEngine, Proposal, ConsensusThreshold, TradingDecision, WeightedVote};
 use investor_os::agent::communication::CommunicationHub;
+use investor_os::agent::consensus::{
+    ConsensusEngine, ConsensusThreshold, Proposal, TradingDecision, WeightedVote,
+};
+use investor_os::agent::*;
 use rust_decimal::Decimal;
 use std::time::Duration;
 
@@ -17,17 +19,17 @@ use std::time::Duration;
 #[tokio::test]
 async fn test_agent_lifecycle() {
     let coordinator = coordinator::AgentCoordinator::new(coordinator::CoordinatorConfig::default());
-    
+
     // Register a market analyst agent
     let config = AgentConfig::new(AgentRole::MarketAnalyst, "Test Analyst")
         .with_description("Test market analyst");
-    
+
     let agent = MarketAnalystAgent::new(config.clone());
     let agent_id = coordinator.register_agent(config, agent).await.unwrap();
-    
+
     // Verify agent is registered
     assert_eq!(coordinator.get_all_agents().await.len(), 1);
-    
+
     // Deregister agent
     coordinator.deregister_agent(&agent_id).await.unwrap();
     assert_eq!(coordinator.get_all_agents().await.len(), 0);
@@ -37,31 +39,44 @@ async fn test_agent_lifecycle() {
 #[tokio::test]
 async fn test_specialized_agents() {
     let coordinator = coordinator::AgentCoordinator::new(coordinator::CoordinatorConfig::default());
-    
+
     // Register agents of different types
     let analyst_config = AgentConfig::new(AgentRole::MarketAnalyst, "Analyst");
     let analyst = MarketAnalystAgent::new(analyst_config.clone());
-    let analyst_id = coordinator.register_agent(analyst_config, analyst).await.unwrap();
-    
+    let analyst_id = coordinator
+        .register_agent(analyst_config, analyst)
+        .await
+        .unwrap();
+
     let risk_config = AgentConfig::new(AgentRole::RiskAssessor, "Risk Manager");
     let risk_agent = RiskAssessorAgent::new(risk_config.clone());
-    let risk_id = coordinator.register_agent(risk_config, risk_agent).await.unwrap();
-    
+    let risk_id = coordinator
+        .register_agent(risk_config, risk_agent)
+        .await
+        .unwrap();
+
     let exec_config = AgentConfig::new(AgentRole::ExecutionSpecialist, "Execution");
     let exec_agent = ExecutionSpecialistAgent::new(exec_config.clone());
-    let exec_id = coordinator.register_agent(exec_config, exec_agent).await.unwrap();
-    
+    let exec_id = coordinator
+        .register_agent(exec_config, exec_agent)
+        .await
+        .unwrap();
+
     // Verify all agents are registered
     assert_eq!(coordinator.get_all_agents().await.len(), 3);
-    
+
     // Verify agents by role
-    let analysts = coordinator.get_agents_by_role(AgentRole::MarketAnalyst).await;
+    let analysts = coordinator
+        .get_agents_by_role(AgentRole::MarketAnalyst)
+        .await;
     assert_eq!(analysts.len(), 1);
     assert!(analysts.contains(&analyst_id));
-    
-    let risk = coordinator.get_agents_by_role(AgentRole::RiskAssessor).await;
+
+    let risk = coordinator
+        .get_agents_by_role(AgentRole::RiskAssessor)
+        .await;
     assert_eq!(risk.len(), 1);
-    
+
     // Cleanup
     coordinator.deregister_agent(&analyst_id).await.unwrap();
     coordinator.deregister_agent(&risk_id).await.unwrap();
@@ -72,22 +87,24 @@ async fn test_specialized_agents() {
 #[tokio::test]
 async fn test_market_analysis_task() {
     let coordinator = coordinator::AgentCoordinator::new(coordinator::CoordinatorConfig::default());
-    
+
     let config = AgentConfig::new(AgentRole::MarketAnalyst, "Analyst");
     let agent = MarketAnalystAgent::new(config.clone());
     let agent_id = coordinator.register_agent(config, agent).await.unwrap();
-    
+
     // Send analysis task
     let task = Task {
         id: TaskId::new(),
-        task_type: TaskType::AnalyzeMarket { symbol: "AAPL".to_string() },
+        task_type: TaskType::AnalyzeMarket {
+            symbol: "AAPL".to_string(),
+        },
         payload: serde_json::Value::Null,
         deadline: None,
         priority: Priority::Normal,
     };
-    
+
     let result = coordinator.send_task(&agent_id, task).await.unwrap();
-    
+
     assert!(matches!(result.status, TaskStatus::Success));
     match result.output {
         TaskOutput::MarketAnalysis(analysis) => {
@@ -96,7 +113,7 @@ async fn test_market_analysis_task() {
         }
         _ => panic!("Expected MarketAnalysis output"),
     }
-    
+
     // Cleanup
     coordinator.deregister_agent(&agent_id).await.unwrap();
 }
@@ -105,11 +122,11 @@ async fn test_market_analysis_task() {
 #[tokio::test]
 async fn test_risk_assessment_task() {
     let coordinator = coordinator::AgentCoordinator::new(coordinator::CoordinatorConfig::default());
-    
+
     let config = AgentConfig::new(AgentRole::RiskAssessor, "Risk Agent");
     let agent = RiskAssessorAgent::new(config.clone());
     let agent_id = coordinator.register_agent(config, agent).await.unwrap();
-    
+
     // Send risk assessment task
     let position = PositionInfo {
         symbol: "TSLA".to_string(),
@@ -118,7 +135,7 @@ async fn test_risk_assessment_task() {
         current_price: Decimal::try_from(180.0).unwrap(), // 10% loss
         side: PositionSide::Long,
     };
-    
+
     let task = Task {
         id: TaskId::new(),
         task_type: TaskType::AssessRisk { position },
@@ -126,9 +143,9 @@ async fn test_risk_assessment_task() {
         deadline: None,
         priority: Priority::High,
     };
-    
+
     let result = coordinator.send_task(&agent_id, task).await.unwrap();
-    
+
     assert!(matches!(result.status, TaskStatus::Success));
     match result.output {
         TaskOutput::RiskAssessment(assessment) => {
@@ -137,7 +154,7 @@ async fn test_risk_assessment_task() {
         }
         _ => panic!("Expected RiskAssessment output"),
     }
-    
+
     // Cleanup
     coordinator.deregister_agent(&agent_id).await.unwrap();
 }
@@ -145,9 +162,8 @@ async fn test_risk_assessment_task() {
 /// Test 5: Consensus simple majority
 #[test]
 fn test_simple_majority_consensus() {
-    
     let mut engine = ConsensusEngine::new();
-    
+
     let voters = vec![
         AgentId::from_string("agent1"),
         AgentId::from_string("agent2"),
@@ -155,44 +171,65 @@ fn test_simple_majority_consensus() {
         AgentId::from_string("agent4"),
         AgentId::from_string("agent5"),
     ];
-    
+
     let proposal = Proposal::new(
         "Buy AAPL",
         "Proposal to buy 100 shares of AAPL",
-        TradingDecision::Buy { 
-            symbol: "AAPL".to_string(), 
+        TradingDecision::Buy {
+            symbol: "AAPL".to_string(),
             quantity: Decimal::from(100),
             max_price: None,
         },
         Duration::from_secs(60),
         ConsensusThreshold::SimpleMajority,
     );
-    
+
     let proposal_id = engine.create_proposal(proposal, voters.clone());
-    
+
     // 3 out of 5 vote for (60% - meets simple majority)
-    engine.vote(&proposal_id, WeightedVote::new(
-        voters[0].clone(), VoteChoice::For, 1.0, 0.9, "Good setup"
-    )).unwrap();
-    
-    engine.vote(&proposal_id, WeightedVote::new(
-        voters[1].clone(), VoteChoice::For, 1.0, 0.8, "Agree"
-    )).unwrap();
-    
-    engine.vote(&proposal_id, WeightedVote::new(
-        voters[2].clone(), VoteChoice::For, 1.0, 0.85, "Buy signal"
-    )).unwrap();
-    
-    engine.vote(&proposal_id, WeightedVote::new(
-        voters[3].clone(), VoteChoice::Against, 1.0, 0.5, "Too risky"
-    )).unwrap();
-    
-    engine.vote(&proposal_id, WeightedVote::new(
-        voters[4].clone(), VoteChoice::Against, 1.0, 0.6, "Wait"
-    )).unwrap();
-    
+    engine
+        .vote(
+            &proposal_id,
+            WeightedVote::new(voters[0].clone(), VoteChoice::For, 1.0, 0.9, "Good setup"),
+        )
+        .unwrap();
+
+    engine
+        .vote(
+            &proposal_id,
+            WeightedVote::new(voters[1].clone(), VoteChoice::For, 1.0, 0.8, "Agree"),
+        )
+        .unwrap();
+
+    engine
+        .vote(
+            &proposal_id,
+            WeightedVote::new(voters[2].clone(), VoteChoice::For, 1.0, 0.85, "Buy signal"),
+        )
+        .unwrap();
+
+    engine
+        .vote(
+            &proposal_id,
+            WeightedVote::new(
+                voters[3].clone(),
+                VoteChoice::Against,
+                1.0,
+                0.5,
+                "Too risky",
+            ),
+        )
+        .unwrap();
+
+    engine
+        .vote(
+            &proposal_id,
+            WeightedVote::new(voters[4].clone(), VoteChoice::Against, 1.0, 0.6, "Wait"),
+        )
+        .unwrap();
+
     let result = engine.finalize(&proposal_id);
-    
+
     match result {
         consensus::ConsensusResult::Approved(decision) => {
             assert_eq!(decision.votes_for.len(), 3);
@@ -206,45 +243,59 @@ fn test_simple_majority_consensus() {
 /// Test 6: Consensus weighted voting
 #[test]
 fn test_weighted_consensus() {
-    
     let mut engine = ConsensusEngine::new();
-    
+
     let voters = vec![
         AgentId::from_string("expert"),
         AgentId::from_string("novice1"),
         AgentId::from_string("novice2"),
     ];
-    
+
     let proposal = Proposal::new(
         "Trade Decision",
         "Should we enter this trade?",
-        TradingDecision::Buy { 
-            symbol: "BTC".to_string(), 
+        TradingDecision::Buy {
+            symbol: "BTC".to_string(),
             quantity: Decimal::from(1),
             max_price: None,
         },
         Duration::from_secs(60),
         ConsensusThreshold::SimpleMajority,
     );
-    
+
     let proposal_id = engine.create_proposal(proposal, voters.clone());
-    
+
     // Expert votes against with weight 3.0
-    engine.vote(&proposal_id, WeightedVote::new(
-        voters[0].clone(), VoteChoice::Against, 3.0, 0.95, "Strong rejection"
-    )).unwrap();
-    
+    engine
+        .vote(
+            &proposal_id,
+            WeightedVote::new(
+                voters[0].clone(),
+                VoteChoice::Against,
+                3.0,
+                0.95,
+                "Strong rejection",
+            ),
+        )
+        .unwrap();
+
     // Novices vote for with weight 1.0 each
-    engine.vote(&proposal_id, WeightedVote::new(
-        voters[1].clone(), VoteChoice::For, 1.0, 0.5, "Looks good"
-    )).unwrap();
-    
-    engine.vote(&proposal_id, WeightedVote::new(
-        voters[2].clone(), VoteChoice::For, 1.0, 0.5, "I agree"
-    )).unwrap();
-    
+    engine
+        .vote(
+            &proposal_id,
+            WeightedVote::new(voters[1].clone(), VoteChoice::For, 1.0, 0.5, "Looks good"),
+        )
+        .unwrap();
+
+    engine
+        .vote(
+            &proposal_id,
+            WeightedVote::new(voters[2].clone(), VoteChoice::For, 1.0, 0.5, "I agree"),
+        )
+        .unwrap();
+
     let result = engine.finalize(&proposal_id);
-    
+
     // Should be rejected: 3.0 against vs 2.0 for
     match result {
         consensus::ConsensusResult::Rejected(_) => {}
@@ -255,15 +306,14 @@ fn test_weighted_consensus() {
 /// Test 7: Communication hub message passing
 #[tokio::test]
 async fn test_inter_agent_communication() {
-    
     let hub = CommunicationHub::new();
-    
+
     let agent1 = AgentId::from_string("agent1");
     let agent2 = AgentId::from_string("agent2");
-    
+
     let _rx1 = hub.register_agent(agent1.clone()).await;
     let mut rx2 = hub.register_agent(agent2.clone()).await;
-    
+
     // Send message from agent1 to agent2
     let msg = AgentMessage::new(
         agent1.clone(),
@@ -276,9 +326,9 @@ async fn test_inter_agent_communication() {
             metadata: [("source".to_string(), "market".to_string())].into(),
         }),
     );
-    
+
     hub.send_to(msg.clone(), &agent2).await.unwrap();
-    
+
     // Verify agent2 receives the message
     let received = rx2.recv().await;
     assert!(received.is_some());
@@ -289,15 +339,15 @@ async fn test_inter_agent_communication() {
 #[tokio::test]
 async fn test_sentiment_reader_agent() {
     let coordinator = coordinator::AgentCoordinator::new(coordinator::CoordinatorConfig::default());
-    
+
     let config = AgentConfig::new(AgentRole::SentimentReader, "Sentiment Agent");
     let agent = SentimentReaderAgent::new(config.clone());
     let agent_id = coordinator.register_agent(config, agent).await.unwrap();
-    
+
     // Send sentiment analysis task
     let task = Task {
         id: TaskId::new(),
-        task_type: TaskType::AnalyzeSentiment { 
+        task_type: TaskType::AnalyzeSentiment {
             symbol: "TSLA".to_string(),
             sources: vec!["news".to_string(), "twitter".to_string()],
         },
@@ -305,9 +355,9 @@ async fn test_sentiment_reader_agent() {
         deadline: None,
         priority: Priority::Normal,
     };
-    
+
     let result = coordinator.send_task(&agent_id, task).await.unwrap();
-    
+
     assert!(matches!(result.status, TaskStatus::Success));
     match result.output {
         TaskOutput::SentimentAnalysis(sentiment) => {
@@ -316,7 +366,7 @@ async fn test_sentiment_reader_agent() {
         }
         _ => panic!("Expected SentimentAnalysis output"),
     }
-    
+
     // Cleanup
     coordinator.deregister_agent(&agent_id).await.unwrap();
 }
@@ -325,11 +375,11 @@ async fn test_sentiment_reader_agent() {
 #[tokio::test]
 async fn test_learner_agent() {
     let coordinator = coordinator::AgentCoordinator::new(coordinator::CoordinatorConfig::default());
-    
+
     let config = AgentConfig::new(AgentRole::Learner, "Learning Agent");
     let agent = LearnerAgent::new(config.clone());
     let agent_id = coordinator.register_agent(config, agent).await.unwrap();
-    
+
     // Send learning task
     let trade = TradeResult {
         symbol: "AAPL".to_string(),
@@ -340,7 +390,7 @@ async fn test_learner_agent() {
         duration_secs: 3600,
         exit_reason: "take_profit".to_string(),
     };
-    
+
     let task = Task {
         id: TaskId::new(),
         task_type: TaskType::LearnFromTrade { trade },
@@ -348,9 +398,9 @@ async fn test_learner_agent() {
         deadline: None,
         priority: Priority::Normal,
     };
-    
+
     let result = coordinator.send_task(&agent_id, task).await.unwrap();
-    
+
     assert!(matches!(result.status, TaskStatus::Success));
     match result.output {
         TaskOutput::LearningUpdate(update) => {
@@ -358,7 +408,7 @@ async fn test_learner_agent() {
         }
         _ => panic!("Expected LearningUpdate output"),
     }
-    
+
     // Cleanup
     coordinator.deregister_agent(&agent_id).await.unwrap();
 }
@@ -367,11 +417,11 @@ async fn test_learner_agent() {
 #[tokio::test]
 async fn test_execution_specialist() {
     let coordinator = coordinator::AgentCoordinator::new(coordinator::CoordinatorConfig::default());
-    
+
     let config = AgentConfig::new(AgentRole::ExecutionSpecialist, "Execution Agent");
     let agent = ExecutionSpecialistAgent::new(config.clone());
     let agent_id = coordinator.register_agent(config, agent).await.unwrap();
-    
+
     // Send execution optimization task
     let order = OrderInfo {
         symbol: "BTC".to_string(),
@@ -379,7 +429,7 @@ async fn test_execution_specialist() {
         side: OrderSide::Buy,
         order_type: OrderType::Market,
     };
-    
+
     let task = Task {
         id: TaskId::new(),
         task_type: TaskType::OptimizeExecution { order },
@@ -387,9 +437,9 @@ async fn test_execution_specialist() {
         deadline: None,
         priority: Priority::High,
     };
-    
+
     let result = coordinator.send_task(&agent_id, task).await.unwrap();
-    
+
     assert!(matches!(result.status, TaskStatus::Success));
     match result.output {
         TaskOutput::ExecutionPlan(plan) => {
@@ -398,7 +448,7 @@ async fn test_execution_specialist() {
         }
         _ => panic!("Expected ExecutionPlan output"),
     }
-    
+
     // Cleanup
     coordinator.deregister_agent(&agent_id).await.unwrap();
 }

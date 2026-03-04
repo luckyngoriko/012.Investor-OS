@@ -4,7 +4,6 @@
 //! S7-D5: XGBoost CQ prediction model
 //! S7-D6: Anomaly detection
 
-
 use crate::analytics::{AnalyticsError, Result};
 
 /// ML feature pipeline
@@ -31,28 +30,27 @@ impl FeaturePipeline {
             signals.quality_score.inner(),
             signals.value_score.inner(),
             signals.momentum_score.inner(),
-            
             // Insider features
             signals.insider_score.inner(),
             signals.insider_flow_ratio,
-            if signals.insider_cluster_signal { 1.0 } else { 0.0 },
-            
+            if signals.insider_cluster_signal {
+                1.0
+            } else {
+                0.0
+            },
             // Sentiment features
             signals.sentiment_score.inner(),
             signals.news_sentiment,
             signals.social_sentiment,
-            
             // Regime features
             signals.regime_fit.inner(),
             signals.vix_level,
             signals.market_breadth,
-            
             // Technical features
             signals.breakout_score,
             signals.atr_trend,
             signals.rsi_14,
             signals.macd_signal,
-            
             // Interactions
             signals.quality_score.inner() * signals.value_score.inner(),
             signals.momentum_score.inner() * signals.regime_fit.inner(),
@@ -130,15 +128,13 @@ impl FeaturePipeline {
     pub fn normalize(features: &[f64]) -> Vec<f64> {
         let min = features.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = features.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        
+
         let range = max - min;
         if range == 0.0 {
             return features.to_vec();
         }
 
-        features.iter()
-            .map(|f| (f - min) / range)
-            .collect()
+        features.iter().map(|f| (f - min) / range).collect()
     }
 
     // Private helper methods
@@ -147,14 +143,14 @@ impl FeaturePipeline {
         if prices.len() < period + 1 {
             return 0.0;
         }
-        
+
         let current = prices[prices.len() - 1];
         let past = prices[prices.len() - 1 - period];
-        
+
         if past == 0.0 {
             return 0.0;
         }
-        
+
         (current - past) / past
     }
 
@@ -173,9 +169,8 @@ impl FeaturePipeline {
         }
 
         let mean = returns.iter().sum::<f64>() / returns.len() as f64;
-        let variance = returns.iter()
-            .map(|r| (r - mean) * (r - mean))
-            .sum::<f64>() / returns.len() as f64;
+        let variance =
+            returns.iter().map(|r| (r - mean) * (r - mean)).sum::<f64>() / returns.len() as f64;
 
         variance.sqrt()
     }
@@ -231,25 +226,25 @@ impl CQPredictor {
         // Simplified weights - in production would be trained
         Self {
             weights: vec![
-                0.25, // quality_score
-                0.20, // value_score
-                0.20, // momentum_score
-                0.10, // insider_score
-                0.05, // insider_flow_ratio
-                0.05, // insider_cluster
-                0.10, // sentiment_score
-                0.03, // news_sentiment
-                0.02, // social_sentiment
-                0.10, // regime_fit
+                0.25,  // quality_score
+                0.20,  // value_score
+                0.20,  // momentum_score
+                0.10,  // insider_score
+                0.05,  // insider_flow_ratio
+                0.05,  // insider_cluster
+                0.10,  // sentiment_score
+                0.03,  // news_sentiment
+                0.02,  // social_sentiment
+                0.10,  // regime_fit
                 -0.05, // vix_level
-                0.05, // market_breadth
-                0.15, // breakout_score
-                0.05, // atr_trend
-                0.05, // rsi_14
-                0.05, // macd_signal
-                0.10, // quality_x_value
-                0.05, // momentum_x_regime
-                0.05, // insider_x_sentiment
+                0.05,  // market_breadth
+                0.15,  // breakout_score
+                0.05,  // atr_trend
+                0.05,  // rsi_14
+                0.05,  // macd_signal
+                0.10,  // quality_x_value
+                0.05,  // momentum_x_regime
+                0.05,  // insider_x_sentiment
             ],
             bias: 0.0,
             threshold: 0.65, // CQ threshold
@@ -259,26 +254,29 @@ impl CQPredictor {
     /// Predict CQ score from features
     pub fn predict(&self, features: &[f64]) -> Result<f64> {
         if features.len() != self.weights.len() {
-            return Err(AnalyticsError::InvalidParameters(
-                format!("Expected {} features, got {}", self.weights.len(), features.len())
-            ));
+            return Err(AnalyticsError::InvalidParameters(format!(
+                "Expected {} features, got {}",
+                self.weights.len(),
+                features.len()
+            )));
         }
 
-        let weighted_sum: f64 = features.iter()
+        let weighted_sum: f64 = features
+            .iter()
             .zip(self.weights.iter())
             .map(|(f, w)| f * w)
             .sum();
 
         // Sigmoid activation for [0, 1] output
         let score = Self::sigmoid(weighted_sum + self.bias);
-        
+
         Ok(score)
     }
 
     /// Predict with confidence
     pub fn predict_with_confidence(&self, features: &[f64]) -> Result<(f64, f64)> {
         let score = self.predict(features)?;
-        
+
         // Confidence based on distance from threshold
         let confidence = (score - self.threshold).abs() * 2.0;
         let confidence = confidence.min(1.0).max(0.0);
@@ -294,7 +292,8 @@ impl CQPredictor {
 
     /// Feature importance
     pub fn feature_importance(&self, feature_names: &[String]) -> Vec<(String, f64)> {
-        self.weights.iter()
+        self.weights
+            .iter()
             .zip(feature_names.iter())
             .map(|(w, name)| (name.clone(), w.abs()))
             .collect()
@@ -337,9 +336,8 @@ impl AnomalyDetector {
         }
 
         let mean = data.iter().sum::<f64>() / data.len() as f64;
-        let variance = data.iter()
-            .map(|x| (x - mean) * (x - mean))
-            .sum::<f64>() / data.len() as f64;
+        let variance =
+            data.iter().map(|x| (x - mean) * (x - mean)).sum::<f64>() / data.len() as f64;
         let std = variance.sqrt();
 
         self.baseline_mean = Some(mean);
@@ -374,7 +372,11 @@ impl AnomalyDetector {
     }
 
     /// Detect regime change using change point detection
-    pub fn detect_regime_change(&self, recent_data: &[f64], previous_data: &[f64]) -> Option<RegimeChange> {
+    pub fn detect_regime_change(
+        &self,
+        recent_data: &[f64],
+        previous_data: &[f64],
+    ) -> Option<RegimeChange> {
         if recent_data.len() < self.lookback || previous_data.len() < self.lookback {
             return None;
         }
@@ -386,9 +388,10 @@ impl AnomalyDetector {
         let previous_std = Self::calculate_std(previous_data);
 
         // Welch's t-test for difference in means
-        let t_stat = (recent_mean - previous_mean) / 
-            (recent_std.powf(2.0) / recent_data.len() as f64 + 
-             previous_std.powf(2.0) / previous_data.len() as f64).sqrt();
+        let t_stat = (recent_mean - previous_mean)
+            / (recent_std.powf(2.0) / recent_data.len() as f64
+                + previous_std.powf(2.0) / previous_data.len() as f64)
+                .sqrt();
 
         if t_stat.abs() > self.threshold {
             Some(RegimeChange {
@@ -404,9 +407,8 @@ impl AnomalyDetector {
 
     fn calculate_std(data: &[f64]) -> f64 {
         let mean = data.iter().sum::<f64>() / data.len() as f64;
-        let variance = data.iter()
-            .map(|x| (x - mean) * (x - mean))
-            .sum::<f64>() / data.len() as f64;
+        let variance =
+            data.iter().map(|x| (x - mean) * (x - mean)).sum::<f64>() / data.len() as f64;
         variance.sqrt()
     }
 }
@@ -448,7 +450,7 @@ mod tests {
         let features = vec![0.5; 19]; // All features at 0.5
 
         let score = predictor.predict(&features).unwrap();
-        
+
         // Score should be in [0, 1]
         assert!(score >= 0.0 && score <= 1.0);
     }
@@ -456,7 +458,7 @@ mod tests {
     #[test]
     fn test_anomaly_detector() {
         let mut detector = AnomalyDetector::new(2.0, 20);
-        
+
         // Set baseline with normal data (with some variation)
         let baseline: Vec<f64> = (0..100).map(|i| 10.0 + (i as f64 * 0.01)).collect();
         detector.set_baseline(&baseline);

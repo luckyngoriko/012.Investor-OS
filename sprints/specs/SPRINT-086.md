@@ -3,7 +3,7 @@
 ## Metadata
 
 - Sprint ID: 86
-- Status: queued
+- Status: done
 - Gate: G33
 - Owner: Frontend + API
 - Dependencies: 85

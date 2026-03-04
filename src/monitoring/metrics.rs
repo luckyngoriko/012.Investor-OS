@@ -60,9 +60,8 @@ pub fn init_metrics() -> &'static Registry {
         registry.register(Box::new(hrm_latency)).ok();
 
         // HRM Inference Errors
-        let hrm_errors =
-            Counter::new("hrm_inference_errors_total", "Total HRM inference errors")
-                .expect("metric can be created");
+        let hrm_errors = Counter::new("hrm_inference_errors_total", "Total HRM inference errors")
+            .expect("metric can be created");
         HRM_INFERENCE_ERRORS.set(hrm_errors.clone()).ok();
         registry.register(Box::new(hrm_errors)).ok();
 
@@ -113,9 +112,8 @@ pub fn init_metrics() -> &'static Registry {
         registry.register(Box::new(ws_messages)).ok();
 
         // WebSocket Errors
-        let ws_errors =
-            IntCounter::new("websocket_errors_total", "Total WebSocket errors")
-                .expect("metric can be created");
+        let ws_errors = IntCounter::new("websocket_errors_total", "Total WebSocket errors")
+            .expect("metric can be created");
         WS_ERRORS.set(ws_errors.clone()).ok();
         registry.register(Box::new(ws_errors)).ok();
 
@@ -200,7 +198,6 @@ pub fn record_ws_error() {
 
 /// Encode metrics to Prometheus text format
 pub fn encode_metrics() -> Result<String, prometheus::Error> {
-    
     let encoder = prometheus::TextEncoder::new();
     let metric_families = registry().gather();
     encoder.encode_to_string(&metric_families)

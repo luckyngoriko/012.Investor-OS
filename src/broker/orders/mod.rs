@@ -33,22 +33,26 @@ impl OrderManager {
             Ok(()) => {
                 info!(
                     "Order submitted: {} {} {} shares of {}",
-                    order.id, order.side.as_str(), order.quantity, order.ticker
+                    order.id,
+                    order.side.as_str(),
+                    order.quantity,
+                    order.ticker
                 );
-                
+
                 // Update in database
                 self.update_order_status(order).await?;
-                
+
                 // Log to order journal
                 self.log_order_action(order, "SUBMIT", None).await?;
-                
+
                 Ok(())
             }
             Err(e) => {
                 error!("Failed to submit order {}: {}", order.id, e);
                 order.status = OrderStatus::ApiCancelled;
                 self.update_order_status(order).await?;
-                self.log_order_action(order, "SUBMIT_FAILED", Some(&e.to_string())).await?;
+                self.log_order_action(order, "SUBMIT_FAILED", Some(&e.to_string()))
+                    .await?;
                 Err(e)
             }
         }
@@ -57,9 +61,7 @@ impl OrderManager {
     /// Cancel an existing order
     pub async fn cancel_order(&self, order: &mut Order) -> Result<()> {
         if !order.is_active() {
-            return Err(BrokerError::InvalidOrder(
-                "Order is not active".to_string()
-            ));
+            return Err(BrokerError::InvalidOrder("Order is not active".to_string()));
         }
 
         match self.broker.cancel_order(order).await {
@@ -71,7 +73,8 @@ impl OrderManager {
             }
             Err(e) => {
                 error!("Failed to cancel order {}: {}", order.id, e);
-                self.log_order_action(order, "CANCEL_FAILED", Some(&e.to_string())).await?;
+                self.log_order_action(order, "CANCEL_FAILED", Some(&e.to_string()))
+                    .await?;
                 Err(e)
             }
         }
@@ -80,7 +83,7 @@ impl OrderManager {
     /// Update order status from broker
     pub async fn refresh_order_status(&self, order: &mut Order) -> Result<OrderStatus> {
         let status = self.broker.get_order_status(order).await?;
-        
+
         if status != order.status {
             info!(
                 "Order {} status changed: {:?} -> {:?}",
@@ -89,11 +92,11 @@ impl OrderManager {
             order.status = status;
             order.updated_at = Utc::now();
             self.update_order_status(order).await?;
-            
+
             // Log status change
             self.log_order_action(order, "STATUS_UPDATE", None).await?;
         }
-        
+
         Ok(status)
     }
 
@@ -115,19 +118,19 @@ impl OrderManager {
 
     /// Get active orders for a portfolio
     pub async fn get_active_orders(&self, portfolio_id: Uuid) -> Result<Vec<Order>> {
-        self.get_portfolio_orders(portfolio_id, None).await
-            .map(|orders| {
-                orders.into_iter()
-                    .filter(|o| o.is_active())
-                    .collect()
-            })
+        self.get_portfolio_orders(portfolio_id, None)
+            .await
+            .map(|orders| orders.into_iter().filter(|o| o.is_active()).collect())
     }
 
     /// Record an execution
     pub async fn record_execution(&self, execution: &Execution) -> Result<()> {
         info!(
             "Execution recorded: {} {} {} shares @ ${}",
-            execution.id, execution.side.as_str(), execution.quantity, execution.price
+            execution.id,
+            execution.side.as_str(),
+            execution.quantity,
+            execution.price
         );
         Ok(())
     }
@@ -159,7 +162,12 @@ impl OrderManager {
     ) -> Result<()> {
         info!(
             "Order Journal: {} {} {} {} shares - Status: {:?} Error: {:?}",
-            order.id, action, order.side.as_str(), order.quantity, order.status, error
+            order.id,
+            action,
+            order.side.as_str(),
+            order.quantity,
+            order.status,
+            error
         );
         Ok(())
     }

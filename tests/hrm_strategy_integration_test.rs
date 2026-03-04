@@ -2,11 +2,10 @@
 //!
 //! End-to-end test demonstrating HRM integration with StrategySelectorEngine.
 
-use investor_os::hrm::{HRM, HRMBuilder};
+use investor_os::hrm::{HRMBuilder, HRM};
 use investor_os::strategy_selector::{
-    ConvictionResult, ConvictionSource, HRMInputSignals, MarketIndicators, 
-    MarketRegime, RiskTolerance, SelectionCriteria, Strategy, StrategySelectorEngine,
-    StrategyType,
+    ConvictionResult, ConvictionSource, HRMInputSignals, MarketIndicators, MarketRegime,
+    RiskTolerance, SelectionCriteria, Strategy, StrategySelectorEngine, StrategyType,
 };
 use rust_decimal::Decimal;
 use uuid::Uuid;
@@ -26,16 +25,30 @@ fn test_hrm_integration_with_loaded_weights() {
 
     // Test different market scenarios
     let test_cases = vec![
-        ("Strong Bull", HRMInputSignals::new(0.9, 0.9, 0.9, 10.0, 0.0, 0.5)),
-        ("Moderate Bull", HRMInputSignals::new(0.7, 0.7, 0.7, 15.0, 0.0, 0.5)),
-        ("Bear Market", HRMInputSignals::new(0.2, 0.2, 0.2, 50.0, 1.0, 0.5)),
-        ("Crisis", HRMInputSignals::new(0.1, 0.1, 0.1, 80.0, 3.0, 0.5)),
+        (
+            "Strong Bull",
+            HRMInputSignals::new(0.9, 0.9, 0.9, 10.0, 0.0, 0.5),
+        ),
+        (
+            "Moderate Bull",
+            HRMInputSignals::new(0.7, 0.7, 0.7, 15.0, 0.0, 0.5),
+        ),
+        (
+            "Bear Market",
+            HRMInputSignals::new(0.2, 0.2, 0.2, 50.0, 1.0, 0.5),
+        ),
+        (
+            "Crisis",
+            HRMInputSignals::new(0.1, 0.1, 0.1, 80.0, 3.0, 0.5),
+        ),
         ("Mixed", HRMInputSignals::new(0.5, 0.5, 0.5, 25.0, 2.0, 0.5)),
     ];
 
     println!("📊 Conviction Analysis:\n");
-    println!("{:<20} {:>10} {:>12} {:>15} {:>12}", 
-             "Scenario", "Conviction", "Confidence", "Regime", "Should Trade");
+    println!(
+        "{:<20} {:>10} {:>12} {:>15} {:>12}",
+        "Scenario", "Conviction", "Confidence", "Regime", "Should Trade"
+    );
     println!("{}", "-".repeat(75));
 
     let mut bullish_count = 0;
@@ -43,18 +56,18 @@ fn test_hrm_integration_with_loaded_weights() {
 
     for (name, signals) in test_cases {
         let result = engine.calculate_conviction(&signals);
-        
+
         // Verify ML model is being used
         assert_eq!(
-            result.source, 
+            result.source,
             ConvictionSource::MLModel,
             "Should use ML model when HRM is available"
         );
-        
+
         // Verify output ranges
         assert!(result.conviction >= 0.0 && result.conviction <= 1.0);
         assert!(result.confidence >= 0.0 && result.confidence <= 1.0);
-        
+
         let should_trade = result.should_trade(0.6);
         if should_trade {
             should_trade_count += 1;
@@ -62,8 +75,9 @@ fn test_hrm_integration_with_loaded_weights() {
         if matches!(result.regime, MarketRegime::StrongUptrend) {
             bullish_count += 1;
         }
-        
-        println!("{:<20} {:>10.4} {:>12.4} {:>15?} {:>12}", 
+
+        println!(
+            "{:<20} {:>10.4} {:>12.4} {:>15?} {:>12}",
             name,
             result.conviction,
             result.confidence,
@@ -104,23 +118,30 @@ fn test_strategy_selection_with_hrm() {
     let conviction = engine.calculate_conviction(&bull_signals);
 
     println!("Market Signals: PEGY=0.9, Insider=0.9, Sentiment=0.9, VIX=10");
-    println!("HRM Output: conviction={:.4}, confidence={:.4}, regime={:?}",
-        conviction.conviction, conviction.confidence, conviction.regime);
+    println!(
+        "HRM Output: conviction={:.4}, confidence={:.4}, regime={:?}",
+        conviction.conviction, conviction.confidence, conviction.regime
+    );
 
     // In bull market, Momentum and TrendFollowing should be preferred
     assert!(matches!(conviction.regime, MarketRegime::StrongUptrend));
-    
+
     // Select strategy based on regime
     let criteria = SelectionCriteria::default();
-    let selection = engine.select_strategy(conviction.regime, criteria)
+    let selection = engine
+        .select_strategy(conviction.regime, criteria)
         .expect("Strategy selection failed");
 
-    println!("Selected Strategy: {:?} (score: {:.4}, confidence: {:.4})",
-        selection.strategy_type, selection.overall_score, selection.confidence);
+    println!(
+        "Selected Strategy: {:?} (score: {:.4}, confidence: {:.4})",
+        selection.strategy_type, selection.overall_score, selection.confidence
+    );
 
     // Verify regime fit score is high for trending strategies
-    assert!(selection.regime_fit_score > 0.5, 
-        "Selected strategy should fit the regime");
+    assert!(
+        selection.regime_fit_score > 0.5,
+        "Selected strategy should fit the regime"
+    );
 }
 
 /// Compare ML vs Heuristic conviction
@@ -137,13 +158,21 @@ fn test_ml_vs_heuristic_comparison() {
     let heuristic_engine = StrategySelectorEngine::new();
 
     let test_signals = vec![
-        ("Strong Bull", HRMInputSignals::new(0.9, 0.9, 0.9, 10.0, 0.0, 0.5)),
-        ("Weak Bull", HRMInputSignals::new(0.5, 0.5, 0.5, 20.0, 0.0, 0.5)),
+        (
+            "Strong Bull",
+            HRMInputSignals::new(0.9, 0.9, 0.9, 10.0, 0.0, 0.5),
+        ),
+        (
+            "Weak Bull",
+            HRMInputSignals::new(0.5, 0.5, 0.5, 20.0, 0.0, 0.5),
+        ),
         ("Bear", HRMInputSignals::new(0.2, 0.2, 0.2, 50.0, 1.0, 0.5)),
     ];
 
-    println!("{:<15} {:>12} {:>12} {:>12} {:>12}", 
-             "Scenario", "ML Conv", "Heur Conv", "Δ Conv", "Δ Conf");
+    println!(
+        "{:<15} {:>12} {:>12} {:>12} {:>12}",
+        "Scenario", "ML Conv", "Heur Conv", "Δ Conv", "Δ Conf"
+    );
     println!("{}", "-".repeat(65));
 
     for (name, signals) in test_signals {
@@ -156,12 +185,9 @@ fn test_ml_vs_heuristic_comparison() {
         let conv_diff = ml_result.conviction - heuristic_result.conviction;
         let conf_diff = ml_result.confidence - heuristic_result.confidence;
 
-        println!("{:<15} {:>12.4} {:>12.4} {:>+12.4} {:>+12.4}",
-            name,
-            ml_result.conviction,
-            heuristic_result.conviction,
-            conv_diff,
-            conf_diff
+        println!(
+            "{:<15} {:>12.4} {:>12.4} {:>+12.4} {:>+12.4}",
+            name, ml_result.conviction, heuristic_result.conviction, conv_diff, conf_diff
         );
 
         // Both should produce valid results in [0, 1]
@@ -186,7 +212,10 @@ fn test_hrm_fallback_on_error() {
 
     // Should get a valid result
     assert!(result.conviction >= 0.0 && result.conviction <= 1.0);
-    println!("✅ Fallback mechanism works: conviction={:.4}", result.conviction);
+    println!(
+        "✅ Fallback mechanism works: conviction={:.4}",
+        result.conviction
+    );
 }
 
 /// Test trading decision integration
@@ -206,8 +235,10 @@ fn test_trading_decision_workflow() {
     let result = engine.calculate_conviction(&signals);
 
     println!("Market Signal Analysis:");
-    println!("  PEGY: {:.2}, Insider: {:.2}, Sentiment: {:.2}", 
-        signals.pegy, signals.insider, signals.sentiment);
+    println!(
+        "  PEGY: {:.2}, Insider: {:.2}, Sentiment: {:.2}",
+        signals.pegy, signals.insider, signals.sentiment
+    );
     println!("  VIX: {:.1}, Regime: {:.1}", signals.vix, signals.regime);
     println!();
     println!("HRM Analysis:");
@@ -220,10 +251,15 @@ fn test_trading_decision_workflow() {
     for threshold in thresholds {
         let should_trade = result.should_trade(threshold);
         let signal_strength = result.signal_strength();
-        
-        println!("  Threshold {:.1}: {} (strength: {:.4})",
+
+        println!(
+            "  Threshold {:.1}: {} (strength: {:.4})",
             threshold,
-            if should_trade { "TRADE ✅" } else { "HOLD ❌" },
+            if should_trade {
+                "TRADE ✅"
+            } else {
+                "HOLD ❌"
+            },
             signal_strength
         );
     }

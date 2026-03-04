@@ -1,5 +1,5 @@
 //! Graduation Assessment Engine
-//! 
+//!
 //! Evaluates if a strategy is ready for live trading based on
 //! realistic criteria (v2.0 - NOT the impossible 200x goal)
 
@@ -14,7 +14,7 @@ impl GraduationAssessor {
     pub fn new(config: GraduationConfig) -> Self {
         Self { config }
     }
-    
+
     /// Perform comprehensive graduation assessment
     pub fn assess(
         &self,
@@ -26,12 +26,12 @@ impl GraduationAssessor {
     ) -> GraduationAssessment {
         let mut fail_reasons = vec![];
         let mut improvement_areas = vec![];
-        
+
         // CHECK 1: CAGR (Realistic targets)
         let cagr = metrics.cagr;
         let cagr_target = self.config.cagr_targets.level1_min;
         let cagr_max = self.config.cagr_targets.max_suspicious;
-        
+
         if cagr < cagr_target {
             fail_reasons.push(FailReason::InsufficientReturns {
                 current: cagr,
@@ -50,7 +50,7 @@ impl GraduationAssessor {
                 explanation: format!("CAGR {:.1}% exceeds realistic maximum", cagr * 100.0),
             });
         }
-        
+
         // CHECK 2: Risk Metrics
         if metrics.max_drawdown < -self.config.risk_limits.max_drawdown {
             fail_reasons.push(FailReason::ExcessiveDrawdown {
@@ -58,14 +58,14 @@ impl GraduationAssessor {
                 max_allowed: self.config.risk_limits.max_drawdown,
             });
         }
-        
+
         if metrics.sharpe_ratio < self.config.statistical_requirements.min_sharpe {
             fail_reasons.push(FailReason::LowSharpe {
                 current: metrics.sharpe_ratio,
                 required: self.config.statistical_requirements.min_sharpe,
             });
         }
-        
+
         // CHECK 3: Statistical Significance
         if metrics.total_trades < self.config.statistical_requirements.min_total_trades {
             fail_reasons.push(FailReason::InsufficientTrades {
@@ -73,7 +73,7 @@ impl GraduationAssessor {
                 required: self.config.statistical_requirements.min_total_trades,
             });
         }
-        
+
         // CHECK 3b: Payoff Ratio (avoid lottery-ticket strategies)
         if metrics.payoff_ratio > self.config.statistical_requirements.max_payoff_ratio {
             fail_reasons.push(FailReason::HighPayoffRatio {
@@ -81,7 +81,7 @@ impl GraduationAssessor {
                 max_allowed: self.config.statistical_requirements.max_payoff_ratio,
             });
         }
-        
+
         // CHECK 4: Stress Testing
         if !stress_test.passed {
             fail_reasons.push(FailReason::FailedStressTest {
@@ -89,28 +89,33 @@ impl GraduationAssessor {
                 loss: stress_test.worst_drawdown,
             });
         }
-        
+
         // CHECK 5: Walk-Forward Validation
         if !walk_forward.is_consistent {
             fail_reasons.push(FailReason::InconsistentWalkForward {
                 correlation: walk_forward.avg_correlation,
             });
         }
-        
+
         // CHECK 6: Risk of Ruin
         if monte_carlo.probability_of_ruin > self.config.risk_limits.max_risk_of_ruin {
             fail_reasons.push(FailReason::HighRiskOfRuin {
                 probability: monte_carlo.probability_of_ruin,
             });
         }
-        
+
         // DETERMINE GRADUATION LEVEL
         let level = if !fail_reasons.is_empty() {
-            let recommendations = improvement_areas.iter()
-                .map(|a| format!("[{:?}] {} -> {}: {}", 
-                    a.priority, a.current_value, a.target_value, a.suggestion))
+            let recommendations = improvement_areas
+                .iter()
+                .map(|a| {
+                    format!(
+                        "[{:?}] {} -> {}: {}",
+                        a.priority, a.current_value, a.target_value, a.suggestion
+                    )
+                })
                 .collect();
-            
+
             GraduationLevel::NotReady {
                 reasons: fail_reasons.clone(),
                 recommendations,
@@ -118,7 +123,7 @@ impl GraduationAssessor {
         } else {
             self.determine_graduation_level(metrics)
         };
-        
+
         // Calculate overall score
         let overall_score = self.calculate_overall_score(
             metrics,
@@ -127,7 +132,7 @@ impl GraduationAssessor {
             monte_carlo,
             &fail_reasons,
         );
-        
+
         GraduationAssessment {
             level,
             overall_score,
@@ -140,14 +145,14 @@ impl GraduationAssessor {
             improvement_areas,
         }
     }
-    
+
     fn determine_graduation_level(&self, metrics: &PerformanceMetrics) -> GraduationLevel {
         use rust_decimal::Decimal;
-        
+
         let cagr = metrics.cagr;
         let sharpe = metrics.sharpe_ratio;
         let months = metrics.monthly_returns.len() as u32;
-        
+
         // Level 5: Master Level (3+ years track record)
         if months >= 36 && cagr >= 0.30 && sharpe >= 1.5 {
             return GraduationLevel::MasterLevel {
@@ -156,7 +161,7 @@ impl GraduationAssessor {
                 track_record_years: months as f64 / 12.0,
             };
         }
-        
+
         // Level 4: Full Strategy (12+ months, 25%+ CAGR)
         if months >= 12 && cagr >= 0.25 && sharpe >= 1.3 {
             return GraduationLevel::FullStrategy {
@@ -167,7 +172,7 @@ impl GraduationAssessor {
                 allow_margin: true,
             };
         }
-        
+
         // Level 3: Small Live (6+ months, 20%+ CAGR)
         if months >= 6 && cagr >= 0.20 && sharpe >= 1.2 {
             return GraduationLevel::SmallLive {
@@ -178,7 +183,7 @@ impl GraduationAssessor {
                 duration_months: 6,
             };
         }
-        
+
         // Level 2: Micro Live (3+ months, 15%+ CAGR)
         if months >= 3 && cagr >= 0.15 && sharpe >= 1.0 {
             return GraduationLevel::MicroLive {
@@ -189,7 +194,7 @@ impl GraduationAssessor {
                 duration_months: 3,
             };
         }
-        
+
         // Level 1: Paper Trading
         GraduationLevel::PaperTrading {
             max_position_size: Decimal::from(1000),
@@ -198,7 +203,7 @@ impl GraduationAssessor {
             duration_months: 6,
         }
     }
-    
+
     fn calculate_overall_score(
         &self,
         metrics: &PerformanceMetrics,
@@ -209,32 +214,32 @@ impl GraduationAssessor {
     ) -> f64 {
         let mut score = 0.0;
         let mut weights = 0.0;
-        
+
         // Returns (30%)
         let return_score = (metrics.cagr / 0.30).min(1.0);
         score += return_score * 0.30;
         weights += 0.30;
-        
+
         // Risk-adjusted (25%)
         let risk_score = (metrics.sharpe_ratio / 2.0).min(1.0);
         score += risk_score * 0.25;
         weights += 0.25;
-        
+
         // Consistency (15%)
         score += walk_forward.consistency_score * 0.15;
         weights += 0.15;
-        
+
         // Stress test (15%)
         score += stress.survival_rate * 0.15;
         weights += 0.15;
-        
+
         // Monte Carlo (10%)
         score += monte_carlo.survival_rate * 0.10;
         weights += 0.10;
-        
+
         // Penalize for failures
         let failure_penalty = fail_reasons.len() as f64 * 0.05;
-        
+
         (score / weights - failure_penalty).max(0.0)
     }
 }

@@ -3,27 +3,34 @@
  * Complete dashboard for HRM visualization
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { HRMInferenceRequest, HRMInferenceResponse, HistoricalPrediction } from '../types/hrm';
-import { inferHRM, getHRMHealth, generateMockHistory } from '../api/hrm';
-import { ConvictionGauge } from './ConvictionGauge';
-import { RegimeIndicator, RegimeCard } from './RegimeIndicator';
-import { HRMInputForm } from './HRMInputForm';
-import { SignalStrengthChart } from './SignalStrengthChart';
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  HRMInferenceRequest,
+  HRMInferenceResponse,
+  HistoricalPrediction,
+} from "../types/hrm";
+import { inferHRM, getHRMHealth, fetchHRMHistory } from "../api/hrm";
+import { ConvictionGauge } from "./ConvictionGauge";
+import { RegimeIndicator, RegimeCard } from "./RegimeIndicator";
+import { HRMInputForm } from "./HRMInputForm";
+import { SignalStrengthChart } from "./SignalStrengthChart";
 
 export const HRMDashboard: React.FC = () => {
   const [result, setResult] = useState<HRMInferenceResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [health, setHealth] = useState<{ status: string; model_loaded: boolean } | null>(null);
+  const [health, setHealth] = useState<{
+    status: string;
+    model_loaded: boolean;
+  } | null>(null);
   const [history, setHistory] = useState<HistoricalPrediction[]>([]);
 
   // Load initial data
   useEffect(() => {
     checkHealth();
-    // Load mock history for demonstration
-    setHistory(generateMockHistory(30));
-    
+    // Load history from backend
+    fetchHRMHistory(30).then(setHistory);
+
     // Run initial analysis with default values
     handleAnalyze({
       pegy: 0.8,
@@ -43,7 +50,7 @@ export const HRMDashboard: React.FC = () => {
         model_loaded: healthData.model_loaded,
       });
     } catch (err) {
-      setHealth({ status: 'unhealthy', model_loaded: false });
+      setHealth({ status: "unhealthy", model_loaded: false });
     }
   };
 
@@ -65,7 +72,7 @@ export const HRMDashboard: React.FC = () => {
       };
       setHistory((prev) => [newEntry, ...prev].slice(0, 50));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Analysis failed');
+      setError(err instanceof Error ? err.message : "Analysis failed");
     } finally {
       setLoading(false);
     }
@@ -82,25 +89,25 @@ export const HRMDashboard: React.FC = () => {
           <p className="text-gray-600 mt-2">
             Hierarchical Reasoning Model - ML-powered trading conviction
           </p>
-          
+
           {/* Health Status */}
           {health && (
             <div className="flex items-center gap-2 mt-4">
               <span className="text-sm text-gray-500">Model Status:</span>
               <span
                 className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  health.status === 'healthy'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
+                  health.status === "healthy"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-red-100 text-red-800"
                 }`}
               >
                 <span
                   className={`w-2 h-2 rounded-full mr-2 ${
-                    health.status === 'healthy' ? 'bg-green-500' : 'bg-red-500'
+                    health.status === "healthy" ? "bg-green-500" : "bg-red-500"
                   }`}
                 />
-                {health.status === 'healthy' ? 'Online' : 'Offline'}
-                {health.model_loaded && ' (ML Model Active)'}
+                {health.status === "healthy" ? "Online" : "Offline"}
+                {health.model_loaded && " (ML Model Active)"}
               </span>
             </div>
           )}
@@ -128,7 +135,7 @@ export const HRMDashboard: React.FC = () => {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               HRM Analysis
             </h2>
-            
+
             {result ? (
               <div className="space-y-6">
                 {/* Conviction Gauge */}
@@ -165,13 +172,13 @@ export const HRMDashboard: React.FC = () => {
                 <div
                   className={`p-4 rounded-lg text-center ${
                     result.should_trade
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
                   }`}
                 >
                   <p className="text-sm opacity-75">Trading Signal</p>
                   <p className="text-xl font-bold">
-                    {result.should_trade ? '🚀 TRADE' : '⛔ HOLD'}
+                    {result.should_trade ? "🚀 TRADE" : "⛔ HOLD"}
                   </p>
                 </div>
 
@@ -201,10 +208,10 @@ export const HRMDashboard: React.FC = () => {
             {result && (
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                 <p className="text-sm text-blue-800">
-                  <span className="font-medium">Source:</span>{' '}
-                  {result.source === 'MLModel'
-                    ? '🧠 Neural Network (9,347 params)'
-                    : '📊 Heuristic Formula'}
+                  <span className="font-medium">Source:</span>{" "}
+                  {result.source === "MLModel"
+                    ? "🧠 Neural Network (9,347 params)"
+                    : "📊 Heuristic Formula"}
                 </p>
               </div>
             )}

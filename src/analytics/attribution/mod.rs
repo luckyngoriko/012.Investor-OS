@@ -5,7 +5,6 @@
 use rust_decimal::Decimal;
 use std::collections::HashMap;
 
-
 /// Performance attribution analyzer
 pub struct AttributionAnalyzer;
 
@@ -45,7 +44,7 @@ pub struct FactorAttribution {
 
 impl AttributionAnalyzer {
     /// Brinson-Fachler attribution model
-    /// 
+    ///
     /// Decomposes excess return into:
     /// - Allocation effect: From over/under-weighting sectors
     /// - Selection effect: From picking better stocks within sectors
@@ -62,7 +61,8 @@ impl AttributionAnalyzer {
         let mut sector_attributions = Vec::new();
 
         // Get all sectors
-        let mut all_sectors: Vec<String> = portfolio_weights.keys()
+        let mut all_sectors: Vec<String> = portfolio_weights
+            .keys()
             .chain(benchmark_weights.keys())
             .cloned()
             .collect();
@@ -111,7 +111,7 @@ impl AttributionAnalyzer {
     }
 
     /// Factor attribution using regression
-    /// 
+    ///
     /// Identifies exposure to common factors:
     /// - Market
     /// - Size (SMB)
@@ -131,10 +131,10 @@ impl AttributionAnalyzer {
 
             // Calculate correlation (simplified as "exposure")
             let exposure = Self::calculate_beta(portfolio_returns, returns);
-            
+
             // Calculate contribution
-            let avg_factor_return = returns.iter().sum::<Decimal>() 
-                / Decimal::from(returns.len() as i32);
+            let avg_factor_return =
+                returns.iter().sum::<Decimal>() / Decimal::from(returns.len() as i32);
             let contribution = exposure * avg_factor_return;
 
             attributions.push(FactorAttribution {
@@ -155,20 +155,24 @@ impl AttributionAnalyzer {
         }
 
         let n = Decimal::from(portfolio_returns.len() as i32);
-        
+
         let mean_p = portfolio_returns.iter().sum::<Decimal>() / n;
         let mean_f = factor_returns.iter().sum::<Decimal>() / n;
 
         // Covariance
-        let cov: Decimal = portfolio_returns.iter()
+        let cov: Decimal = portfolio_returns
+            .iter()
             .zip(factor_returns.iter())
             .map(|(p, f)| (*p - mean_p) * (*f - mean_f))
-            .sum::<Decimal>() / n;
+            .sum::<Decimal>()
+            / n;
 
         // Variance of factor
-        let var_f: Decimal = factor_returns.iter()
+        let var_f: Decimal = factor_returns
+            .iter()
             .map(|f| (*f - mean_f) * (*f - mean_f))
-            .sum::<Decimal>() / n;
+            .sum::<Decimal>()
+            / n;
 
         if var_f == Decimal::ZERO {
             return Decimal::ZERO;
@@ -188,19 +192,18 @@ impl ContributionAnalyzer {
     ) -> Vec<PositionContribution> {
         let total_pnl: Decimal = positions.iter().map(|(_, _, _, pnl)| pnl).sum();
 
-        positions.iter()
-            .map(|(ticker, weight, ret, pnl)| {
-                PositionContribution {
-                    ticker: ticker.clone(),
-                    weight: *weight,
-                    return_pct: *ret,
-                    pnl: *pnl,
-                    contribution_pct: if total_pnl != Decimal::ZERO {
-                        *pnl / total_pnl
-                    } else {
-                        Decimal::ZERO
-                    },
-                }
+        positions
+            .iter()
+            .map(|(ticker, weight, ret, pnl)| PositionContribution {
+                ticker: ticker.clone(),
+                weight: *weight,
+                return_pct: *ret,
+                pnl: *pnl,
+                contribution_pct: if total_pnl != Decimal::ZERO {
+                    *pnl / total_pnl
+                } else {
+                    Decimal::ZERO
+                },
             })
             .collect()
     }
@@ -224,23 +227,33 @@ mod tests {
     fn test_brinson_attribution() {
         let portfolio_weights: HashMap<String, Decimal> = [
             ("Tech".to_string(), Decimal::from(60) / Decimal::from(100)),
-            ("Finance".to_string(), Decimal::from(40) / Decimal::from(100)),
-        ].into();
+            (
+                "Finance".to_string(),
+                Decimal::from(40) / Decimal::from(100),
+            ),
+        ]
+        .into();
 
         let benchmark_weights: HashMap<String, Decimal> = [
             ("Tech".to_string(), Decimal::from(50) / Decimal::from(100)),
-            ("Finance".to_string(), Decimal::from(50) / Decimal::from(100)),
-        ].into();
+            (
+                "Finance".to_string(),
+                Decimal::from(50) / Decimal::from(100),
+            ),
+        ]
+        .into();
 
         let portfolio_returns: HashMap<String, Decimal> = [
             ("Tech".to_string(), Decimal::from(10) / Decimal::from(100)),
             ("Finance".to_string(), Decimal::from(5) / Decimal::from(100)),
-        ].into();
+        ]
+        .into();
 
         let benchmark_returns: HashMap<String, Decimal> = [
             ("Tech".to_string(), Decimal::from(8) / Decimal::from(100)),
             ("Finance".to_string(), Decimal::from(6) / Decimal::from(100)),
-        ].into();
+        ]
+        .into();
 
         let result = AttributionAnalyzer::brinson_attribution(
             &portfolio_weights,
@@ -254,7 +267,8 @@ mod tests {
         // Excess return: 0.01
 
         assert!(result.total_return > Decimal::ZERO);
-        assert!(result.allocation_effect != Decimal::ZERO || 
-                result.selection_effect != Decimal::ZERO);
+        assert!(
+            result.allocation_effect != Decimal::ZERO || result.selection_effect != Decimal::ZERO
+        );
     }
 }

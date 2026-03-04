@@ -12,13 +12,13 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+use crate::analytics::attribution::AttributionAnalyzer;
+use crate::analytics::backtest::{BacktestConfig, SlippageModel};
+use crate::analytics::ml::{CQPredictor, FeaturePipeline};
+use crate::analytics::risk::RiskAnalyzer;
 use crate::api::handlers::ApiResponse;
 use crate::api::AppState;
-use crate::analytics::backtest::{BacktestConfig, SlippageModel};
-use crate::analytics::risk::RiskAnalyzer;
-use crate::analytics::ml::{CQPredictor, FeaturePipeline};
-use crate::analytics::attribution::AttributionAnalyzer;
-use crate::signals::{TickerSignals, QualityScore};
+use crate::signals::{QualityScore, TickerSignals};
 use std::collections::HashMap;
 
 /// Backtest request
@@ -53,11 +53,11 @@ pub async fn run_backtest(
         start_date: req.start_date,
         end_date: req.end_date,
         initial_capital: req.initial_capital,
-        commission_rate: req.commission_rate.unwrap_or_else(|| 
-            Decimal::from(1) / Decimal::from(1000) // 0.1% default
+        commission_rate: req.commission_rate.unwrap_or_else(
+            || Decimal::from(1) / Decimal::from(1000), // 0.1% default
         ),
         slippage_model: SlippageModel::Fixed(
-            Decimal::from(1) / Decimal::from(1000) // 0.1% default
+            Decimal::from(1) / Decimal::from(1000), // 0.1% default
         ),
         rebalance_frequency: chrono::Duration::days(1),
         max_positions: 20,
@@ -65,7 +65,11 @@ pub async fn run_backtest(
     };
 
     // Run backtest using analytics service
-    match state.analytics_service.run_backtest(config, req.tickers).await {
+    match state
+        .analytics_service
+        .run_backtest(config, req.tickers)
+        .await
+    {
         Ok(result) => {
             let response = BacktestResponse {
                 total_return: result.total_return,
@@ -103,22 +107,39 @@ pub struct RiskMetricsResponse {
 }
 
 /// GET /api/analytics/risk - Get risk metrics
-/// 
-/// Calculates risk metrics using historical returns.
-/// For now uses simulated returns based on lookback period.
+///
+/// Calculates risk metrics using real portfolio returns from the database.
+/// Returns an error if insufficient return data is available.
 pub async fn get_risk_metrics(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Query(req): Query<RiskMetricsRequest>,
 ) -> Result<Json<ApiResponse<RiskMetricsResponse>>, StatusCode> {
-    // Generate simulated daily returns for demonstration
-    // In production, this would fetch actual portfolio returns from database
-    let lookback_days = req.lookback_days.unwrap_or(252); // Default 1 year
-    let returns = generate_simulated_returns(lookback_days);
-    
+    let lookback_days = req.lookback_days.unwrap_or(252);
+
+    // Fetch real portfolio returns from database
+    let returns = fetch_portfolio_returns(&state.pool, &req.portfolio_id, lookback_days).await;
+
+    let returns = match returns {
+        Ok(r) if r.len() >= 30 => r,
+        Ok(r) => {
+            return Ok(Json(ApiResponse::error(format!(
+                "Insufficient portfolio return data: found {} returns, need at least 30",
+                r.len()
+            ))));
+        }
+        Err(e) => {
+            tracing::warn!("Failed to fetch portfolio returns: {}", e);
+            return Ok(Json(ApiResponse::error(format!(
+                "Failed to fetch portfolio returns: {}",
+                e
+            ))));
+        }
+    };
+
     // Use RiskAnalyzer for calculations
     let risk_free_rate = Decimal::from(2) / Decimal::from(100); // 2% annual
     let analyzer = RiskAnalyzer::new(returns, risk_free_rate);
-    
+
     match analyzer.calculate_all() {
         Ok(metrics) => {
             let response = RiskMetricsResponse {
@@ -138,30 +159,37 @@ pub async fn get_risk_metrics(
     }
 }
 
-/// Generate simulated daily returns for risk calculation
-/// 
-/// In production, this would be replaced with actual portfolio returns
-/// fetched from the database based on portfolio_id.
-fn generate_simulated_returns(days: i64) -> Vec<Decimal> {
-    use rand::Rng;
-    use rust_decimal::MathematicalOps;
-    
-    let mut rng = rand::thread_rng();
-    let mut returns = Vec::new();
-    
-    // Simulate daily returns with mean ~0.0004 (10% annual) and std ~0.02
-    for _ in 0..days {
-        // Generate random return using Box-Muller transform approximation
-        let u1: f64 = rng.gen();
-        let u2: f64 = rng.gen();
-        let z = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos();
-        
-        // Convert to daily return (mean 0.04%, std 2%)
-        let daily_return = 0.0004 + z * 0.02;
-        returns.push(Decimal::try_from(daily_return).unwrap_or(Decimal::ZERO));
-    }
-    
-    returns
+/// Fetch real portfolio daily returns from database
+async fn fetch_portfolio_returns(
+    pool: &sqlx::PgPool,
+    portfolio_id: &str,
+    lookback_days: i64,
+) -> std::result::Result<Vec<Decimal>, String> {
+    let rows = sqlx::query(
+        r#"
+        SELECT daily_return
+        FROM portfolio_snapshots
+        WHERE portfolio_id = $1
+          AND snapshot_date >= NOW() - make_interval(days => $2)
+        ORDER BY snapshot_date ASC
+        "#,
+    )
+    .bind(portfolio_id)
+    .bind(lookback_days as i32)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    use sqlx::Row;
+    let returns: Vec<Decimal> = rows
+        .iter()
+        .filter_map(|row| {
+            let val: f64 = row.try_get("daily_return").ok()?;
+            Decimal::try_from(val).ok()
+        })
+        .collect();
+
+    Ok(returns)
 }
 
 /// Attribution request
@@ -189,22 +217,76 @@ pub struct SectorAttribution {
     pub total_effect: Decimal,
 }
 
+/// S&P 500 approximate sector benchmark weights (static reference)
+const SP500_BENCHMARK_WEIGHTS: &[(&str, &str)] = &[
+    ("Technology", "0.29"),
+    ("Healthcare", "0.13"),
+    ("Financials", "0.13"),
+    ("Consumer Discretionary", "0.11"),
+    ("Communication Services", "0.09"),
+    ("Industrials", "0.08"),
+    ("Consumer Staples", "0.06"),
+    ("Energy", "0.04"),
+    ("Utilities", "0.03"),
+    ("Real Estate", "0.02"),
+    ("Materials", "0.02"),
+];
+
 /// GET /api/analytics/attribution - Get performance attribution
-/// 
+///
 /// Uses Brinson-Fachler model to decompose returns into:
 /// - Allocation effect: From sector over/under-weighting
 /// - Selection effect: From stock picking within sectors
-/// 
-/// For now uses simulated portfolio/benchmark data.
+///
+/// Fetches real portfolio positions from database and uses static S&P 500
+/// sector weights as benchmark.
 pub async fn get_attribution(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Query(req): Query<AttributionRequest>,
 ) -> Result<Json<ApiResponse<AttributionResponse>>, StatusCode> {
-    // Generate simulated portfolio and benchmark data
-    // In production, fetch real data from portfolio database
-    let (portfolio_weights, benchmark_weights, portfolio_returns, benchmark_returns) = 
-        generate_simulated_attribution_data(&req.portfolio_id);
-    
+    // Fetch real portfolio weights from positions table, grouped by ticker
+    let (portfolio_weights, portfolio_returns) =
+        match fetch_attribution_data(&state.pool, &req.portfolio_id, req.start_date, req.end_date)
+            .await
+        {
+            Ok(data) if data.0.is_empty() => {
+                return Ok(Json(ApiResponse::error(
+                    "Insufficient attribution data: no positions found for portfolio",
+                )));
+            }
+            Ok(data) => data,
+            Err(e) => {
+                tracing::warn!("Failed to fetch attribution data: {}", e);
+                return Ok(Json(ApiResponse::error(format!(
+                    "Failed to fetch attribution data: {}",
+                    e
+                ))));
+            }
+        };
+
+    // Build benchmark weights from static S&P 500 sector weights
+    let benchmark_weights: HashMap<String, Decimal> = SP500_BENCHMARK_WEIGHTS
+        .iter()
+        .map(|(sector, weight)| {
+            (
+                sector.to_string(),
+                weight.parse::<Decimal>().unwrap_or(Decimal::ZERO),
+            )
+        })
+        .collect();
+
+    // Benchmark returns: assume market-average return spread across sectors
+    // (in a full implementation, fetch per-sector ETF returns)
+    let benchmark_returns: HashMap<String, Decimal> = benchmark_weights
+        .keys()
+        .map(|sector| {
+            (
+                sector.clone(),
+                Decimal::from(5) / Decimal::from(100), // 5% annualized default
+            )
+        })
+        .collect();
+
     // Calculate attribution using Brinson-Fachler model
     let result = AttributionAnalyzer::brinson_attribution(
         &portfolio_weights,
@@ -212,9 +294,10 @@ pub async fn get_attribution(
         &portfolio_returns,
         &benchmark_returns,
     );
-    
+
     // Convert to API response format
-    let sector_attributions: Vec<SectorAttribution> = result.sector_attributions
+    let sector_attributions: Vec<SectorAttribution> = result
+        .sector_attributions
         .into_iter()
         .map(|sa| SectorAttribution {
             sector: sa.sector,
@@ -223,58 +306,75 @@ pub async fn get_attribution(
             total_effect: sa.total_effect,
         })
         .collect();
-    
+
     let response = AttributionResponse {
         total_return: result.total_return,
         allocation_effect: result.allocation_effect,
         selection_effect: result.selection_effect,
         sector_attributions,
     };
-    
+
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// Generate simulated attribution data
-/// 
-/// In production, this would fetch real portfolio and benchmark data
-fn generate_simulated_attribution_data(
-    _portfolio_id: &str
-) -> (
-    HashMap<String, Decimal>, // portfolio weights
-    HashMap<String, Decimal>, // benchmark weights
-    HashMap<String, Decimal>, // portfolio returns
-    HashMap<String, Decimal>, // benchmark returns
-) {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
-    
-    let sectors = vec!["Technology", "Finance", "Healthcare", "Energy", "Consumer"];
-    
-    let mut portfolio_weights = HashMap::new();
-    let mut benchmark_weights = HashMap::new();
-    let mut portfolio_returns = HashMap::new();
-    let mut benchmark_returns = HashMap::new();
-    
-    // Equal benchmark weights
-    let bench_weight = Decimal::from(1) / Decimal::from(sectors.len() as i32);
-    
-    for sector in sectors {
-        // Portfolio weights vary from benchmark
-        let weight_variation: f64 = rng.gen_range(-0.1..0.1);
-        let port_weight = (bench_weight + Decimal::try_from(weight_variation).unwrap_or(Decimal::ZERO))
-            .max(Decimal::ZERO);
-        
-        // Returns vary by sector
-        let port_return: f64 = rng.gen_range(-0.05..0.15); // -5% to +15%
-        let bench_return: f64 = rng.gen_range(-0.03..0.10); // -3% to +10%
-        
-        portfolio_weights.insert(sector.to_string(), port_weight);
-        benchmark_weights.insert(sector.to_string(), bench_weight);
-        portfolio_returns.insert(sector.to_string(), Decimal::try_from(port_return).unwrap_or(Decimal::ZERO));
-        benchmark_returns.insert(sector.to_string(), Decimal::try_from(bench_return).unwrap_or(Decimal::ZERO));
+/// Fetch real portfolio weights and returns from positions table, grouped by ticker
+async fn fetch_attribution_data(
+    pool: &sqlx::PgPool,
+    portfolio_id: &str,
+    start_date: DateTime<Utc>,
+    end_date: DateTime<Utc>,
+) -> std::result::Result<(HashMap<String, Decimal>, HashMap<String, Decimal>), String> {
+    let rows = sqlx::query(
+        r#"
+        SELECT ticker,
+               SUM(market_value) AS total_value,
+               AVG(daily_return)  AS avg_return
+        FROM positions
+        WHERE portfolio_id = $1
+          AND updated_at >= $2
+          AND updated_at <= $3
+        GROUP BY ticker
+        "#,
+    )
+    .bind(portfolio_id)
+    .bind(start_date)
+    .bind(end_date)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    use sqlx::Row;
+    let total_portfolio_value: Decimal = rows
+        .iter()
+        .filter_map(|row| {
+            let val: f64 = row.try_get("total_value").ok()?;
+            Decimal::try_from(val).ok()
+        })
+        .sum();
+
+    let mut weights = HashMap::new();
+    let mut returns = HashMap::new();
+
+    for row in &rows {
+        let ticker: String = row.try_get("ticker").map_err(|e| e.to_string())?;
+        let value_f64: f64 = row.try_get("total_value").unwrap_or(0.0);
+        let value = Decimal::try_from(value_f64).unwrap_or(Decimal::ZERO);
+        let avg_return: f64 = row.try_get("avg_return").unwrap_or(0.0);
+
+        let weight = if total_portfolio_value > Decimal::ZERO {
+            value / total_portfolio_value
+        } else {
+            Decimal::ZERO
+        };
+
+        weights.insert(ticker.clone(), weight);
+        returns.insert(
+            ticker,
+            Decimal::try_from(avg_return).unwrap_or(Decimal::ZERO),
+        );
     }
-    
-    (portfolio_weights, benchmark_weights, portfolio_returns, benchmark_returns)
+
+    Ok((weights, returns))
 }
 
 /// ML prediction request
@@ -294,34 +394,45 @@ pub struct MLPredictionResponse {
 }
 
 /// POST /api/analytics/predict - Get ML prediction
-/// 
-/// Uses CQPredictor to calculate Composite Quality score from signals.
-/// In production, this would fetch real signals from the database.
+///
+/// Uses CQPredictor to calculate Composite Quality score from real signal data.
+/// Fetches signals from the `signals` table for the requested ticker.
 pub async fn get_ml_prediction(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Json(req): Json<MLPredictionRequest>,
 ) -> Result<Json<ApiResponse<MLPredictionResponse>>, StatusCode> {
-    // Generate simulated signals for the ticker
-    // In production, fetch real signals from database
-    let signals = generate_simulated_signals(&req.ticker);
-    
+    // Fetch real signals from database
+    let signals = match fetch_ticker_signals(&state.pool, &req.ticker).await {
+        Ok(Some(s)) => s,
+        Ok(None) => {
+            return Ok(Json(ApiResponse::error(format!(
+                "No signal data available for ticker: {}",
+                req.ticker
+            ))));
+        }
+        Err(e) => {
+            tracing::warn!("Failed to fetch signals for {}: {}", req.ticker, e);
+            return Ok(Json(ApiResponse::error(format!(
+                "Failed to fetch signals: {}",
+                e
+            ))));
+        }
+    };
+
     // Generate features from signals
     let feature_vector = FeaturePipeline::generate_features(&req.ticker, &signals);
-    
+
     // Use CQPredictor for prediction
     let predictor = CQPredictor::new();
-    
+
     match predictor.predict_with_confidence(&feature_vector.features) {
         Ok((predicted_cq, confidence)) => {
             // Get feature importance
             let feature_importance = predictor.feature_importance(&feature_vector.feature_names);
-            
+
             // Take top 5 most important features
-            let top_features: Vec<(String, f64)> = feature_importance
-                .into_iter()
-                .take(5)
-                .collect();
-            
+            let top_features: Vec<(String, f64)> = feature_importance.into_iter().take(5).collect();
+
             let response = MLPredictionResponse {
                 ticker: req.ticker,
                 predicted_cq,
@@ -329,7 +440,7 @@ pub async fn get_ml_prediction(
                 should_trade: predicted_cq > 0.65, // threshold
                 feature_importance: top_features,
             };
-            
+
             Ok(Json(ApiResponse::success(response)))
         }
         Err(e) => {
@@ -339,38 +450,51 @@ pub async fn get_ml_prediction(
     }
 }
 
-/// Generate simulated signals for ML prediction
-/// 
-/// In production, these would come from the signals pipeline.
-fn generate_simulated_signals(_ticker: &str) -> TickerSignals {
-    use rand::Rng;
-    
-    let mut rng = rand::thread_rng();
-    
-    // Generate random scores between 30 and 90 (u8 for QualityScore)
-    TickerSignals {
-        quality_score: QualityScore(rng.gen_range(30..90)),
-        value_score: QualityScore(rng.gen_range(30..90)),
-        momentum_score: QualityScore(rng.gen_range(30..90)),
-        insider_score: QualityScore(rng.gen_range(30..90)),
-        sentiment_score: QualityScore(rng.gen_range(30..90)),
-        regime_fit: QualityScore(rng.gen_range(30..90)),
-        composite_quality: QualityScore(rng.gen_range(30..90)),
-        
-        insider_flow_ratio: rng.gen_range(0.5..1.5),
-        insider_cluster_signal: rng.gen_bool(0.5),
-        
-        news_sentiment: rng.gen_range(-0.5..0.5),
-        social_sentiment: rng.gen_range(-0.5..0.5),
-        
-        vix_level: rng.gen_range(15.0..30.0),
-        market_breadth: rng.gen_range(0.4..0.8),
-        
-        breakout_score: rng.gen_range(0.3..0.8),
-        atr_trend: rng.gen_range(-0.1..0.1),
-        rsi_14: rng.gen_range(30.0..70.0),
-        macd_signal: rng.gen_range(-0.5..0.5),
-    }
+/// Fetch the latest signal data for a ticker from the signals table
+async fn fetch_ticker_signals(
+    pool: &sqlx::PgPool,
+    ticker: &str,
+) -> std::result::Result<Option<TickerSignals>, String> {
+    let row = sqlx::query(
+        r#"
+        SELECT quality_score, value_score, momentum_score, insider_score,
+               sentiment_score, regime_fit, breakout_score
+        FROM signals
+        WHERE ticker = $1
+        ORDER BY calculated_at DESC
+        LIMIT 1
+        "#,
+    )
+    .bind(ticker)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let row = match row {
+        Some(r) => r,
+        None => return Ok(None),
+    };
+
+    use sqlx::Row;
+    let quality: i32 = row.try_get("quality_score").unwrap_or(50);
+    let value: i32 = row.try_get("value_score").unwrap_or(50);
+    let momentum: i32 = row.try_get("momentum_score").unwrap_or(50);
+    let insider: i32 = row.try_get("insider_score").unwrap_or(50);
+    let sentiment: i32 = row.try_get("sentiment_score").unwrap_or(50);
+    let regime: i32 = row.try_get("regime_fit").unwrap_or(50);
+    let breakout: f64 = row.try_get("breakout_score").unwrap_or(0.5);
+
+    Ok(Some(TickerSignals {
+        quality_score: QualityScore(quality.clamp(0, 100) as u8),
+        value_score: QualityScore(value.clamp(0, 100) as u8),
+        momentum_score: QualityScore(momentum.clamp(0, 100) as u8),
+        insider_score: QualityScore(insider.clamp(0, 100) as u8),
+        sentiment_score: QualityScore(sentiment.clamp(0, 100) as u8),
+        regime_fit: QualityScore(regime.clamp(0, 100) as u8),
+        composite_quality: QualityScore(50), // computed by CQPredictor
+        breakout_score: breakout,
+        ..TickerSignals::default()
+    }))
 }
 
 /// Anomaly detection response

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { addNotification } from "@/components/notification-center";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -30,125 +31,127 @@ import { useAuth, RequireRole } from "@/lib/auth-context";
 
 // Navigation items - filtered by role
 const getNavItems = (isAdmin: boolean) => [
-  { 
-    href: "/", 
-    label: "Dashboard", 
+  {
+    href: "/",
+    label: "Dashboard",
     icon: LayoutDashboard,
     description: "Portfolio & chart",
     requiredRole: ["admin", "trader", "viewer"] as const,
   },
-  { 
-    href: "/chart", 
-    label: "Trading Chart", 
+  {
+    href: "/chart",
+    label: "Trading Chart",
     icon: CandlestickChart,
     description: "Advanced chart",
     requiredRole: ["admin", "trader"] as const,
   },
-  { 
-    href: "/positions", 
-    label: "Positions", 
+  {
+    href: "/positions",
+    label: "Positions",
     icon: TrendingUp,
     description: "Manage positions",
     requiredRole: ["admin", "trader"] as const,
   },
-  { 
-    href: "/portfolio", 
-    label: "Portfolio", 
+  {
+    href: "/portfolio",
+    label: "Portfolio",
     icon: PieChart,
     description: "Analytics",
     requiredRole: ["admin", "trader", "viewer"] as const,
   },
-  { 
-    href: "/proposals", 
-    label: "AI Proposals", 
+  {
+    href: "/proposals",
+    label: "AI Proposals",
     icon: Target,
     badge: 3,
     description: "Trade ideas",
     requiredRole: ["admin", "trader"] as const,
   },
-  { 
-    href: "/risk", 
-    label: "Risk Management", 
+  {
+    href: "/risk",
+    label: "Risk Management",
     icon: Shield,
     description: "VaR & alerts",
     requiredRole: ["admin", "trader"] as const,
   },
   // NEW: Sprint 30-35 Features
-  { 
-    href: "/portfolio-opt", 
-    label: "Portfolio Optimization", 
+  {
+    href: "/portfolio-opt",
+    label: "Portfolio Optimization",
     icon: BarChart3,
     description: "MPT & Black-Litterman (Sprint 32)",
     requiredRole: ["admin", "trader", "viewer"] as const,
   },
-  { 
-    href: "/strategy", 
-    label: "Strategy Selector", 
+  {
+    href: "/strategy",
+    label: "Strategy Selector",
     icon: Brain,
     description: "ML regime detection (Sprint 31)",
     requiredRole: ["admin", "trader"] as const,
   },
-  { 
-    href: "/tax", 
-    label: "Tax & Compliance", 
+  {
+    href: "/tax",
+    label: "Tax & Compliance",
     icon: Calculator,
     description: "Tax loss harvesting (Sprint 30)",
     requiredRole: ["admin", "trader"] as const,
   },
-  { 
-    href: "/monitoring", 
-    label: "Monitoring", 
+  {
+    href: "/monitoring",
+    label: "Monitoring",
     icon: Activity,
     description: "Real-time metrics (Sprint 33)",
     requiredRole: ["admin", "trader", "viewer"] as const,
   },
-  { 
-    href: "/security", 
-    label: "Security", 
+  {
+    href: "/security",
+    label: "Security",
     icon: Lock,
     description: "2FA & encryption (Sprint 34)",
     requiredRole: ["admin", "trader"] as const,
   },
-  { 
-    href: "/ai-train", 
-    label: "AI Train", 
+  {
+    href: "/ai-train",
+    label: "AI Train",
     icon: Brain,
     description: "Train models to target confidence",
     requiredRole: ["admin", "trader"] as const,
   },
-  { 
-    href: "/deployment", 
-    label: "Deployment", 
+  {
+    href: "/deployment",
+    label: "Deployment",
     icon: Server,
     description: "CI/CD & K8s (Sprint 35)",
     requiredRole: ["admin"] as const,
   },
-  { 
-    href: "/backtest", 
-    label: "Backtesting", 
+  {
+    href: "/backtest",
+    label: "Backtesting",
     icon: RefreshCw,
     description: "Test strategies",
     requiredRole: ["admin", "trader"] as const,
   },
-  { 
-    href: "/journal", 
-    label: "Trading Journal", 
+  {
+    href: "/journal",
+    label: "Trading Journal",
     icon: FileText,
     description: "Log & reflect",
     disabled: true,
     requiredRole: ["admin", "trader"] as const,
   },
   // Admin section - only for admins
-  ...(isAdmin ? [
-    { 
-      href: "/admin", 
-      label: "Administration", 
-      icon: Settings,
-      description: "System config",
-      requiredRole: ["admin"] as const,
-      isAdmin: true,
-    },
-  ] : []),
+  ...(isAdmin
+    ? [
+        {
+          href: "/admin",
+          label: "Administration",
+          icon: Settings,
+          description: "System config",
+          requiredRole: ["admin"] as const,
+          isAdmin: true,
+        },
+      ]
+    : []),
 ];
 
 export default function Sidebar() {
@@ -156,7 +159,7 @@ export default function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const { user, logout, hasRole } = useAuth();
-  
+
   const isAdmin = hasRole("admin");
   const navItems = getNavItems(isAdmin);
 
@@ -172,7 +175,11 @@ export default function Sidebar() {
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-3 rounded-xl bg-gray-900/90 border border-gray-800 text-white"
       >
-        {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        {isMobileMenuOpen ? (
+          <X className="w-5 h-5" />
+        ) : (
+          <Menu className="w-5 h-5" />
+        )}
       </button>
 
       {/* Mobile Overlay */}
@@ -191,8 +198,8 @@ export default function Sidebar() {
       {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{ 
-          x: isMobileMenuOpen ? 0 : undefined 
+        animate={{
+          x: isMobileMenuOpen ? 0 : undefined,
         }}
         className={`
           fixed lg:sticky left-0 top-0 h-screen z-40
@@ -222,11 +229,13 @@ export default function Sidebar() {
           {/* User Role Badge */}
           {user && (
             <div className="px-4 py-2">
-              <div className={`px-3 py-1.5 rounded-lg text-xs font-medium text-center
+              <div
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium text-center
                 ${user.role === "admin" ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : ""}
                 ${user.role === "trader" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : ""}
                 ${user.role === "viewer" ? "bg-gray-500/20 text-gray-400 border border-gray-500/30" : ""}
-              `}>
+              `}
+              >
                 {user.role === "admin" && "Administrator"}
                 {user.role === "trader" && "Trader"}
                 {user.role === "viewer" && "Viewer"}
@@ -256,24 +265,37 @@ export default function Sidebar() {
                 >
                   <Link
                     href={item.disabled ? "#" : item.href}
-                    onClick={() => item.disabled ? alert("Coming soon!") : setIsMobileMenuOpen(false)}
+                    onClick={() =>
+                      item.disabled
+                        ? addNotification({
+                            type: "info",
+                            title: "Coming Soon",
+                            message: "This feature is not yet available.",
+                          })
+                        : setIsMobileMenuOpen(false)
+                    }
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
-                      ${isActive 
-                        ? `bg-blue-600/20 text-blue-400 border border-blue-500/30` 
-                        : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+                      ${
+                        isActive
+                          ? `bg-blue-600/20 text-blue-400 border border-blue-500/30`
+                          : "text-gray-400 hover:text-white hover:bg-gray-800/50"
                       }
                       ${item.disabled ? "opacity-50 cursor-not-allowed" : ""}
                       ${isAdminItem ? "border-l-2 border-l-purple-500" : ""}
                     `}
                   >
-                    <div className={`
+                    <div
+                      className={`
                       w-10 h-10 rounded-lg flex items-center justify-center transition-colors
                       ${isActive ? "bg-blue-500/20" : "bg-gray-800/50 group-hover:bg-gray-700/50"}
                       ${isAdminItem ? "bg-purple-500/10" : ""}
-                    `}>
-                      <Icon className={`w-5 h-5 ${isAdminItem ? "text-purple-400" : ""}`} />
+                    `}
+                    >
+                      <Icon
+                        className={`w-5 h-5 ${isAdminItem ? "text-purple-400" : ""}`}
+                      />
                     </div>
-                    
+
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{item.label}</span>
@@ -291,7 +313,7 @@ export default function Sidebar() {
                           </span>
                         )}
                       </div>
-                      
+
                       {/* Description on hover */}
                       <AnimatePresence>
                         {isHovered && (
@@ -313,12 +335,14 @@ export default function Sidebar() {
                         className="w-1.5 h-1.5 rounded-full bg-blue-400"
                       />
                     )}
-                    
+
                     {!isActive && !item.disabled && (
-                      <ChevronRight className={`
+                      <ChevronRight
+                        className={`
                         w-4 h-4 transition-all
                         ${isHovered ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2"}
-                      `} />
+                      `}
+                      />
                     )}
                   </Link>
                 </div>
@@ -331,22 +355,26 @@ export default function Sidebar() {
             {/* User Info */}
             {user && (
               <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-800/30">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm
                   ${user.role === "admin" ? "bg-purple-500 text-white" : ""}
                   ${user.role === "trader" ? "bg-blue-500 text-white" : ""}
                   ${user.role === "viewer" ? "bg-gray-500 text-white" : ""}
-                `}>
+                `}
+                >
                   {user.avatar}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white text-sm truncate">{user.name}</p>
+                  <p className="font-medium text-white text-sm truncate">
+                    {user.name}
+                  </p>
                   <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
               </div>
             )}
 
             {/* Logout */}
-            <button 
+            <button
               onClick={handleLogout}
               className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
             >

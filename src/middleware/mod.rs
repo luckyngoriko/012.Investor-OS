@@ -50,24 +50,32 @@ impl RateLimiter {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
-        
+
         // Get current count
         let count: u32 = self.redis.get(&window_key).await.unwrap_or(0);
-        
+
         if count >= self.max_requests {
             // Get TTL
             let ttl: i64 = self.redis.ttl(&window_key).await.unwrap_or(0);
-            RateLimitResult::Exceeded { retry_after: ttl.max(0) as u64 }
+            RateLimitResult::Exceeded {
+                retry_after: ttl.max(0) as u64,
+            }
         } else {
             // Increment counter
             let _: () = self.redis.incr(&window_key, 1).await.unwrap_or(());
-            
+
             // Set expiry if first request
             if count == 0 {
-                let _: () = self.redis.expire(&window_key, self.window_secs as i64).await.unwrap_or(());
+                let _: () = self
+                    .redis
+                    .expire(&window_key, self.window_secs as i64)
+                    .await
+                    .unwrap_or(());
             }
-            
-            RateLimitResult::Allowed { remaining: self.max_requests - count - 1 }
+
+            RateLimitResult::Allowed {
+                remaining: self.max_requests - count - 1,
+            }
         }
     }
 }
@@ -80,13 +88,13 @@ pub async fn rate_limit_middleware(
 ) -> Result<Response, StatusCode> {
     // Extract client IP or API key
     let client_key = extract_client_key(&request);
-    
+
     let mut limiter = limiter.lock().await;
-    
+
     match limiter.check(&client_key).await {
         RateLimitResult::Allowed { remaining } => {
             let mut response = next.run(request).await;
-            
+
             // Add rate limit headers
             response.headers_mut().insert(
                 "X-RateLimit-Limit",
@@ -96,7 +104,7 @@ pub async fn rate_limit_middleware(
                 "X-RateLimit-Remaining",
                 remaining.to_string().parse().unwrap(),
             );
-            
+
             Ok(response)
         }
         RateLimitResult::Exceeded { retry_after: _ } => {
@@ -114,39 +122,81 @@ fn extract_client_key(request: &Request) -> String {
             return format!("api:{}", key);
         }
     }
-    
+
     // Fall back to IP address
     if let Some(forwarded) = request.headers().get("X-Forwarded-For") {
         if let Ok(ip) = forwarded.to_str() {
             return format!("ip:{}", ip.split(',').next().unwrap_or("unknown").trim());
         }
     }
-    
+
     // Last resort
     "ip:unknown".to_string()
 }
 
+/// Security headers middleware (OWASP recommended).
+///
+/// Adds CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy,
+/// Permissions-Policy, and removes the Server header to reduce fingerprinting.
+pub async fn security_headers_middleware(request: Request, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    let headers = response.headers_mut();
+
+    // Prevent clickjacking
+    headers.insert("X-Frame-Options", "DENY".parse().unwrap());
+
+    // Prevent MIME-type sniffing
+    headers.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
+
+    // Enable HSTS (1 year, include subdomains)
+    headers.insert(
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains".parse().unwrap(),
+    );
+
+    // Content Security Policy — API-only (no inline scripts/styles needed)
+    headers.insert(
+        "Content-Security-Policy",
+        "default-src 'none'; frame-ancestors 'none'"
+            .parse()
+            .unwrap(),
+    );
+
+    // Control referrer leakage
+    headers.insert(
+        "Referrer-Policy",
+        "strict-origin-when-cross-origin".parse().unwrap(),
+    );
+
+    // Restrict browser features
+    headers.insert(
+        "Permissions-Policy",
+        "camera=(), microphone=(), geolocation=(), payment=()"
+            .parse()
+            .unwrap(),
+    );
+
+    // Prevent XSS (legacy header, still useful for older browsers)
+    headers.insert("X-XSS-Protection", "1; mode=block".parse().unwrap());
+
+    // Remove server fingerprint
+    headers.remove("Server");
+
+    response
+}
+
 /// Request logging middleware
-pub async fn logging_middleware(
-    request: Request,
-    next: Next,
-) -> Response {
+pub async fn logging_middleware(request: Request, next: Next) -> Response {
     let method = request.method().clone();
     let uri = request.uri().clone();
     let start = std::time::Instant::now();
-    
+
     let response = next.run(request).await;
-    
+
     let duration = start.elapsed();
     let status = response.status();
-    
-    debug!(
-        "{} {} - {} - {:?}",
-        method,
-        uri,
-        status.as_u16(),
-        duration
-    );
-    
+
+    debug!("{} {} - {} - {:?}", method, uri, status.as_u16(), duration);
+
     response
 }

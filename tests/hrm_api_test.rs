@@ -60,11 +60,11 @@ fn test_hrm_request_serialization() {
         regime: 0.0,
         time: 0.5,
     };
-    
+
     let json = serde_json::to_string(&request).unwrap();
     assert!(json.contains("pegy"));
     assert!(json.contains("0.8"));
-    
+
     // Test deserialization
     let deserialized: HRMInferenceRequest = serde_json::from_str(&json).unwrap();
     assert!((deserialized.pegy - 0.8).abs() < 0.001);
@@ -83,7 +83,7 @@ fn test_hrm_response_serialization() {
         source: "MLModel".to_string(),
         latency_ms: 0.35,
     };
-    
+
     let json = serde_json::to_string(&response).unwrap();
     assert!(json.contains("conviction"));
     assert!(json.contains("0.85"));
@@ -114,9 +114,9 @@ fn test_hrm_batch_request() {
             },
         ],
     };
-    
+
     assert_eq!(batch.signals.len(), 2);
-    
+
     let json = serde_json::to_string(&batch).unwrap();
     let deserialized: HRMBatchRequest = serde_json::from_str(&json).unwrap();
     assert_eq!(deserialized.signals.len(), 2);
@@ -132,7 +132,7 @@ fn test_hrm_health_response() {
         parameters: 9347,
         backend: "burn-ndarray".to_string(),
     };
-    
+
     let json = serde_json::to_string(&health).unwrap();
     assert!(json.contains("healthy"));
     assert!(json.contains("9347"));
@@ -156,11 +156,11 @@ fn test_api_examples() {
         "regime": 0.0,
         "time": 0.5
     }"#;
-    
+
     let req: HRMInferenceRequest = serde_json::from_str(bull_request).unwrap();
     assert!(req.pegy > 0.8);
     assert!(req.vix < 20.0);
-    
+
     // Example 2: Bear market (without time - should use default)
     let bear_request = r#"{
         "pegy": 0.2,
@@ -169,7 +169,7 @@ fn test_api_examples() {
         "vix": 50.0,
         "regime": 1.0
     }"#;
-    
+
     let req: HRMInferenceRequest = serde_json::from_str(bear_request).unwrap();
     assert!(req.pegy < 0.3);
     assert!(req.vix > 40.0);
@@ -188,7 +188,7 @@ fn test_request_validation() {
         regime: 1.0,
         time: 0.5,
     };
-    
+
     assert!(valid.pegy >= 0.0 && valid.pegy <= 1.0);
     assert!(valid.vix >= 0.0);
 }
@@ -197,7 +197,7 @@ fn test_request_validation() {
 #[test]
 fn test_api_documentation() {
     // This test serves as documentation for the API
-    
+
     // 1. Single inference request
     let single_request = serde_json::json!({
         "pegy": 0.8,
@@ -207,7 +207,7 @@ fn test_api_documentation() {
         "regime": 0.0,
         "time": 0.5
     });
-    
+
     // Expected response format
     let expected_response = serde_json::json!({
         "success": true,
@@ -223,9 +223,9 @@ fn test_api_documentation() {
         },
         "error": null
     });
-    
+
     assert!(expected_response["success"].as_bool().unwrap());
-    
+
     // 2. Batch inference request
     let batch_request = serde_json::json!({
         "signals": [
@@ -233,9 +233,9 @@ fn test_api_documentation() {
             { "pegy": 0.2, "insider": 0.1, "sentiment": 0.2, "vix": 50.0, "regime": 1.0 }
         ]
     });
-    
+
     assert_eq!(batch_request["signals"].as_array().unwrap().len(), 2);
-    
+
     // 3. Health check response
     let health_response = serde_json::json!({
         "success": true,
@@ -247,6 +247,9 @@ fn test_api_documentation() {
             "backend": "burn-ndarray"
         }
     });
-    
-    assert_eq!(health_response["data"]["parameters"].as_i64().unwrap(), 9347);
+
+    assert_eq!(
+        health_response["data"]["parameters"].as_i64().unwrap(),
+        9347
+    );
 }

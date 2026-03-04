@@ -102,19 +102,29 @@ impl MetricsCollector {
 
     /// Get counter value
     pub fn get_counter(&self, name: &str) -> u64 {
-        self.counters.read().unwrap().get(name).copied().unwrap_or(0)
+        self.counters
+            .read()
+            .unwrap()
+            .get(name)
+            .copied()
+            .unwrap_or(0)
     }
 
     /// Get gauge value
     pub fn get_gauge(&self, name: &str) -> f64 {
-        self.gauges.read().unwrap().get(name).copied().unwrap_or(0.0)
+        self.gauges
+            .read()
+            .unwrap()
+            .get(name)
+            .copied()
+            .unwrap_or(0.0)
     }
 
     /// Get histogram statistics
     pub fn get_histogram_stats(&self, name: &str) -> Option<HistogramStats> {
         let histograms = self.histograms.read().unwrap();
         let values = histograms.get(name)?;
-        
+
         if values.is_empty() {
             return None;
         }
@@ -174,7 +184,9 @@ impl MetricsCollector {
             sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
             // Buckets
-            let buckets = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0];
+            let buckets = [
+                0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
+            ];
             let mut cumulative_count = 0;
 
             for bucket in &buckets {
@@ -186,8 +198,16 @@ impl MetricsCollector {
                 ));
             }
 
-            output.push_str(&format!("{}_bucket{{le=\"+Inf\"}} {}\n", name_normalized, sorted.len()));
-            output.push_str(&format!("{}_sum {}\n", name_normalized, sorted.iter().sum::<f64>()));
+            output.push_str(&format!(
+                "{}_bucket{{le=\"+Inf\"}} {}\n",
+                name_normalized,
+                sorted.len()
+            ));
+            output.push_str(&format!(
+                "{}_sum {}\n",
+                name_normalized,
+                sorted.iter().sum::<f64>()
+            ));
             output.push_str(&format!("{}_count {}\n", name_normalized, sorted.len()));
         }
 
@@ -219,7 +239,9 @@ static METRICS: OnceLock<Arc<MetricsCollector>> = OnceLock::new();
 
 /// Initialize global metrics
 pub fn init_metrics() -> Arc<MetricsCollector> {
-    METRICS.get_or_init(|| Arc::new(MetricsCollector::new())).clone()
+    METRICS
+        .get_or_init(|| Arc::new(MetricsCollector::new()))
+        .clone()
 }
 
 /// Macro to instrument a function with metrics
@@ -228,11 +250,11 @@ macro_rules! instrument {
     ($name:expr, $body:block) => {{
         let _span = $crate::observability::create_operation_span($name, "execute");
         let _timer = $crate::observability::OperationTimer::start($name);
-        
+
         let result = $body;
-        
+
         $crate::observability::init_metrics().increment_counter(&format!("{}_total", $name));
-        
+
         result
     }};
 }
@@ -244,30 +266,30 @@ mod tests {
     #[test]
     fn test_metrics_counter() {
         let metrics = MetricsCollector::new();
-        
+
         metrics.increment_counter("test_counter");
         metrics.increment_counter("test_counter");
-        
+
         assert_eq!(metrics.get_counter("test_counter"), 2);
     }
 
     #[test]
     fn test_metrics_gauge() {
         let metrics = MetricsCollector::new();
-        
+
         metrics.set_gauge("test_gauge", 42.0);
-        
+
         assert_eq!(metrics.get_gauge("test_gauge"), 42.0);
     }
 
     #[test]
     fn test_metrics_histogram() {
         let metrics = MetricsCollector::new();
-        
+
         metrics.record_histogram("test_histogram", 1.0);
         metrics.record_histogram("test_histogram", 2.0);
         metrics.record_histogram("test_histogram", 3.0);
-        
+
         let stats = metrics.get_histogram_stats("test_histogram").unwrap();
         assert_eq!(stats.count, 3);
         assert_eq!(stats.mean, 2.0);
@@ -276,11 +298,11 @@ mod tests {
     #[test]
     fn test_prometheus_export() {
         let metrics = MetricsCollector::new();
-        
+
         metrics.increment_counter("requests");
         metrics.set_gauge("active_connections", 10.0);
         metrics.record_histogram("latency", 0.1);
-        
+
         let output = metrics.export_prometheus();
         assert!(output.contains("requests"));
         assert!(output.contains("active_connections"));
@@ -291,7 +313,7 @@ mod tests {
     fn test_operation_timer() {
         let timer = OperationTimer::start("test");
         std::thread::sleep(std::time::Duration::from_millis(10));
-        
+
         assert!(timer.elapsed_ms() >= 10);
         timer.finish(); // Should not panic
     }

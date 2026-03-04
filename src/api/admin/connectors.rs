@@ -6,16 +6,17 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
 
 /// Trait за всички API конектори
 #[async_trait]
 pub trait ApiConnector: Send + Sync {
     /// Тестваме връзката с API-то
     async fn test_connection(&self) -> ConnectionTestResult;
-    
+
     /// Връща името на конектора
     fn name(&self) -> &str;
-    
+
     /// Връща статуса на конектора
     fn status(&self) -> ConnectorStatus;
 }
@@ -64,19 +65,80 @@ impl InteractiveBrokersConnector {
 #[async_trait]
 impl ApiConnector for InteractiveBrokersConnector {
     async fn test_connection(&self) -> ConnectionTestResult {
-        // Тук ще се направи реална заявка към IBKR API
-        ConnectionTestResult {
-            success: false,
-            response_time_ms: 0,
-            message: "Not implemented - placeholder for IBKR connection".to_string(),
-            errors: vec!["IBKR connector not yet implemented".to_string()],
+        let started = Instant::now();
+
+        if self.config.api_key.trim().is_empty() || self.config.api_secret.trim().is_empty() {
+            return ConnectionTestResult {
+                success: false,
+                response_time_ms: started.elapsed().as_millis() as u64,
+                message: "IBKR credentials are required for validation".to_string(),
+                errors: vec!["Missing IBKR_API_KEY or IBKR_API_SECRET".to_string()],
+            };
+        }
+
+        let endpoint = format!(
+            "{}/v1/api/iserver/marketdata/snapshot",
+            self.config.base_url.trim_end_matches('/'),
+        );
+
+        match reqwest::Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build()
+        {
+            Ok(client) => {
+                match client.get(&endpoint).send().await {
+                    Ok(response) => {
+                        if response.status().is_client_error() {
+                            return ConnectionTestResult {
+                                success: false,
+                                response_time_ms: started.elapsed().as_millis() as u64,
+                                message: format!(
+                                    "IBKR endpoint responded with status {}",
+                                    response.status()
+                                ),
+                                errors: vec!["Credentials or endpoint path may require authenticated session".to_string()],
+                            };
+                        }
+
+                        return ConnectionTestResult {
+                            success: response.status().is_success()
+                                || response.status().is_redirection(),
+                            response_time_ms: started.elapsed().as_millis() as u64,
+                            message: "IBKR connectivity probe completed".to_string(),
+                            errors: if response.status().is_success()
+                                || response.status().is_redirection()
+                            {
+                                vec![]
+                            } else {
+                                vec![format!("Unexpected status: {}", response.status())]
+                            },
+                        };
+                    }
+                    Err(err) => {
+                        return ConnectionTestResult {
+                            success: false,
+                            response_time_ms: started.elapsed().as_millis() as u64,
+                            message: "IBKR connectivity probe failed".to_string(),
+                            errors: vec![err.to_string()],
+                        };
+                    }
+                }
+            }
+            Err(err) => {
+                return ConnectionTestResult {
+                    success: false,
+                    response_time_ms: started.elapsed().as_millis() as u64,
+                    message: "Unable to build HTTP client for IBKR probe".to_string(),
+                    errors: vec![err.to_string()],
+                };
+            }
         }
     }
-    
+
     fn name(&self) -> &str {
         "Interactive Brokers"
     }
-    
+
     fn status(&self) -> ConnectorStatus {
         self.status.clone()
     }
@@ -106,18 +168,76 @@ impl PolygonConnector {
 #[async_trait]
 impl ApiConnector for PolygonConnector {
     async fn test_connection(&self) -> ConnectionTestResult {
-        ConnectionTestResult {
-            success: false,
-            response_time_ms: 0,
-            message: "Not implemented - placeholder for Polygon connection".to_string(),
-            errors: vec!["Polygon connector not yet implemented".to_string()],
+        let started = Instant::now();
+
+        if self.config.api_key.trim().is_empty() {
+            return ConnectionTestResult {
+                success: false,
+                response_time_ms: started.elapsed().as_millis() as u64,
+                message: "Polygon API key is required for validation".to_string(),
+                errors: vec!["Missing POLYGON_API_KEY".to_string()],
+            };
+        }
+
+        let endpoint = format!(
+            "https://api.polygon.io/v3/reference/tickers/AAPL?apiKey={}",
+            self.config.api_key
+        );
+
+        match reqwest::Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build()
+        {
+            Ok(client) => match client.get(&endpoint).send().await {
+                Ok(response) => {
+                    if response.status() == reqwest::StatusCode::UNAUTHORIZED {
+                        return ConnectionTestResult {
+                            success: false,
+                            response_time_ms: started.elapsed().as_millis() as u64,
+                            message: "Polygon API key is not valid or missing privileges"
+                                .to_string(),
+                            errors: vec!["UNAUTHORIZED".to_string()],
+                        };
+                    }
+
+                    return ConnectionTestResult {
+                        success: response.status().is_success()
+                            || response.status().is_redirection(),
+                        response_time_ms: started.elapsed().as_millis() as u64,
+                        message: "Polygon connectivity probe completed".to_string(),
+                        errors: if response.status().is_success()
+                            || response.status().is_redirection()
+                        {
+                            vec![]
+                        } else {
+                            vec![format!("Unexpected status: {}", response.status())]
+                        },
+                    };
+                }
+                Err(err) => {
+                    return ConnectionTestResult {
+                        success: false,
+                        response_time_ms: started.elapsed().as_millis() as u64,
+                        message: "Polygon connectivity probe failed".to_string(),
+                        errors: vec![err.to_string()],
+                    };
+                }
+            },
+            Err(err) => {
+                return ConnectionTestResult {
+                    success: false,
+                    response_time_ms: started.elapsed().as_millis() as u64,
+                    message: "Unable to build HTTP client for Polygon probe".to_string(),
+                    errors: vec![err.to_string()],
+                };
+            }
         }
     }
-    
+
     fn name(&self) -> &str {
         "Polygon.io"
     }
-    
+
     fn status(&self) -> ConnectorStatus {
         self.status.clone()
     }
@@ -134,32 +254,34 @@ impl ConnectorFactory {
     ) -> Result<Box<dyn ApiConnector>, String> {
         match connector_type {
             "ibkr" => {
-                let api_key = config.get("IBKR_API_KEY")
-                    .ok_or("Missing IBKR_API_KEY")?;
-                let api_secret = config.get("IBKR_API_SECRET")
+                let api_key = config.get("IBKR_API_KEY").ok_or("Missing IBKR_API_KEY")?;
+                let api_secret = config
+                    .get("IBKR_API_SECRET")
                     .ok_or("Missing IBKR_API_SECRET")?;
-                let base_url = config.get("IBKR_BASE_URL")
+                let base_url = config
+                    .get("IBKR_BASE_URL")
                     .cloned()
                     .unwrap_or_else(|| "https://paper-api.ibkr.com".to_string());
-                
+
                 let ibkr_config = IBKRConfig {
                     api_key: api_key.clone(),
                     api_secret: api_secret.clone(),
                     base_url,
                     paper_trading: true,
                 };
-                
+
                 Ok(Box::new(InteractiveBrokersConnector::new(ibkr_config)))
             }
             "polygon" => {
-                let api_key = config.get("POLYGON_API_KEY")
+                let api_key = config
+                    .get("POLYGON_API_KEY")
                     .ok_or("Missing POLYGON_API_KEY")?;
-                
+
                 let polygon_config = PolygonConfig {
                     api_key: api_key.clone(),
                     rate_limit: 5,
                 };
-                
+
                 Ok(Box::new(PolygonConnector::new(polygon_config)))
             }
             _ => Err(format!("Unknown connector type: {}", connector_type)),
@@ -184,17 +306,13 @@ pub fn list_available_connectors() -> Vec<ConnectorInfo> {
             id: "polygon".to_string(),
             name: "Polygon.io".to_string(),
             description: "Market data and historical prices".to_string(),
-            required_fields: vec![
-                "POLYGON_API_KEY".to_string(),
-            ],
+            required_fields: vec!["POLYGON_API_KEY".to_string()],
         },
         ConnectorInfo {
             id: "alpha_vantage".to_string(),
             name: "Alpha Vantage".to_string(),
             description: "Free market data (limited requests)".to_string(),
-            required_fields: vec![
-                "ALPHA_VANTAGE_KEY".to_string(),
-            ],
+            required_fields: vec!["ALPHA_VANTAGE_KEY".to_string()],
         },
         ConnectorInfo {
             id: "fireblocks".to_string(),

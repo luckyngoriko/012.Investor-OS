@@ -28,13 +28,13 @@ use thiserror::Error;
 pub enum AnalyticsError {
     #[error("Insufficient data: {0}")]
     InsufficientData(String),
-    
+
     #[error("Calculation error: {0}")]
     Calculation(String),
-    
+
     #[error("Invalid parameters: {0}")]
     InvalidParameters(String),
-    
+
     #[error("Model error: {0}")]
     Model(String),
 }
@@ -57,7 +57,7 @@ pub struct Trade {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DailySnapshot {
     pub date: DateTime<Utc>,
-    pub nav: Decimal,              // Net Asset Value
+    pub nav: Decimal, // Net Asset Value
     pub cash: Decimal,
     pub positions_value: Decimal,
     pub positions: Vec<PositionSnapshot>,
@@ -88,10 +88,10 @@ pub struct PriceBar {
 pub trait Strategy: Send + Sync {
     /// Strategy name
     fn name(&self) -> &str;
-    
+
     /// Generate trading signals for current market data
     async fn generate_signals(&self, data: &MarketData) -> Vec<Signal>;
-    
+
     /// Calculate position size for a signal
     fn position_size(&self, signal: &Signal, portfolio_value: Decimal) -> Decimal;
 }

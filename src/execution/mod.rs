@@ -55,82 +55,112 @@ impl ExecutionEngine {
                 self.execute_single(order, &decision).await
             }
             OrderType::TWAP { .. } => {
-                // TWAP execution
+                let best_price = self.resolve_fill_price(order)?;
                 self.twap_executor.execute(order, |qty| async move {
-                    // Mock execution - in real implementation would call venue API
+                    let fee_rate = Decimal::try_from(0.001).unwrap();
                     Ok(Fill {
                         id: Uuid::new_v4(),
                         order_id: order.id,
                         symbol: order.symbol.clone(),
                         side: order.side,
                         quantity: qty,
-                        price: Decimal::from(50000), // Mock price
+                        price: best_price,
                         venue: Venue::Binance,
                         timestamp: chrono::Utc::now(),
-                        fees: qty * Decimal::from(50000) * Decimal::try_from(0.001).unwrap(),
+                        fees: qty * best_price * fee_rate,
                     })
                 }).await
             }
             OrderType::VWAP { .. } => {
-                // VWAP execution with default profile
+                let best_price = self.resolve_fill_price(order)?;
                 let profile = VWAPExecutor::default_intraday_profile(24);
                 self.vwap_executor.execute(order, &profile, |qty| async move {
+                    let fee_rate = Decimal::try_from(0.001).unwrap();
                     Ok(Fill {
                         id: Uuid::new_v4(),
                         order_id: order.id,
                         symbol: order.symbol.clone(),
                         side: order.side,
                         quantity: qty,
-                        price: Decimal::from(50000),
+                        price: best_price,
                         venue: Venue::Binance,
                         timestamp: chrono::Utc::now(),
-                        fees: qty * Decimal::from(50000) * Decimal::try_from(0.001).unwrap(),
+                        fees: qty * best_price * fee_rate,
                     })
                 }).await
             }
             OrderType::Iceberg { .. } => {
-                // Iceberg execution
+                let best_price = self.resolve_fill_price(order)?;
                 let iceberg = IcebergExecutor::new(order.quantity / Decimal::from(10));
                 iceberg.execute(order, |child| async move {
+                    let fee_rate = Decimal::try_from(0.001).unwrap();
                     Ok(Fill {
                         id: Uuid::new_v4(),
                         order_id: child.id,
                         symbol: child.symbol.clone(),
                         side: child.side,
                         quantity: child.quantity,
-                        price: Decimal::from(50000),
+                        price: best_price,
                         venue: Venue::Binance,
                         timestamp: chrono::Utc::now(),
-                        fees: child.quantity * Decimal::from(50000) * Decimal::try_from(0.001).unwrap(),
+                        fees: child.quantity * best_price * fee_rate,
                     })
                 }).await
             }
-            OrderType::StopLimit(_, _) => {
-                Err(ExecutionError::ExecutionFailed(
-                    "Stop-limit orders not yet implemented".to_string()
-                ))
+            OrderType::StopLimit(_, limit_price) => {
+                let synthetic_order = Order {
+                    order_type: OrderType::Limit(*limit_price),
+                    ..order.clone()
+                };
+                let decision = self.router.route(&synthetic_order)?;
+                self.execute_single(&synthetic_order, &decision).await
             }
         }
     }
     
+    /// Resolve fill price from venue quotes or limit price.
+    /// Returns error if no price data is available.
+    fn resolve_fill_price(&self, order: &Order) -> Result<Decimal> {
+        // Use limit price if available
+        if let OrderType::Limit(price) = &order.order_type {
+            return Ok(*price);
+        }
+
+        // Try to get best quote from venue analyzer
+        if let Some(quote) = self.router.venue_analyzer().get_best_quote(&order.symbol, order.side) {
+            let price = match order.side {
+                OrderSide::Buy => quote.ask,
+                OrderSide::Sell => quote.bid,
+            };
+            return Ok(price);
+        }
+
+        Err(ExecutionError::NoMarketData(format!(
+            "No price data available for {}. Update venue quotes before submitting market orders.",
+            order.symbol
+        )))
+    }
+
     /// Execute single order at chosen venue
     async fn execute_single(&self, order: &Order, decision: &RouteDecision) -> Result<Vec<Fill>> {
-        info!("Executing at {}: expected cost ${}", 
+        info!("Executing at {}: expected cost ${}",
             decision.primary_venue.name(), decision.expected_cost);
-        
-        // Mock execution - in production this would call the venue's API
+
+        let fill_price = self.resolve_fill_price(order)?;
+        let fee_rate = Decimal::try_from(0.001).unwrap();
+
         let fill = Fill {
             id: Uuid::new_v4(),
             order_id: order.id,
             symbol: order.symbol.clone(),
             side: order.side,
             quantity: order.quantity,
-            price: Decimal::from(50000), // Mock
+            price: fill_price,
             venue: decision.primary_venue.clone(),
             timestamp: chrono::Utc::now(),
-            fees: order.quantity * Decimal::from(50000) * Decimal::try_from(0.001).unwrap(),
+            fees: order.quantity * fill_price * fee_rate,
         };
-        
+
         Ok(vec![fill])
     }
     

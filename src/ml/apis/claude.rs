@@ -23,10 +23,10 @@ impl ClaudeClient {
     }
 }
 
-
 impl ClaudeClient {
     pub async fn generate(&self, prompt: &str) -> Result<String, LLMError> {
-        let response = self.client
+        let response = self
+            .client
             .post("https://api.anthropic.com/v1/messages")
             .header("x-api-key", &self.api_key)
             .header("anthropic-version", "2023-06-01")
@@ -38,25 +38,26 @@ impl ClaudeClient {
             .send()
             .await
             .map_err(|e| LLMError::ApiError(e.to_string()))?;
-        
-        let result: serde_json::Value = response.json().await
+
+        let result: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| LLMError::ApiError(e.to_string()))?;
-        
+
         result["content"][0]["text"]
             .as_str()
             .map(|s| s.to_string())
             .ok_or_else(|| LLMError::ApiError("Invalid response".to_string()))
     }
-    
 }
 
 /// Deep analysis of 10-K filing
 pub async fn analyze_10k(filing_text: &str, api_key: &str) -> Result<TenKAnalysis, LLMError> {
     let client = ClaudeClient::new(api_key.to_string());
-    
+
     // Truncate if too long (200K context window but expensive)
     let truncated = &filing_text[..filing_text.len().min(50000)];
-    
+
     let prompt = format!(
         "Perform a comprehensive analysis of this 10-K filing:\n\n{}\n\n\
         Focus on:\n\
@@ -69,13 +70,32 @@ pub async fn analyze_10k(filing_text: &str, api_key: &str) -> Result<TenKAnalysi
         Provide detailed investment thesis.",
         truncated
     );
-    
+
     let analysis = client.generate(&prompt).await?;
-    
+
+    // Parse risk_rating from LLM analysis content
+    let analysis_lower = analysis.to_lowercase();
+    let risk_rating = if analysis_lower.contains("high risk")
+        || analysis_lower.contains("significant risk")
+        || analysis_lower.contains("elevated risk")
+        || analysis_lower.contains("substantial risk")
+    {
+        "high"
+    } else if analysis_lower.contains("low risk")
+        || analysis_lower.contains("minimal risk")
+        || analysis_lower.contains("limited risk")
+        || analysis_lower.contains("negligible risk")
+    {
+        "low"
+    } else {
+        "medium"
+    }
+    .to_string();
+
     Ok(TenKAnalysis {
         summary: analysis.lines().take(3).collect::<Vec<_>>().join(" "),
         full_analysis: analysis,
-        risk_rating: "medium".to_string(), // Would parse from analysis
+        risk_rating,
     })
 }
 

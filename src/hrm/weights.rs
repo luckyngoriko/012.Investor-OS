@@ -44,43 +44,42 @@ impl WeightLoader {
     /// Load SafeTensors format
     fn load_safetensors<P: AsRef<Path>>(&self, path: P) -> Result<ModelWeights> {
         use safetensors::SafeTensors;
-        
+
         let path = path.as_ref();
-        let data = fs::read(path).map_err(|e| {
-            HRMError::WeightLoadError(format!("Failed to read file: {}", e))
-        })?;
-        
+        let data = fs::read(path)
+            .map_err(|e| HRMError::WeightLoadError(format!("Failed to read file: {}", e)))?;
+
         let tensors = SafeTensors::deserialize(&data).map_err(|e| {
             HRMError::WeightLoadError(format!("Failed to parse SafeTensors: {}", e))
         })?;
-        
+
         let mut weights = HashMap::new();
-        
+
         for name in tensors.names() {
             let view = tensors.tensor(name).map_err(|e| {
                 HRMError::WeightLoadError(format!("Failed to get tensor {}: {}", name, e))
             })?;
-            
+
             let shape: Vec<usize> = view.shape().to_vec();
-            
+
             // Convert f32 data
             let data: Vec<f32> = match view.dtype() {
                 safetensors::Dtype::F32 => {
                     let bytes = view.data();
-                    bytes.chunks_exact(4)
+                    bytes
+                        .chunks_exact(4)
                         .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
                         .collect()
                 }
                 _ => continue, // Skip non-f32 tensors
             };
-            
+
             weights.insert(name.to_string(), TensorData { shape, data });
         }
-        
-        let metadata = fs::metadata(path).map_err(|e| {
-            HRMError::WeightLoadError(format!("Failed to read metadata: {}", e))
-        })?;
-        
+
+        let metadata = fs::metadata(path)
+            .map_err(|e| HRMError::WeightLoadError(format!("Failed to read metadata: {}", e)))?;
+
         Ok(ModelWeights {
             format: WeightFormat::SafeTensors,
             file_size: metadata.len(),
@@ -90,13 +89,11 @@ impl WeightLoader {
 
     /// Load JSON format
     fn load_json<P: AsRef<Path>>(&self, path: P) -> Result<ModelWeights> {
-        let content = fs::read_to_string(&path).map_err(|e| {
-            HRMError::WeightLoadError(format!("Failed to read JSON: {}", e))
-        })?;
+        let content = fs::read_to_string(&path)
+            .map_err(|e| HRMError::WeightLoadError(format!("Failed to read JSON: {}", e)))?;
 
-        let weights: JsonWeights = serde_json::from_str(&content).map_err(|e| {
-            HRMError::WeightLoadError(format!("Failed to parse JSON: {}", e))
-        })?;
+        let weights: JsonWeights = serde_json::from_str(&content)
+            .map_err(|e| HRMError::WeightLoadError(format!("Failed to parse JSON: {}", e)))?;
 
         Ok(ModelWeights {
             format: WeightFormat::Json,
@@ -108,16 +105,24 @@ impl WeightLoader {
     /// Verify compatibility
     pub fn verify_compatibility(&self, weights: &ModelWeights, _config: &HRMConfig) -> Result<()> {
         // Check required tensors exist
-        let required = ["fc1.weight", "fc1.bias", "fc2.weight", "fc2.bias", "fc3.weight", "fc3.bias"];
-        
+        let required = [
+            "fc1.weight",
+            "fc1.bias",
+            "fc2.weight",
+            "fc2.bias",
+            "fc3.weight",
+            "fc3.bias",
+        ];
+
         for tensor_name in &required {
             if !weights.tensors.contains_key(*tensor_name) {
                 return Err(HRMError::WeightLoadError(format!(
-                    "Missing required tensor: {}", tensor_name
+                    "Missing required tensor: {}",
+                    tensor_name
                 )));
             }
         }
-        
+
         Ok(())
     }
 }
@@ -141,7 +146,7 @@ impl ModelWeights {
     pub fn get(&self, name: &str) -> Option<&TensorData> {
         self.tensors.get(name)
     }
-    
+
     /// Get tensor as 1D burn tensor
     pub fn get_tensor_1d<B: Backend>(
         &self,
@@ -152,7 +157,7 @@ impl ModelWeights {
         let tensor: Tensor<B, 1> = Tensor::from_data(data.data.as_slice(), device);
         Some(tensor.reshape([data.data.len()]))
     }
-    
+
     /// Get tensor as 2D burn tensor
     pub fn get_tensor_2d<B: Backend>(
         &self,
@@ -166,12 +171,12 @@ impl ModelWeights {
         let tensor: Tensor<B, 1> = Tensor::from_data(data.data.as_slice(), device);
         Some(tensor.reshape([data.shape[0], data.shape[1]]))
     }
-    
+
     /// Total parameter count
     pub fn parameter_count(&self) -> usize {
         self.tensors.values().map(|t| t.data.len()).sum()
     }
-    
+
     /// List tensor names
     pub fn tensor_names(&self) -> Vec<&String> {
         self.tensors.keys().collect()
@@ -221,33 +226,37 @@ mod tests {
             format: "hrm".to_string(),
             tensors: {
                 let mut m = HashMap::new();
-                m.insert("w".to_string(), TensorData {
-                    shape: vec![2, 3],
-                    data: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-                });
+                m.insert(
+                    "w".to_string(),
+                    TensorData {
+                        shape: vec![2, 3],
+                        data: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+                    },
+                );
                 m
             },
         };
-        temp.write_all(serde_json::to_string(&weights).unwrap().as_bytes()).unwrap();
+        temp.write_all(serde_json::to_string(&weights).unwrap().as_bytes())
+            .unwrap();
 
         let loader = WeightLoader::new();
         let result = loader.load(temp.path()).unwrap();
-        
+
         assert_eq!(result.format, WeightFormat::Json);
         assert_eq!(result.parameter_count(), 6);
     }
 
     #[test]
-    #[ignore = "Requires trained model file"] 
+    #[ignore = "Requires trained model file"]
     fn test_load_safetensors_real() {
         let loader = WeightLoader::new();
         let result = loader.load("models/hrm_synthetic_v1.safetensors");
-        
+
         if let Ok(weights) = result {
             assert_eq!(weights.format, WeightFormat::SafeTensors);
             println!("Loaded {} parameters", weights.parameter_count());
             println!("Tensors: {:?}", weights.tensor_names());
-            
+
             // Verify required tensors exist
             assert!(weights.tensors.contains_key("fc1.weight"));
             assert!(weights.tensors.contains_key("fc1.bias"));

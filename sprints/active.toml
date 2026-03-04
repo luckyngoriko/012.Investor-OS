@@ -2,10 +2,10 @@
 # Updated by: make sprint-next | make sprint-done
 
 [meta]
-phase = "enterprise-readiness-recovery"
-phase_range = "63-95"
-active_sprint = 95
-updated = "2026-03-02"
+phase = "production-hardening"
+phase_range = "106-110"
+active_sprint = 110
+updated = "2026-03-04"
 
 [sprint.63]
 title = "Security Baseline & Auth Hardening"
@@ -336,3 +336,153 @@ tasks_total = 8
 tasks_done = 8
 gate = "G42"
 depends_on = [94]
+
+[sprint.96]
+title = "Treasury Security & Kill-Switch Hardening"
+status = "done"
+started = "2026-03-03"
+completed = "2026-03-04"
+tasks_total = 6
+tasks_done = 6
+gate = "G43"
+depends_on = [95]
+
+[sprint.97]
+title = "Execution Engine & Compliance Real Data"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 5
+tasks_done = 5
+gate = "G44"
+depends_on = [96]
+
+[sprint.98]
+title = "Data Integrity & Risk Analytics Production Wiring"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 8
+tasks_done = 8
+gate = "G45"
+depends_on = [96]
+
+[sprint.99]
+title = "Observability, Test Hygiene & Frontend Closure"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 6
+tasks_done = 6
+gate = "G46"
+depends_on = [97, 98]
+
+[sprint.100]
+title = "Final Production Purity — 100% Readiness"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 7
+tasks_done = 7
+gate = "G47"
+depends_on = [99]
+
+[sprint.101]
+title = "Production-Grade RBAC & Multi-User Auth"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 12
+tasks_done = 12
+gate = "G48"
+depends_on = [100]
+
+[sprint.102]
+title = "Auth Hardening & Security Middleware"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 8
+tasks_done = 8
+gate = "G49"
+depends_on = [101]
+
+[sprint.103]
+title = "API Production Quality"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 10
+tasks_done = 8
+gate = "G50"
+depends_on = [102]
+
+[sprint.104]
+title = "Observability & Resilience"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 10
+tasks_done = 7
+gate = "G51"
+depends_on = [102]
+
+[sprint.105]
+title = "Testing, CI Security & Frontend Hardening"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 10
+tasks_done = 5
+gate = "G52"
+depends_on = [103, 104]
+
+[sprint.106]
+title = "Critical Production Gaps — 2FA, Env Validation, API Keys"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 8
+tasks_done = 8
+gate = "G53"
+depends_on = [101, 105]
+
+[sprint.107]
+title = "Auth Wiring Completion & Demo Endpoint Cleanup"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 4
+tasks_done = 4
+gate = "G54"
+depends_on = [106]
+
+[sprint.108]
+title = "Killswitch Persistence & Auth Test Coverage"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 3
+tasks_done = 3
+gate = "G55"
+depends_on = [107]
+
+[sprint.109]
+title = "Wire Portfolio/Tax/Strategy Endpoints to Real Services"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 4
+tasks_done = 4
+gate = "G56"
+depends_on = [108]
+
+[sprint.110]
+title = "Config-Driven Endpoints & Production Hardening Closure"
+status = "done"
+started = "2026-03-04"
+completed = "2026-03-04"
+tasks_total = 3
+tasks_done = 3
+gate = "G57"
+depends_on = [109]

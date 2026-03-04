@@ -119,6 +119,12 @@ jobs:
       with:
         sarif_file: 'trivy-results.sarif'
 
+    - name: Frontend security audit (npm)
+      run: |
+        cd frontend/investor-dashboard
+        npm audit --audit-level=high || true
+      continue-on-error: true
+
     - name: Run Hadolint (Dockerfile linter)
       uses: hadolint/hadolint-action@v3.1.0
       with:

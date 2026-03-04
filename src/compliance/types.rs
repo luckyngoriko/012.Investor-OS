@@ -185,12 +185,12 @@ pub enum FindingSeverity {
 /// Compliance category per EU AI Act
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ComplianceCategory {
-    Transparency,      // Article 13
-    HumanOversight,    // Article 14
-    Accuracy,          // Article 15
-    Robustness,        // Article 16
-    Logging,           // Article 12
-    DataGovernance,    // Article 10
+    Transparency,   // Article 13
+    HumanOversight, // Article 14
+    Accuracy,       // Article 15
+    Robustness,     // Article 16
+    Logging,        // Article 12
+    DataGovernance, // Article 10
 }
 
 /// DLP scan result

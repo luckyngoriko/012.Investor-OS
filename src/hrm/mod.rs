@@ -22,7 +22,7 @@
 //! ```
 
 pub mod config;
-pub mod gpu;        // Sprint 48: Multi-Backend GPU Support
+pub mod gpu; // Sprint 48: Multi-Backend GPU Support
 pub mod inference;
 pub mod lstm;
 pub mod model;
@@ -30,7 +30,7 @@ pub mod weights;
 
 pub use config::{DeviceConfig, HRMConfig};
 pub use inference::{InferenceEngine, InferenceResult};
-pub use model::{HRM, HRMBuilder};
+pub use model::{HRMBuilder, HRM};
 pub use weights::WeightLoader;
 
 /// HRM Input signals

@@ -1,5 +1,5 @@
 //! Google Gemini API Client
-//! 
+//!
 //! Free tier: 1000 requests/day
 //! https://ai.google.dev/
 
@@ -27,7 +27,7 @@ impl GeminiClient {
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={}",
             self.api_key
         );
-        
+
         let body = json!({
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
@@ -35,20 +35,30 @@ impl GeminiClient {
                 "maxOutputTokens": 1000
             }
         });
-        
-        let response = self.client.post(&url).json(&body).send().await
+
+        let response = self
+            .client
+            .post(&url)
+            .json(&body)
+            .send()
+            .await
             .map_err(|e| LLMError::ApiError(e.to_string()))?;
-        
-        let result: serde_json::Value = response.json().await
+
+        let result: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| LLMError::ApiError(e.to_string()))?;
-        
+
         result["candidates"][0]["content"]["parts"][0]["text"]
             .as_str()
             .map(|s| s.to_string())
             .ok_or_else(|| LLMError::ApiError("Invalid response".to_string()))
     }
-    
-    pub async fn generate_json<T: serde::de::DeserializeOwned>(&self, prompt: &str) -> Result<T, LLMError> {
+
+    pub async fn generate_json<T: serde::de::DeserializeOwned>(
+        &self,
+        prompt: &str,
+    ) -> Result<T, LLMError> {
         let text = self.generate(prompt).await?;
         serde_json::from_str(&text).map_err(|e| LLMError::ParseError(e.to_string()))
     }
@@ -57,7 +67,7 @@ impl GeminiClient {
 /// Analyze SEC filing using Gemini
 pub async fn analyze_sec_filing(text: &str, api_key: &str) -> Result<SECFilingAnalysis, LLMError> {
     let client = GeminiClient::new(api_key.to_string());
-    
+
     let prompt = format!(
         "Analyze this SEC filing and extract key insights:\n\n{}\n\n\
         Provide analysis in this JSON format:\n\
@@ -70,7 +80,7 @@ pub async fn analyze_sec_filing(text: &str, api_key: &str) -> Result<SECFilingAn
         }}",
         &text[..text.len().min(10000)] // Limit text length
     );
-    
+
     client.generate_json(&prompt).await
 }
 

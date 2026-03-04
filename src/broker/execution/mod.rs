@@ -9,11 +9,10 @@ use tokio::sync::RwLock;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
-use crate::broker::{
-    orders::OrderManager, Broker, BrokerConfig, BrokerError, Order, OrderSide,
-    OrderType, Result,
-};
 use crate::broker::risk::{RiskChecker, RiskSeverity};
+use crate::broker::{
+    orders::OrderManager, Broker, BrokerConfig, BrokerError, Order, OrderSide, OrderType, Result,
+};
 
 /// Execution engine for processing trade proposals
 pub struct ExecutionEngine {
@@ -22,6 +21,7 @@ pub struct ExecutionEngine {
     config: ExecutionConfig,
     enabled: Arc<RwLock<bool>>,
     kill_switch_triggered: Arc<RwLock<bool>>,
+    broker: Arc<dyn Broker>,
 }
 
 /// Execution configuration
@@ -57,15 +57,17 @@ impl ExecutionEngine {
         order_manager: Arc<OrderManager>,
         broker_config: BrokerConfig,
         execution_config: ExecutionConfig,
+        broker: Arc<dyn Broker>,
     ) -> Self {
         let risk_checker = RiskChecker::new(broker_config);
-        
+
         Self {
             order_manager,
             risk_checker,
             config: execution_config,
             enabled: Arc::new(RwLock::new(true)),
             kill_switch_triggered: Arc::new(RwLock::new(false)),
+            broker,
         }
     }
 
@@ -73,7 +75,10 @@ impl ExecutionEngine {
     pub async fn set_enabled(&self, enabled: bool) {
         let mut e = self.enabled.write().await;
         *e = enabled;
-        info!("Execution engine {}", if enabled { "enabled" } else { "disabled" });
+        info!(
+            "Execution engine {}",
+            if enabled { "enabled" } else { "disabled" }
+        );
     }
 
     /// Check if engine is enabled
@@ -99,45 +104,56 @@ impl ExecutionEngine {
         // Check if kill switch is active
         if self.is_kill_switch_triggered().await {
             return Err(BrokerError::InvalidOrder(
-                "Kill switch is active - trading disabled".to_string()
+                "Kill switch is active - trading disabled".to_string(),
             ));
         }
 
         // Check if engine is enabled
         if !self.is_enabled().await {
             return Err(BrokerError::InvalidOrder(
-                "Execution engine is disabled".to_string()
+                "Execution engine is disabled".to_string(),
             ));
         }
 
         // Build order
-        let mut order = self.build_order(
-            ticker,
-            side,
-            quantity,
-            market_price,
-            portfolio_id,
-            proposal_id,
-        ).await?;
+        let mut order = self
+            .build_order(
+                ticker,
+                side,
+                quantity,
+                market_price,
+                portfolio_id,
+                proposal_id,
+            )
+            .await?;
 
-        // Pre-trade risk check
-        // Would get positions and account value from broker
-        let positions = vec![]; // Placeholder
-        let account_value = Decimal::from(100000); // Placeholder
-        
-        let risk_result = self.risk_checker.validate_order(
-            &order,
-            &positions,
-            account_value,
-        ).await?;
+        // Pre-trade risk check — fetch real data from broker
+        let positions = self.broker.get_positions().await.map_err(|e| {
+            error!("Failed to fetch positions for pre-trade risk check: {}", e);
+            BrokerError::ExternalApi(format!("Pre-trade risk: cannot fetch positions: {}", e))
+        })?;
+        let account_info = self.broker.get_account_info().await.map_err(|e| {
+            error!(
+                "Failed to fetch account info for pre-trade risk check: {}",
+                e
+            );
+            BrokerError::ExternalApi(format!("Pre-trade risk: cannot fetch account info: {}", e))
+        })?;
+        let account_value = account_info.net_liquidation;
+
+        let risk_result = self
+            .risk_checker
+            .validate_order(&order, &positions, account_value)
+            .await?;
 
         if !risk_result.passed {
-            let errors: Vec<String> = risk_result.violations
+            let errors: Vec<String> = risk_result
+                .violations
                 .into_iter()
                 .filter(|v| matches!(v.severity, RiskSeverity::Fatal | RiskSeverity::Error))
                 .map(|v| v.message)
                 .collect();
-            
+
             return Err(BrokerError::RiskCheckFailed(errors.join("; ")));
         }
 
@@ -157,7 +173,11 @@ impl ExecutionEngine {
 
         info!(
             "Proposal {} executed: {} {} shares of {} @ ${}",
-            proposal_id, side.as_str(), quantity, ticker, market_price
+            proposal_id,
+            side.as_str(),
+            quantity,
+            ticker,
+            market_price
         );
 
         Ok(order)
@@ -166,10 +186,8 @@ impl ExecutionEngine {
     /// Cancel all active orders (partial kill switch)
     pub async fn cancel_all_orders(&self, portfolio_id: Uuid) -> Result<usize> {
         info!("Cancelling all orders for portfolio {}", portfolio_id);
-        
-        let active_orders = self.order_manager
-            .get_active_orders(portfolio_id)
-            .await?;
+
+        let active_orders = self.order_manager.get_active_orders(portfolio_id).await?;
 
         let mut cancelled = 0;
         for mut order in active_orders {
@@ -186,7 +204,7 @@ impl ExecutionEngine {
     /// Kill switch - flatten all positions immediately (S6-D8)
     pub async fn trigger_kill_switch(&self, portfolio_id: Uuid) -> Result<KillSwitchResult> {
         warn!("KILL SWITCH TRIGGERED for portfolio {}", portfolio_id);
-        
+
         // Set kill switch flag
         let mut ks = self.kill_switch_triggered.write().await;
         *ks = true;
@@ -216,10 +234,10 @@ impl ExecutionEngine {
     /// Reset kill switch (requires manual intervention)
     pub async fn reset_kill_switch(&self) -> Result<()> {
         warn!("Kill switch is being reset - manual verification required");
-        
+
         let mut ks = self.kill_switch_triggered.write().await;
         *ks = false;
-        
+
         info!("Kill switch has been reset");
         Ok(())
     }
@@ -241,16 +259,10 @@ impl ExecutionEngine {
             OrderType::Market
         };
 
-        let mut order = Order::new(
-            ticker,
-            side,
-            quantity,
-            order_type,
-            portfolio_id,
-        )
-        .with_proposal(proposal_id)
-        .with_time_in_force(self.config.default_tif)
-        .with_notes(format!("Auto-generated from proposal {}", proposal_id));
+        let mut order = Order::new(ticker, side, quantity, order_type, portfolio_id)
+            .with_proposal(proposal_id)
+            .with_time_in_force(self.config.default_tif)
+            .with_notes(format!("Auto-generated from proposal {}", proposal_id));
 
         // Set limit price with offset
         if order_type == OrderType::Limit {
@@ -265,17 +277,61 @@ impl ExecutionEngine {
     }
 
     async fn flatten_all_positions(&self, portfolio_id: Uuid) -> Result<usize> {
-        // Would get all positions and create closing orders
-        // Simplified implementation
         info!("Flattening all positions for portfolio {}", portfolio_id);
-        
-        // In production:
-        // 1. Get all positions from broker
-        // 2. Create market orders to close each
-        // 3. Submit all orders
-        // 4. Return count of positions flattened
-        
-        Ok(0) // Placeholder
+
+        let positions = self.broker.get_positions().await.map_err(|e| {
+            error!("Kill switch: failed to fetch positions: {}", e);
+            BrokerError::ExternalApi(format!("Cannot fetch positions for flattening: {}", e))
+        })?;
+
+        let mut flattened = 0usize;
+        for position in &positions {
+            if position.quantity == Decimal::ZERO {
+                continue;
+            }
+
+            // Determine closing side: sell if long, buy if short
+            let close_side = if position.quantity > Decimal::ZERO {
+                OrderSide::Sell
+            } else {
+                OrderSide::Buy
+            };
+            let close_qty = position.quantity.abs();
+
+            let mut close_order = Order::new(
+                &position.ticker,
+                close_side,
+                close_qty,
+                OrderType::Market, // Market order for immediate execution
+                portfolio_id,
+            )
+            .with_notes("KILL SWITCH: emergency position flatten".to_string());
+
+            match self.order_manager.submit_order(&mut close_order).await {
+                Ok(()) => {
+                    info!(
+                        "Kill switch: closing {} {} shares of {}",
+                        close_side.as_str(),
+                        close_qty,
+                        position.ticker
+                    );
+                    flattened += 1;
+                }
+                Err(e) => {
+                    error!(
+                        "Kill switch: FAILED to close position {} ({}): {}",
+                        position.ticker, close_qty, e
+                    );
+                }
+            }
+        }
+
+        info!(
+            "Kill switch: flattened {}/{} positions",
+            flattened,
+            positions.len()
+        );
+        Ok(flattened)
     }
 }
 
@@ -297,7 +353,7 @@ mod tests {
     #[test]
     fn test_execution_config_default() {
         let config = ExecutionConfig::default();
-        
+
         assert!(!config.auto_execute); // Disabled by default
         assert_eq!(config.manual_confirmation_threshold, Decimal::from(10000));
         assert!(config.prefer_limit_orders);

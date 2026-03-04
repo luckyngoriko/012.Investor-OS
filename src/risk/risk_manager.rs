@@ -9,7 +9,8 @@ use tracing::{info, warn};
 use super::{
     portfolio_risk::{PortfolioRisk, RiskMetrics, VaRConfig},
     position_sizing::{PositionSizer, SizingConfig},
-    stop_loss::{StopLossConfig, StopLossManager, StopLossType}, Result,
+    stop_loss::{StopLossConfig, StopLossManager, StopLossType},
+    Result,
 };
 
 /// Risk limits configuration
@@ -34,10 +35,10 @@ pub struct RiskLimits {
 impl Default for RiskLimits {
     fn default() -> Self {
         Self {
-            max_drawdown: Decimal::try_from(0.20).unwrap(),      // 20%
-            max_daily_loss: Decimal::try_from(0.05).unwrap(),    // 5%
+            max_drawdown: Decimal::try_from(0.20).unwrap(), // 20%
+            max_daily_loss: Decimal::try_from(0.05).unwrap(), // 5%
             max_position_weight: Decimal::try_from(0.25).unwrap(), // 25%
-            max_var_95: Decimal::try_from(0.03).unwrap(),        // 3%
+            max_var_95: Decimal::try_from(0.03).unwrap(),   // 3%
             max_open_positions: 20,
             max_leverage: Decimal::from(10),
             min_risk_reward_ratio: Decimal::from(2), // 2:1
@@ -61,23 +62,19 @@ pub struct RiskManager {
     position_sizer: PositionSizer,
     stop_loss_manager: Arc<RwLock<StopLossManager>>,
     portfolio_risk: Arc<RwLock<PortfolioRisk>>,
-    
+
     // Daily tracking
     daily_pnl: Arc<RwLock<Decimal>>,
     daily_starting_equity: Arc<RwLock<Decimal>>,
     open_positions: Arc<RwLock<usize>>,
-    
+
     // Circuit breaker
     circuit_breaker_triggered: Arc<RwLock<bool>>,
 }
 
 impl RiskManager {
     /// Create a new risk manager
-    pub fn new(
-        limits: RiskLimits,
-        sizing_config: SizingConfig,
-        var_config: VaRConfig,
-    ) -> Self {
+    pub fn new(limits: RiskLimits, sizing_config: SizingConfig, var_config: VaRConfig) -> Self {
         Self {
             limits: limits.clone(),
             position_sizer: PositionSizer::new(sizing_config),
@@ -93,7 +90,10 @@ impl RiskManager {
     /// Initialize with starting equity
     pub async fn initialize(&self, starting_equity: Decimal) {
         *self.daily_starting_equity.write().await = starting_equity;
-        self.portfolio_risk.write().await.update_equity(starting_equity);
+        self.portfolio_risk
+            .write()
+            .await
+            .update_equity(starting_equity);
         info!("Risk manager initialized with equity: {}", starting_equity);
     }
 
@@ -277,10 +277,9 @@ impl RiskManager {
 
         for (symbol, price) in prices {
             for (order_id, order) in slm.get_all_orders() {
-                if order.symbol == *symbol
-                    && slm.check_trigger(order_id, *price).is_some() {
-                        triggered.push(order_id.clone());
-                    }
+                if order.symbol == *symbol && slm.check_trigger(order_id, *price).is_some() {
+                    triggered.push(order_id.clone());
+                }
             }
         }
 
@@ -354,7 +353,10 @@ impl RiskManager {
 
     /// Remove closed position
     pub async fn remove_position(&self, position_id: &str) {
-        self.stop_loss_manager.write().await.cancel_for_position(position_id);
+        self.stop_loss_manager
+            .write()
+            .await
+            .cancel_for_position(position_id);
         let mut count = self.open_positions.write().await;
         if *count > 0 {
             *count -= 1;
@@ -391,7 +393,9 @@ impl RiskManager {
     }
 
     /// Get mutable stop-loss manager (acquires lock)
-    pub async fn stop_loss_manager_mut(&self) -> tokio::sync::RwLockWriteGuard<'_, StopLossManager> {
+    pub async fn stop_loss_manager_mut(
+        &self,
+    ) -> tokio::sync::RwLockWriteGuard<'_, StopLossManager> {
         self.stop_loss_manager.write().await
     }
 }
@@ -407,7 +411,10 @@ mod tests {
             SizingConfig::default(),
             VaRConfig::default(),
         );
-        assert_eq!(manager.limits.max_drawdown, Decimal::try_from(0.20).unwrap());
+        assert_eq!(
+            manager.limits.max_drawdown,
+            Decimal::try_from(0.20).unwrap()
+        );
     }
 
     #[tokio::test]
@@ -429,7 +436,7 @@ mod tests {
             .assess_trade(
                 "BTC",
                 Decimal::from(50000),
-                Decimal::from(49000), // 2% stop
+                Decimal::from(49000),       // 2% stop
                 Some(Decimal::from(52000)), // 4% profit
                 Decimal::from(100000),
                 Decimal::from(100000),
@@ -437,7 +444,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(assessment.approved, "Trade should be approved: {:?}", assessment.reason);
+        assert!(
+            assessment.approved,
+            "Trade should be approved: {:?}",
+            assessment.reason
+        );
         assert!(assessment.suggested_size.is_some());
     }
 
@@ -453,7 +464,7 @@ mod tests {
             .assess_trade(
                 "BTC",
                 Decimal::from(50000),
-                Decimal::from(49000), // 2% risk
+                Decimal::from(49000),       // 2% risk
                 Some(Decimal::from(50500)), // 1% reward = 0.5:1 ratio
                 Decimal::from(100000),
                 Decimal::from(100000),
@@ -510,10 +521,17 @@ mod tests {
 
         // Simulate 15% drawdown
         let metrics = manager.update_equity(Decimal::from(85000)).await.unwrap();
-        eprintln!("Drawdown: {}%", metrics.current_drawdown * Decimal::from(100));
+        eprintln!(
+            "Drawdown: {}%",
+            metrics.current_drawdown * Decimal::from(100)
+        );
 
         // Trading should be halted
-        assert!(!manager.is_trading_allowed().await, "Trading should be halted after {}% drawdown", metrics.current_drawdown * Decimal::from(100));
+        assert!(
+            !manager.is_trading_allowed().await,
+            "Trading should be halted after {}% drawdown",
+            metrics.current_drawdown * Decimal::from(100)
+        );
 
         // New trade should be rejected
         let assessment = manager
@@ -580,7 +598,10 @@ mod tests {
             .unwrap();
 
         assert!(!assessment.approved);
-        assert!(assessment.reason.unwrap().contains("Maximum open positions"));
+        assert!(assessment
+            .reason
+            .unwrap()
+            .contains("Maximum open positions"));
     }
 
     #[tokio::test]

@@ -8,8 +8,8 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+use super::memory::{ExperienceQuery, MarketRegime, OutcomeFilter, RagMemory, TradingExperience};
 use super::{Action, TradingDecision};
-use super::memory::{RagMemory, ExperienceQuery, OutcomeFilter, TradingExperience, MarketRegime};
 
 /// LLM Strategist that makes trading decisions
 pub struct LlmStrategist {
@@ -20,7 +20,11 @@ pub struct LlmStrategist {
 /// LLM Provider trait
 #[async_trait::async_trait]
 pub trait LlmProvider: Send + Sync {
-    async fn generate_decision(&self, prompt: &str, context: &DecisionContext) -> Result<TradingDecision, LlmError>;
+    async fn generate_decision(
+        &self,
+        prompt: &str,
+        context: &DecisionContext,
+    ) -> Result<TradingDecision, LlmError>;
     async fn analyze_experience(&self, experience: &TradingExperience) -> Result<String, LlmError>;
 }
 
@@ -104,7 +108,7 @@ impl LlmStrategist {
     pub fn new(provider: Arc<dyn LlmProvider>, config: StrategistConfig) -> Self {
         Self { provider, config }
     }
-    
+
     /// Make trading decision based on context and memory
     pub async fn decide(
         &self,
@@ -123,17 +127,17 @@ impl LlmStrategist {
             limit: self.config.max_context_experiences,
             ..Default::default()
         };
-        
+
         let similar_experiences = memory.query_similar_cases(&query);
         let regime_insight = memory.what_works_in_regime(&context.regime);
-        
+
         // Build decision prompt
         let prompt = self.build_decision_prompt(context, &similar_experiences, &regime_insight);
-        
+
         // Get decision from LLM
         self.provider.generate_decision(&prompt, context).await
     }
-    
+
     /// Generate lesson from experience
     pub async fn generate_lesson(
         &self,
@@ -141,7 +145,7 @@ impl LlmStrategist {
     ) -> Result<String, LlmError> {
         self.provider.analyze_experience(experience).await
     }
-    
+
     /// Build decision prompt for LLM
     fn build_decision_prompt(
         &self,
@@ -170,7 +174,10 @@ SIMILAR PAST EXPERIENCES:
 "#,
             context.ticker,
             context.current_price,
-            context.rsi.map(|r| format!("{:.1}", r)).unwrap_or_else(|| "N/A".to_string()),
+            context
+                .rsi
+                .map(|r| format!("{:.1}", r))
+                .unwrap_or_else(|| "N/A".to_string()),
             context.trend,
             context.regime,
             context.portfolio_value,
@@ -179,7 +186,7 @@ SIMILAR PAST EXPERIENCES:
             context.market_sentiment.overall,
             regime_insight.recommendation,
         );
-        
+
         // Add similar experiences
         if experiences.is_empty() {
             prompt.push_str("No similar past experiences available.\n");
@@ -197,8 +204,9 @@ SIMILAR PAST EXPERIENCES:
                 ));
             }
         }
-        
-        prompt.push_str(r#"
+
+        prompt.push_str(
+            r#"
 DECISION INSTRUCTIONS:
 1. Analyze the current market conditions
 2. Consider similar past experiences and their outcomes
@@ -215,8 +223,9 @@ RESPONSE FORMAT:
 }
 
 Only respond with the JSON object, nothing else.
-"#);
-        
+"#,
+        );
+
         prompt
     }
 }
@@ -251,10 +260,13 @@ impl LlmProvider for MockLlmProvider {
             rationale: "Mock decision for testing".to_string(),
         })
     }
-    
+
     async fn analyze_experience(&self, experience: &TradingExperience) -> Result<String, LlmError> {
         let lesson = if experience.outcome.success {
-            format!("Good trade: captured {}%", experience.outcome.profit_loss_pct)
+            format!(
+                "Good trade: captured {}%",
+                experience.outcome.profit_loss_pct
+            )
         } else {
             format!("Mistake: lost {}%", experience.outcome.profit_loss_pct)
         };
@@ -268,18 +280,18 @@ pub struct RuleBasedStrategist;
 impl RuleBasedStrategist {
     pub fn decide(&self, context: &DecisionContext) -> TradingDecision {
         let action = match context.rsi {
-            Some(rsi) if rsi < 30.0 => Action::Buy,   // Oversold
-            Some(rsi) if rsi > 70.0 => Action::Sell,  // Overbought
+            Some(rsi) if rsi < 30.0 => Action::Buy,  // Oversold
+            Some(rsi) if rsi > 70.0 => Action::Sell, // Overbought
             _ => Action::Hold,
         };
-        
+
         let confidence = match action {
             Action::Buy if context.rsi.unwrap_or(50.0) < 20.0 => 0.8,
             Action::Sell if context.rsi.unwrap_or(50.0) > 80.0 => 0.8,
             Action::Buy | Action::Sell => 0.6,
             Action::Hold => 0.5,
         };
-        
+
         TradingDecision {
             action,
             ticker: context.ticker.clone(),

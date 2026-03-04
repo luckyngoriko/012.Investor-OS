@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { addNotification } from "@/components/notification-center";
 import {
   Brain,
   Play,
@@ -23,20 +24,25 @@ import {
 // TYPES & CONFIGURATION
 // ============================================
 
-export type TrainingMode = "idle" | "running" | "paused" | "completed" | "error";
+export type TrainingMode =
+  | "idle"
+  | "running"
+  | "paused"
+  | "completed"
+  | "error";
 
 export interface TrainingConfig {
-  targetConfidence: number;        // 0-100%
-  maxEpochs: number;              // Максимум епохи
-  earlyStoppingPatience: number;  // Epochs без подобрение преди спиране
-  minDelta: number;               // Минимално подобрение за отчитане
-  learningRate: number;           // Learning rate
-  batchSize: number;              // Batch size
-  validationSplit: number;        // % за validation
-  datasetSize: number;            // Общ брой примери
+  targetConfidence: number; // 0-100%
+  maxEpochs: number; // Максимум епохи
+  earlyStoppingPatience: number; // Epochs без подобрение преди спиране
+  minDelta: number; // Минимално подобрение за отчитане
+  learningRate: number; // Learning rate
+  batchSize: number; // Batch size
+  validationSplit: number; // % за validation
+  datasetSize: number; // Общ брой примери
   modelType: "xgboost" | "lstm" | "transformer" | "ensemble";
-  checkpointInterval: number;     // Запазване на checkpoint на всеки N епохи
-  autoSave: boolean;              // Автоматично запазване на най-добрия модел
+  checkpointInterval: number; // Запазване на checkpoint на всеки N епохи
+  autoSave: boolean; // Автоматично запазване на най-добрия модел
 }
 
 export interface TrainingMetrics {
@@ -45,9 +51,9 @@ export interface TrainingMetrics {
   valLoss: number;
   trainAccuracy: number;
   valAccuracy: number;
-  confidence: number;             // Текущ confidence score
+  confidence: number; // Текущ confidence score
   learningRate: number;
-  timePerEpoch: number;           // Секунди
+  timePerEpoch: number; // Секунди
   estimatedTimeRemaining: number; // Секунди
 }
 
@@ -65,7 +71,7 @@ export interface TrainingSession {
 }
 
 export const DEFAULT_TRAINING_CONFIG: TrainingConfig = {
-  targetConfidence: 85,           // Цел: 85% confidence
+  targetConfidence: 85, // Цел: 85% confidence
   maxEpochs: 1000,
   earlyStoppingPatience: 50,
   minDelta: 0.001,
@@ -88,9 +94,13 @@ interface TrainingStatusProps {
   targetConfidence: number;
 }
 
-export function TrainingStatus({ status, currentConfidence, targetConfidence }: TrainingStatusProps) {
+export function TrainingStatus({
+  status,
+  currentConfidence,
+  targetConfidence,
+}: TrainingStatusProps) {
   const progress = Math.min((currentConfidence / targetConfidence) * 100, 100);
-  
+
   const statusConfig = {
     idle: {
       color: "text-gray-400",
@@ -156,29 +166,41 @@ export function TrainingStatus({ status, currentConfidence, targetConfidence }: 
       <div className="flex items-start gap-4">
         <motion.div
           animate={status === "running" ? { rotate: 360 } : {}}
-          transition={status === "running" ? { duration: 2, repeat: Infinity, ease: "linear" } : {}}
+          transition={
+            status === "running"
+              ? { duration: 2, repeat: Infinity, ease: "linear" }
+              : {}
+          }
           className={`w-14 h-14 rounded-xl ${config.bgColor} flex items-center justify-center`}
         >
           <Icon className={`w-7 h-7 ${config.color}`} />
         </motion.div>
 
         <div className="flex-1">
-          <h3 className={`text-xl font-bold ${config.color}`}>{config.label}</h3>
+          <h3 className={`text-xl font-bold ${config.color}`}>
+            {config.label}
+          </h3>
           <p className="text-gray-400 mt-1">{config.message}</p>
 
           {/* Progress Details */}
           <div className="flex items-center gap-6 mt-4">
             <div>
               <span className="text-xs text-gray-500 uppercase">Progress</span>
-              <p className={`text-2xl font-bold ${config.color}`}>{progress.toFixed(1)}%</p>
+              <p className={`text-2xl font-bold ${config.color}`}>
+                {progress.toFixed(1)}%
+              </p>
             </div>
             <div>
               <span className="text-xs text-gray-500 uppercase">Current</span>
-              <p className="text-2xl font-bold text-white">{currentConfidence.toFixed(2)}%</p>
+              <p className="text-2xl font-bold text-white">
+                {currentConfidence.toFixed(2)}%
+              </p>
             </div>
             <div>
               <span className="text-xs text-gray-500 uppercase">Target</span>
-              <p className="text-2xl font-bold text-white">{targetConfidence}%</p>
+              <p className="text-2xl font-bold text-white">
+                {targetConfidence}%
+              </p>
             </div>
           </div>
         </div>
@@ -304,8 +326,13 @@ interface AITrainingModeProps {
   onSessionUpdate?: (session: TrainingSession) => void;
 }
 
-export function AITrainingMode({ initialConfig, onSessionUpdate }: AITrainingModeProps) {
-  const [config, setConfig] = useState<TrainingConfig>(initialConfig || DEFAULT_TRAINING_CONFIG);
+export function AITrainingMode({
+  initialConfig,
+  onSessionUpdate,
+}: AITrainingModeProps) {
+  const [config, setConfig] = useState<TrainingConfig>(
+    initialConfig || DEFAULT_TRAINING_CONFIG,
+  );
   const [status, setStatus] = useState<TrainingMode>("idle");
   const [metrics, setMetrics] = useState<TrainingMetrics[]>([]);
   const [currentEpoch, setCurrentEpoch] = useState(0);
@@ -319,29 +346,41 @@ export function AITrainingMode({ initialConfig, onSessionUpdate }: AITrainingMod
   const trainingStep = useCallback(() => {
     setCurrentEpoch((prev) => {
       const newEpoch = prev + 1;
-      
+
       // Simulate metrics improvement with some randomness
       setMetrics((prevMetrics) => {
         const lastMetric = prevMetrics[prevMetrics.length - 1];
         const baseConfidence = lastMetric?.confidence || 50;
-        
+
         // Gradual improvement with diminishing returns
-        const improvement = Math.max(0, (config.targetConfidence - baseConfidence) * 0.05 * Math.random());
+        const improvement = Math.max(
+          0,
+          (config.targetConfidence - baseConfidence) * 0.05 * Math.random(),
+        );
         const noise = (Math.random() - 0.5) * 2;
-        const newConfidence = Math.min(baseConfidence + improvement + noise, 99.9);
-        
+        const newConfidence = Math.min(
+          baseConfidence + improvement + noise,
+          99.9,
+        );
+
         const newMetric: TrainingMetrics = {
           epoch: newEpoch,
           trainLoss: Math.max(0.1, (lastMetric?.trainLoss || 1.0) * 0.98),
           valLoss: Math.max(0.15, (lastMetric?.valLoss || 1.2) * 0.98),
-          trainAccuracy: Math.min(99, (lastMetric?.trainAccuracy || 60) + improvement * 0.8),
-          valAccuracy: Math.min(98, (lastMetric?.valAccuracy || 55) + improvement * 0.7),
+          trainAccuracy: Math.min(
+            99,
+            (lastMetric?.trainAccuracy || 60) + improvement * 0.8,
+          ),
+          valAccuracy: Math.min(
+            98,
+            (lastMetric?.valAccuracy || 55) + improvement * 0.7,
+          ),
           confidence: newConfidence,
           learningRate: config.learningRate * Math.pow(0.95, newEpoch / 100),
           timePerEpoch: 5 + Math.random() * 3,
           estimatedTimeRemaining: (config.maxEpochs - newEpoch) * 6,
         };
-        
+
         // Check for improvement
         if (newConfidence > bestConfidence + config.minDelta) {
           setBestConfidence(newConfidence);
@@ -349,9 +388,9 @@ export function AITrainingMode({ initialConfig, onSessionUpdate }: AITrainingMod
         } else {
           setPatienceCounter((p) => p + 1);
         }
-        
+
         setCurrentConfidence(newConfidence);
-        
+
         // Check completion criteria
         if (newConfidence >= config.targetConfidence) {
           setStatus("completed");
@@ -369,24 +408,28 @@ export function AITrainingMode({ initialConfig, onSessionUpdate }: AITrainingMod
             });
           }
         }
-        
+
         // Check early stopping
         if (patienceCounter >= config.earlyStoppingPatience) {
           setStatus("completed");
-          setError(`Early stopping triggered after ${newEpoch} epochs (no improvement for ${config.earlyStoppingPatience} epochs)`);
+          setError(
+            `Early stopping triggered after ${newEpoch} epochs (no improvement for ${config.earlyStoppingPatience} epochs)`,
+          );
         }
-        
+
         // Check max epochs
         if (newEpoch >= config.maxEpochs) {
           setStatus("completed");
           if (newConfidence < config.targetConfidence) {
-            setError(`Max epochs (${config.maxEpochs}) reached. Target confidence not achieved.`);
+            setError(
+              `Max epochs (${config.maxEpochs}) reached. Target confidence not achieved.`,
+            );
           }
         }
-        
+
         return [...prevMetrics, newMetric];
       });
-      
+
       return newEpoch;
     });
   }, [config, bestConfidence, patienceCounter, startTime, onSessionUpdate]);
@@ -394,11 +437,11 @@ export function AITrainingMode({ initialConfig, onSessionUpdate }: AITrainingMod
   // Training loop effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     if (status === "running") {
       interval = setInterval(trainingStep, 100); // Fast simulation: 1 epoch per 100ms
     }
-    
+
     return () => clearInterval(interval);
   }, [status, trainingStep]);
 
@@ -416,7 +459,7 @@ export function AITrainingMode({ initialConfig, onSessionUpdate }: AITrainingMod
   };
 
   const handlePause = () => setStatus("paused");
-  
+
   const handleStop = () => {
     setStatus("completed");
     if (onSessionUpdate) {
@@ -446,13 +489,20 @@ export function AITrainingMode({ initialConfig, onSessionUpdate }: AITrainingMod
   };
 
   const handleSave = () => {
-    // Simulate saving model
     console.log("Saving model...", { bestConfidence, currentEpoch, config });
-    alert(`Model saved! Best confidence: ${bestConfidence.toFixed(2)}%`);
+    addNotification({
+      type: "success",
+      title: "Model Saved",
+      message: `Best confidence: ${bestConfidence.toFixed(2)}%`,
+    });
   };
 
   const handleExport = () => {
-    const dataStr = JSON.stringify({ config, metrics, bestConfidence }, null, 2);
+    const dataStr = JSON.stringify(
+      { config, metrics, bestConfidence },
+      null,
+      2,
+    );
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -508,7 +558,9 @@ export function AITrainingMode({ initialConfig, onSessionUpdate }: AITrainingMod
           icon={TrendingUp}
           label="Best Achieved"
           value={`${bestConfidence.toFixed(2)}%`}
-          color={bestConfidence >= config.targetConfidence ? "emerald" : "amber"}
+          color={
+            bestConfidence >= config.targetConfidence ? "emerald" : "amber"
+          }
         />
         <InfoCard
           icon={Clock}
@@ -520,7 +572,11 @@ export function AITrainingMode({ initialConfig, onSessionUpdate }: AITrainingMod
           icon={Shield}
           label="Early Stop Patience"
           value={`${patienceCounter} / ${config.earlyStoppingPatience}`}
-          color={patienceCounter > config.earlyStoppingPatience * 0.7 ? "rose" : "gray"}
+          color={
+            patienceCounter > config.earlyStoppingPatience * 0.7
+              ? "rose"
+              : "gray"
+          }
         />
       </div>
     </div>

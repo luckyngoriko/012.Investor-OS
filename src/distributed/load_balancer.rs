@@ -53,26 +53,26 @@ impl LoadBalancer {
     /// Create new load balancer
     pub fn new(nodes: Vec<NodeInfo>) -> Self {
         let handles: Vec<_> = nodes.into_iter().map(NodeHandle::from).collect();
-        
+
         Self {
             nodes: handles,
-            strategy: LoadBalancingStrategy::LeastLatency,
+            strategy: LoadBalancingStrategy::RoundRobin,
             round_robin_counter: AtomicUsize::new(0),
         }
     }
-    
+
     /// Create with specific strategy
     pub fn with_strategy(mut self, strategy: LoadBalancingStrategy) -> Self {
         self.strategy = strategy;
         self
     }
-    
+
     /// Select a node based on strategy
     pub fn select_node(&self) -> Option<&NodeHandle> {
         if self.nodes.is_empty() {
             return None;
         }
-        
+
         match self.strategy {
             LoadBalancingStrategy::RoundRobin => self.select_round_robin(),
             LoadBalancingStrategy::LeastConnections => self.select_least_connections(),
@@ -80,41 +80,41 @@ impl LoadBalancer {
             LoadBalancingStrategy::Weighted => self.select_weighted(),
         }
     }
-    
+
     /// Round-robin selection
     fn select_round_robin(&self) -> Option<&NodeHandle> {
-        let idx = self.round_robin_counter.fetch_add(1, Ordering::Relaxed) 
-            % self.nodes.len();
+        let idx = self.round_robin_counter.fetch_add(1, Ordering::Relaxed) % self.nodes.len();
         self.nodes.get(idx)
     }
-    
+
     /// Select node with least active connections
     fn select_least_connections(&self) -> Option<&NodeHandle> {
-        self.nodes.iter()
+        self.nodes
+            .iter()
             .min_by_key(|n| n.metrics.requests_active.load(Ordering::Relaxed))
     }
-    
+
     /// Select node with lowest average latency
     fn select_least_latency(&self) -> Option<&NodeHandle> {
-        self.nodes.iter()
-            .min_by(|a, b| {
-                let a_latency = a.metrics.avg_latency_micros();
-                let b_latency = b.metrics.avg_latency_micros();
-                a_latency.partial_cmp(&b_latency).unwrap_or(std::cmp::Ordering::Equal)
-            })
+        self.nodes.iter().min_by(|a, b| {
+            let a_latency = a.metrics.avg_latency_micros();
+            let b_latency = b.metrics.avg_latency_micros();
+            a_latency
+                .partial_cmp(&b_latency)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
     }
-    
+
     /// Weighted random selection
     fn select_weighted(&self) -> Option<&NodeHandle> {
         let total_weight: u32 = self.nodes.iter().map(|n| n.weight).sum();
         if total_weight == 0 {
             return self.select_round_robin();
         }
-        
+
         // Simple weighted selection based on counter
-        let idx = self.round_robin_counter.fetch_add(1, Ordering::Relaxed) 
-            % total_weight as usize;
-        
+        let idx = self.round_robin_counter.fetch_add(1, Ordering::Relaxed) % total_weight as usize;
+
         let mut current = 0;
         for node in &self.nodes {
             current += node.weight as usize;
@@ -122,30 +122,30 @@ impl LoadBalancer {
                 return Some(node);
             }
         }
-        
+
         self.nodes.first()
     }
-    
+
     /// Update node list
     pub fn update_nodes(&mut self, nodes: Vec<NodeInfo>) {
         self.nodes = nodes.into_iter().map(NodeHandle::from).collect();
     }
-    
+
     /// Add a node
     pub fn add_node(&mut self, node: NodeInfo) {
         self.nodes.push(node.into());
     }
-    
+
     /// Remove a node
     pub fn remove_node(&mut self, id: &NodeId) {
         self.nodes.retain(|n| n.id != *id);
     }
-    
+
     /// Get node count
     pub fn node_count(&self) -> usize {
         self.nodes.len()
     }
-    
+
     /// Get all nodes
     pub fn nodes(&self) -> &[NodeHandle] {
         &self.nodes
@@ -160,15 +160,15 @@ pub struct LoadBalancerBuilder {
 impl LoadBalancerBuilder {
     pub fn new() -> Self {
         Self {
-            strategy: LoadBalancingStrategy::LeastLatency,
+            strategy: LoadBalancingStrategy::RoundRobin,
         }
     }
-    
+
     pub fn strategy(mut self, strategy: LoadBalancingStrategy) -> Self {
         self.strategy = strategy;
         self
     }
-    
+
     pub fn build(self, nodes: Vec<NodeInfo>) -> LoadBalancer {
         LoadBalancer::new(nodes).with_strategy(self.strategy)
     }
@@ -211,12 +211,12 @@ mod tests {
     fn test_round_robin() {
         let nodes = create_test_nodes();
         let lb = LoadBalancer::new(nodes).with_strategy(LoadBalancingStrategy::RoundRobin);
-        
+
         let first = lb.select_node().unwrap();
         let second = lb.select_node().unwrap();
         let third = lb.select_node().unwrap();
         let fourth = lb.select_node().unwrap();
-        
+
         assert_eq!(first.id.0, "node-1");
         assert_eq!(second.id.0, "node-2");
         assert_eq!(third.id.0, "node-3");
@@ -227,13 +227,13 @@ mod tests {
     fn test_least_connections() {
         let nodes = create_test_nodes();
         let lb = LoadBalancer::new(nodes).with_strategy(LoadBalancingStrategy::LeastConnections);
-        
+
         // Simulate node-1 having active requests
         lb.nodes[0].metrics.increment_active();
         lb.nodes[0].metrics.increment_active();
-        
+
         let selected = lb.select_node().unwrap();
-        
+
         // Should select node with least connections
         assert_ne!(selected.id.0, "node-1");
     }

@@ -17,7 +17,7 @@ impl TaxYear {
     pub fn current() -> Self {
         Self(Utc::now().year())
     }
-    
+
     pub fn previous() -> Self {
         Self(Utc::now().year() - 1)
     }
@@ -80,9 +80,9 @@ pub struct SymbolSummary {
 /// Tax form types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TaxForm {
-    ScheduleD,      // Capital gains summary
-    Form8949,       // Sales and other dispositions
-    Form1099B,      // Broker proceeds
+    ScheduleD, // Capital gains summary
+    Form8949,  // Sales and other dispositions
+    Form1099B, // Broker proceeds
 }
 
 impl TaxReportingEngine {
@@ -90,7 +90,7 @@ impl TaxReportingEngine {
     pub fn new(jurisdiction: TaxJurisdiction) -> Self {
         Self { jurisdiction }
     }
-    
+
     /// Generate tax report for year
     pub fn generate_report(
         &self,
@@ -98,26 +98,27 @@ impl TaxReportingEngine {
         realized_gains: &[RealizedGain],
         _open_lots: Vec<&TaxLot>,
     ) -> TaxReport {
-        let year_gains: Vec<_> = realized_gains.iter()
+        let year_gains: Vec<_> = realized_gains
+            .iter()
             .filter(|g| g.sale_date.year() == year)
             .collect();
-        
+
         let mut short_term_gains = Decimal::ZERO;
         let mut short_term_losses = Decimal::ZERO;
         let mut long_term_gains = Decimal::ZERO;
         let mut long_term_losses = Decimal::ZERO;
         let mut wash_sale_adjustments = Decimal::ZERO;
-        
+
         let mut transactions = Vec::new();
         let mut symbol_summary: HashMap<String, SymbolSummary> = HashMap::new();
-        
+
         for gain in &year_gains {
             let term = if gain.is_short_term {
                 TermType::ShortTerm
             } else {
                 TermType::LongTerm
             };
-            
+
             let transaction = ReportTransaction {
                 symbol: gain.symbol.clone(),
                 quantity: gain.quantity,
@@ -129,7 +130,7 @@ impl TaxReportingEngine {
                 term,
                 wash_sale_adjustment: gain.adjustment_amount,
             };
-            
+
             // Categorize gains/losses
             if gain.is_short_term {
                 if gain.gain_loss >= Decimal::ZERO {
@@ -142,21 +143,21 @@ impl TaxReportingEngine {
             } else {
                 long_term_losses += gain.gain_loss.abs();
             }
-            
+
             wash_sale_adjustments += gain.adjustment_amount;
             transactions.push(transaction);
-            
+
             // Update symbol summary
-            let summary = symbol_summary.entry(gain.symbol.clone()).or_insert(
-                SymbolSummary {
+            let summary = symbol_summary
+                .entry(gain.symbol.clone())
+                .or_insert(SymbolSummary {
                     symbol: gain.symbol.clone(),
                     total_transactions: 0,
                     total_gains: Decimal::ZERO,
                     total_losses: Decimal::ZERO,
                     net_pnl: Decimal::ZERO,
-                }
-            );
-            
+                });
+
             summary.total_transactions += 1;
             if gain.gain_loss >= Decimal::ZERO {
                 summary.total_gains += gain.gain_loss;
@@ -165,16 +166,18 @@ impl TaxReportingEngine {
             }
             summary.net_pnl += gain.gain_loss;
         }
-        
+
         let net_short_term = short_term_gains - short_term_losses;
         let net_long_term = long_term_gains - long_term_losses;
         let total_net = net_short_term + net_long_term;
-        
+
         info!(
             "Tax report generated for {}: {} transactions, net P&L: {}",
-            year, transactions.len(), total_net
+            year,
+            transactions.len(),
+            total_net
         );
-        
+
         TaxReport {
             year,
             generated_at: Utc::now(),
@@ -190,7 +193,7 @@ impl TaxReportingEngine {
             summary_by_symbol: symbol_summary,
         }
     }
-    
+
     /// Generate Schedule D (Capital Gains)
     pub fn generate_schedule_d(&self, report: &TaxReport) -> ScheduleD {
         ScheduleD {
@@ -205,19 +208,21 @@ impl TaxReportingEngine {
             capital_loss_carryover: self.calculate_carryover(report),
         }
     }
-    
+
     /// Generate Form 8949 transactions
     pub fn generate_form_8949(&self, report: &TaxReport, term: TermType) -> Form8949 {
-        let transactions: Vec<_> = report.transactions.iter()
+        let transactions: Vec<_> = report
+            .transactions
+            .iter()
             .filter(|t| t.term == term)
             .cloned()
             .collect();
-        
+
         let total_proceeds: Decimal = transactions.iter().map(|t| t.proceeds).sum();
         let total_cost: Decimal = transactions.iter().map(|t| t.cost_basis).sum();
         let total_adjustments: Decimal = transactions.iter().map(|t| t.wash_sale_adjustment).sum();
         let total_gain_loss: Decimal = transactions.iter().map(|t| t.gain_loss).sum();
-        
+
         Form8949 {
             tax_year: report.year,
             term,
@@ -228,7 +233,7 @@ impl TaxReportingEngine {
             total_gain_loss,
         }
     }
-    
+
     /// Calculate capital loss carryover
     fn calculate_carryover(&self, report: &TaxReport) -> CapitalLossCarryover {
         // Simplified calculation
@@ -238,10 +243,10 @@ impl TaxReportingEngine {
         } else {
             Decimal::ZERO
         };
-        
+
         let current_deduction = loss_available.min(max_deduction);
         let carryover = loss_available - current_deduction;
-        
+
         CapitalLossCarryover {
             short_term_carryover: if report.net_short_term < Decimal::ZERO {
                 report.net_short_term.abs()
@@ -256,34 +261,39 @@ impl TaxReportingEngine {
             total_carryover: carryover,
         }
     }
-    
+
     /// Export to CSV format
     pub fn export_csv(&self, report: &TaxReport) -> String {
         let mut csv = String::new();
-        
+
         // Header
-        csv.push_str("Symbol,Quantity,Purchase Date,Sale Date,Cost Basis,Proceeds,Gain/Loss,Term\n");
-        
+        csv.push_str(
+            "Symbol,Quantity,Purchase Date,Sale Date,Cost Basis,Proceeds,Gain/Loss,Term\n",
+        );
+
         // Transactions
         for t in &report.transactions {
             let term = match t.term {
                 TermType::ShortTerm => "Short",
                 TermType::LongTerm => "Long",
             };
-            
+
             csv.push_str(&format!(
                 "{},{},{},{},{},{},{},{}\n",
-                t.symbol, t.quantity, 
+                t.symbol,
+                t.quantity,
                 t.purchase_date.format("%Y-%m-%d"),
                 t.sale_date.format("%Y-%m-%d"),
-                t.cost_basis, t.proceeds, t.gain_loss,
+                t.cost_basis,
+                t.proceeds,
+                t.gain_loss,
                 term
             ));
         }
-        
+
         csv
     }
-    
+
     /// Get tax filing deadline for year
     pub fn filing_deadline(&self, year: i32) -> NaiveDate {
         match self.jurisdiction {
@@ -345,7 +355,7 @@ mod tests {
     fn create_test_gain(symbol: &str, gain: Decimal, short_term: bool, year: i32) -> RealizedGain {
         let now = Utc::now();
         let purchase_date = now - chrono::Duration::days(if short_term { 30 } else { 400 });
-        
+
         RealizedGain {
             lot_id: Uuid::new_v4(),
             symbol: symbol.to_string(),
@@ -371,14 +381,14 @@ mod tests {
     fn test_generate_report() {
         let engine = TaxReportingEngine::new(TaxJurisdiction::USA);
         let year = Utc::now().year();
-        
+
         let gains = vec![
             create_test_gain("AAPL", Decimal::from(1000), true, year),
             create_test_gain("MSFT", Decimal::from(-500), false, year),
         ];
-        
+
         let report = engine.generate_report(year, &gains, vec![]);
-        
+
         assert_eq!(report.year, year);
         assert_eq!(report.transactions.len(), 2);
         assert_eq!(report.short_term_gains, Decimal::from(1000));
@@ -389,15 +399,15 @@ mod tests {
     fn test_schedule_d_generation() {
         let engine = TaxReportingEngine::new(TaxJurisdiction::USA);
         let year = Utc::now().year();
-        
+
         let gains = vec![
             create_test_gain("AAPL", Decimal::from(1000), true, year),
             create_test_gain("GOOGL", Decimal::from(2000), false, year),
         ];
-        
+
         let report = engine.generate_report(year, &gains, vec![]);
         let schedule_d = engine.generate_schedule_d(&report);
-        
+
         assert_eq!(schedule_d.tax_year, year);
         assert_eq!(schedule_d.short_term_gains, Decimal::from(1000));
         assert_eq!(schedule_d.long_term_gains, Decimal::from(2000));
@@ -407,11 +417,11 @@ mod tests {
     fn test_csv_export() {
         let engine = TaxReportingEngine::new(TaxJurisdiction::USA);
         let year = Utc::now().year();
-        
+
         let gains = vec![create_test_gain("AAPL", Decimal::from(1000), true, year)];
         let report = engine.generate_report(year, &gains, vec![]);
         let csv = engine.export_csv(&report);
-        
+
         assert!(csv.contains("Symbol,Quantity"));
         assert!(csv.contains("AAPL"));
     }
@@ -420,11 +430,11 @@ mod tests {
     fn test_capital_loss_carryover() {
         let engine = TaxReportingEngine::new(TaxJurisdiction::USA);
         let year = Utc::now().year();
-        
+
         let gains = vec![create_test_gain("AAPL", Decimal::from(-10000), true, year)];
         let report = engine.generate_report(year, &gains, vec![]);
         let schedule_d = engine.generate_schedule_d(&report);
-        
+
         assert!(schedule_d.capital_loss_carryover.total_carryover > Decimal::ZERO);
     }
 }

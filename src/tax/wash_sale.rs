@@ -94,7 +94,7 @@ impl WashSaleMonitor {
             violations: Vec::new(),
         }
     }
-    
+
     /// Record a sale at a loss
     pub fn record_loss_sale(&mut self, symbol: &str, quantity: Decimal, loss: Decimal) -> Uuid {
         let id = Uuid::new_v4();
@@ -105,21 +105,24 @@ impl WashSaleMonitor {
             loss_amount: loss,
             quantity,
         };
-        
+
         self.recent_loss_sales.push(sale);
-        
+
         // Block repurchase for lookforward period
         let unblock_date = Utc::now() + Duration::days(self.lookforward_days);
-        self.blocked_repurchases.insert(symbol.to_string(), unblock_date);
-        
+        self.blocked_repurchases
+            .insert(symbol.to_string(), unblock_date);
+
         info!(
             "Loss sale recorded for {}: {}, repurchase blocked until {}",
-            symbol, loss, unblock_date.format("%Y-%m-%d")
+            symbol,
+            loss,
+            unblock_date.format("%Y-%m-%d")
         );
-        
+
         id
     }
-    
+
     /// Record a purchase
     pub fn record_purchase(&mut self, symbol: &str, quantity: Decimal, price: Decimal) -> Uuid {
         let id = Uuid::new_v4();
@@ -130,19 +133,19 @@ impl WashSaleMonitor {
             quantity,
             price,
         };
-        
+
         self.recent_purchases.push(purchase.clone());
-        
+
         // Check if this creates a wash sale with recent loss sales
         self.check_wash_sale_for_purchase(&purchase);
-        
+
         id
     }
-    
+
     /// Check if lot can be harvested (no recent purchases)
     pub fn check_wash_sale(&self, lot: &TaxLot) -> Option<WashSaleViolation> {
         let cutoff = Utc::now() - Duration::days(self.lookback_days);
-        
+
         // Check for purchases within lookback window
         for purchase in &self.recent_purchases {
             if purchase.symbol == lot.symbol && purchase.purchase_date > cutoff {
@@ -153,7 +156,8 @@ impl WashSaleMonitor {
                     symbol: lot.symbol.clone(),
                     description: format!(
                         "Purchase of {} on {} within 30 days of intended sale",
-                        lot.symbol, purchase.purchase_date.format("%Y-%m-%d")
+                        lot.symbol,
+                        purchase.purchase_date.format("%Y-%m-%d")
                     ),
                     disallowed_loss: Decimal::ZERO, // Would be calculated
                     adjustment_basis_increase: Decimal::ZERO,
@@ -161,11 +165,13 @@ impl WashSaleMonitor {
                 });
             }
         }
-        
+
         // Check substantially identical securities
         if let Some(substantially_identical) = self.get_substantially_identical(&lot.symbol) {
             for purchase in &self.recent_purchases {
-                if substantially_identical.contains(&purchase.symbol) && purchase.purchase_date > cutoff {
+                if substantially_identical.contains(&purchase.symbol)
+                    && purchase.purchase_date > cutoff
+                {
                     return Some(WashSaleViolation {
                         id: Uuid::new_v4(),
                         sale_id: lot.id,
@@ -173,7 +179,8 @@ impl WashSaleMonitor {
                         symbol: lot.symbol.clone(),
                         description: format!(
                             "Purchase of substantially identical security {} on {}",
-                            purchase.symbol, purchase.purchase_date.format("%Y-%m-%d")
+                            purchase.symbol,
+                            purchase.purchase_date.format("%Y-%m-%d")
                         ),
                         disallowed_loss: Decimal::ZERO,
                         adjustment_basis_increase: Decimal::ZERO,
@@ -182,14 +189,14 @@ impl WashSaleMonitor {
                 }
             }
         }
-        
+
         None
     }
-    
+
     /// Check wash sale for a purchase (creates violation)
     fn check_wash_sale_for_purchase(&mut self, purchase: &PurchaseRecord) {
         let cutoff = Utc::now() - Duration::days(self.lookforward_days);
-        
+
         for sale in &self.recent_loss_sales {
             if sale.symbol == purchase.symbol && sale.sale_date > cutoff {
                 let violation = WashSaleViolation {
@@ -201,23 +208,21 @@ impl WashSaleMonitor {
                         "Wash sale: Purchase of {} within 30 days of loss sale",
                         purchase.symbol
                     ),
-                    disallowed_loss: sale.loss_amount.min(
-                        purchase.quantity * purchase.price
-                    ),
+                    disallowed_loss: sale.loss_amount.min(purchase.quantity * purchase.price),
                     adjustment_basis_increase: sale.loss_amount,
                     detected_at: Utc::now(),
                 };
-                
+
                 warn!(
                     "Wash sale violation detected: {} - disallowed loss: {}",
                     violation.description, violation.disallowed_loss
                 );
-                
+
                 self.violations.push(violation);
             }
         }
     }
-    
+
     /// Check if can repurchase symbol
     pub fn can_repurchase(&self, symbol: &str) -> bool {
         if let Some(unblock_date) = self.blocked_repurchases.get(symbol) {
@@ -225,36 +230,34 @@ impl WashSaleMonitor {
         }
         true
     }
-    
+
     /// Get when repurchase will be allowed
     pub fn repurchase_available_date(&self, symbol: &str) -> Option<DateTime<Utc>> {
         self.blocked_repurchases.get(symbol).copied()
     }
-    
+
     /// Get all violations
     pub fn get_violations(&self) -> Vec<WashSaleViolation> {
         self.violations.clone()
     }
-    
+
     /// Get total disallowed losses
     pub fn total_disallowed_losses(&self) -> Decimal {
-        self.violations.iter()
-            .map(|v| v.disallowed_loss)
-            .sum()
+        self.violations.iter().map(|v| v.disallowed_loss).sum()
     }
-    
+
     /// Clean old records
     pub fn clean_old_records(&mut self) {
         let cutoff = Utc::now() - Duration::days(90); // Keep 90 days
-        
+
         self.recent_loss_sales.retain(|s| s.sale_date > cutoff);
         self.recent_purchases.retain(|p| p.purchase_date > cutoff);
-        
+
         // Clean expired blocks
         let now = Utc::now();
         self.blocked_repurchases.retain(|_, date| *date > now);
     }
-    
+
     /// Get substantially identical securities
     fn get_substantially_identical(&self, symbol: &str) -> Option<HashSet<String>> {
         // Simplified mapping
@@ -264,18 +267,21 @@ impl WashSaleMonitor {
             ("IVV", vec!["SPY", "VOO"].into_iter().collect()),
             ("QQQ", vec!["QQQM"].into_iter().collect()),
             ("QQQM", vec!["QQQ"].into_iter().collect()),
-        ].iter().cloned().collect();
-        
-        groups.get(symbol).map(|s| {
-            s.iter().map(|&s| s.to_string()).collect()
-        })
+        ]
+        .iter()
+        .cloned()
+        .collect();
+
+        groups
+            .get(symbol)
+            .map(|s| s.iter().map(|&s| s.to_string()).collect())
     }
-    
+
     /// Set lookback/lookforward days
     pub fn set_lookback_days(&mut self, days: i64) {
         self.lookback_days = days;
     }
-    
+
     pub fn set_lookforward_days(&mut self, days: i64) {
         self.lookforward_days = days;
     }
@@ -301,7 +307,7 @@ mod tests {
     fn test_record_loss_sale() {
         let mut monitor = WashSaleMonitor::new(TaxJurisdiction::USA);
         let id = monitor.record_loss_sale("AAPL", Decimal::from(100), Decimal::from(1000));
-        
+
         assert!(!monitor.can_repurchase("AAPL"));
         assert!(monitor.repurchase_available_date("AAPL").is_some());
     }
@@ -309,10 +315,10 @@ mod tests {
     #[test]
     fn test_wash_sale_detection() {
         let mut monitor = WashSaleMonitor::new(TaxJurisdiction::USA);
-        
+
         // Record purchase first
         monitor.record_purchase("AAPL", Decimal::from(100), Decimal::from(150));
-        
+
         // Create lot for sale
         let lot = TaxLot {
             id: Uuid::new_v4(),
@@ -323,7 +329,7 @@ mod tests {
             current_price: Some(Decimal::from(140)),
             fees: Decimal::ZERO,
         };
-        
+
         // Check for wash sale
         let violation = monitor.check_wash_sale(&lot);
         assert!(violation.is_some());
@@ -333,10 +339,10 @@ mod tests {
     #[test]
     fn test_clean_old_records() {
         let mut monitor = WashSaleMonitor::new(TaxJurisdiction::USA);
-        
+
         monitor.record_loss_sale("AAPL", Decimal::from(100), Decimal::from(1000));
         assert!(!monitor.can_repurchase("AAPL"));
-        
+
         // Clean shouldn't affect recent records
         monitor.clean_old_records();
         // Note: in test, we can't time travel, so records are still there
@@ -345,7 +351,7 @@ mod tests {
     #[test]
     fn test_substantially_identical() {
         let monitor = WashSaleMonitor::new(TaxJurisdiction::USA);
-        
+
         let spy_group = monitor.get_substantially_identical("SPY");
         assert!(spy_group.is_some());
         assert!(spy_group.unwrap().contains("VOO"));

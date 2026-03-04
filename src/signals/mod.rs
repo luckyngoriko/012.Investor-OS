@@ -22,19 +22,19 @@ pub struct TickerSignals {
     pub sentiment_score: QualityScore,
     pub regime_fit: QualityScore,
     pub composite_quality: QualityScore,
-    
+
     // Insider features
     pub insider_flow_ratio: f64,
     pub insider_cluster_signal: bool,
-    
+
     // Sentiment features
     pub news_sentiment: f64,
     pub social_sentiment: f64,
-    
+
     // Regime features
     pub vix_level: f64,
     pub market_breadth: f64,
-    
+
     // Technical features
     pub breakout_score: f64,
     pub atr_trend: f64,

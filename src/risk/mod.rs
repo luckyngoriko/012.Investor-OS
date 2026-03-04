@@ -7,17 +7,17 @@
 //! - Portfolio risk monitoring (VaR, CVaR, drawdown)
 //! - Risk limit enforcement
 
-pub mod position_sizing;
-pub mod stop_loss;
-pub mod portfolio_risk;
-pub mod risk_manager;
 pub mod advanced;
+pub mod portfolio_risk;
+pub mod position_sizing;
+pub mod risk_manager;
+pub mod stop_loss;
 
-pub use position_sizing::{PositionSizer, SizingMethod, SizingConfig};
+pub use advanced::{AdvancedRiskEngine, PortfolioGreeks, StressTestResults, VaRResult};
+pub use portfolio_risk::{PortfolioRisk, Position, RiskMetrics, VaRConfig};
+pub use position_sizing::{PositionSizer, SizingConfig, SizingMethod};
+pub use risk_manager::{RiskAssessment, RiskLimits, RiskManager};
 pub use stop_loss::{StopLossManager, StopLossType, TakeProfitConfig};
-pub use portfolio_risk::{PortfolioRisk, RiskMetrics, VaRConfig, Position};
-pub use risk_manager::{RiskManager, RiskLimits, RiskAssessment};
-pub use advanced::{AdvancedRiskEngine, VaRResult, StressTestResults, PortfolioGreeks};
 
 use rust_decimal::Decimal;
 use thiserror::Error;
@@ -26,17 +26,24 @@ use thiserror::Error;
 #[derive(Error, Debug, Clone)]
 pub enum RiskError {
     #[error("Insufficient margin: required {required}, available {available}")]
-    InsufficientMargin { required: Decimal, available: Decimal },
-    
+    InsufficientMargin {
+        required: Decimal,
+        available: Decimal,
+    },
+
     #[error("Position size {size} exceeds maximum {max}")]
     PositionSizeExceeded { size: Decimal, max: Decimal },
-    
+
     #[error("Risk limit exceeded: {metric} = {value}, limit = {limit}")]
-    RiskLimitExceeded { metric: String, value: Decimal, limit: Decimal },
-    
+    RiskLimitExceeded {
+        metric: String,
+        value: Decimal,
+        limit: Decimal,
+    },
+
     #[error("Invalid volatility data")]
     InvalidVolatility,
-    
+
     #[error("Calculation error: {0}")]
     CalculationError(String),
 }

@@ -24,10 +24,7 @@ fn replace_database_name(url: &str, db_name: &str) -> String {
         None => (url, None),
     };
 
-    let authority_start = base
-        .find("://")
-        .map(|index| index + 3)
-        .unwrap_or(0);
+    let authority_start = base.find("://").map(|index| index + 3).unwrap_or(0);
 
     let db_separator = base[authority_start..]
         .rfind('/')
@@ -133,11 +130,7 @@ async fn migrations_apply_and_reapply_on_fresh_database() {
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock should be after unix epoch")
         .as_nanos();
-    let db_name = format!(
-        "investor_os_s78_{}_{}",
-        std::process::id(),
-        unique_suffix
-    );
+    let db_name = format!("investor_os_s78_{}_{}", std::process::id(), unique_suffix);
 
     sqlx::query(&format!(r#"CREATE DATABASE "{}""#, db_name))
         .execute(&admin_pool)
@@ -168,7 +161,10 @@ async fn migrations_apply_and_reapply_on_fresh_database() {
                 .await?
                 .get("success");
 
-        assert!(v1_success, "migration version 1 should be marked successful");
+        assert!(
+            v1_success,
+            "migration version 1 should be marked successful"
+        );
         assert!(
             seed_success,
             "seed migration version 20250211000002 should be marked successful"
@@ -179,9 +175,12 @@ async fn migrations_apply_and_reapply_on_fresh_database() {
     .await;
 
     drop(test_pool);
-    let _ = sqlx::query(&format!(r#"DROP DATABASE IF EXISTS "{}" WITH (FORCE)"#, db_name))
-        .execute(&admin_pool)
-        .await;
+    let _ = sqlx::query(&format!(
+        r#"DROP DATABASE IF EXISTS "{}" WITH (FORCE)"#,
+        db_name
+    ))
+    .execute(&admin_pool)
+    .await;
 
     if let Err(err) = test_result {
         panic!("migration guardrail integration test failed: {err}");

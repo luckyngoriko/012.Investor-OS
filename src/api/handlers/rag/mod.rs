@@ -1,16 +1,12 @@
 //! RAG API Handlers
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, Json};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use crate::api::AppState;
 use crate::api::handlers::ApiResponse;
+use crate::api::AppState;
 use crate::rag::{DocumentType, SearchQuery};
 
 /// Default limit for search results
@@ -53,9 +49,11 @@ pub async fn rag_search(
     Json(req): Json<RagSearchRequest>,
 ) -> Result<Json<ApiResponse<RagSearchResponse>>, StatusCode> {
     let start = std::time::Instant::now();
-    
+
     // Parse document types
-    let doc_types: Vec<DocumentType> = req.document_types.iter()
+    let doc_types: Vec<DocumentType> = req
+        .document_types
+        .iter()
         .filter_map(|t| match t.as_str() {
             "10-K" => Some(DocumentType::Form10K),
             "10-Q" => Some(DocumentType::Form10Q),
@@ -65,7 +63,7 @@ pub async fn rag_search(
             _ => None,
         })
         .collect();
-    
+
     let query = SearchQuery {
         query: req.query.clone(),
         ticker: req.ticker,
@@ -73,12 +71,13 @@ pub async fn rag_search(
         date_range: None,
         limit: req.limit,
     };
-    
+
     match state.rag_service.search(&query).await {
         Ok(results) => {
             let search_time = start.elapsed().as_millis() as u64;
-            
-            let views: Vec<SearchResultView> = results.iter()
+
+            let views: Vec<SearchResultView> = results
+                .iter()
                 .map(|r| SearchResultView {
                     ticker: r.chunk.ticker.clone(),
                     document_type: r.chunk.document_type.as_str().to_string(),
@@ -88,14 +87,14 @@ pub async fn rag_search(
                     section: r.chunk.metadata.section.clone(),
                 })
                 .collect();
-            
+
             let response = RagSearchResponse {
                 query: req.query,
                 results: views,
                 total_results: results.len(),
                 search_time_ms: search_time,
             };
-            
+
             Ok(Json(ApiResponse::success(response)))
         }
         Err(e) => {
@@ -137,10 +136,15 @@ pub async fn rag_summarize(
         "earnings_call" => Some(DocumentType::EarningsCall),
         _ => None,
     });
-    
-    match state.rag_service.summarize(&req.ticker, doc_type, None).await {
+
+    match state
+        .rag_service
+        .summarize(&req.ticker, doc_type, None)
+        .await
+    {
         Ok(summaries) => {
-            let views: Vec<SummaryView> = summaries.iter()
+            let views: Vec<SummaryView> = summaries
+                .iter()
                 .map(|s| SummaryView {
                     document_type: s.document_type.as_str().to_string(),
                     document_date: s.document_date.format("%Y-%m-%d").to_string(),
@@ -148,12 +152,12 @@ pub async fn rag_summarize(
                     key_points: s.key_points.clone(),
                 })
                 .collect();
-            
+
             let response = RagSummarizeResponse {
                 ticker: req.ticker,
                 summaries: views,
             };
-            
+
             Ok(Json(ApiResponse::success(response)))
         }
         Err(e) => {
@@ -192,9 +196,14 @@ pub async fn rag_journal_search(
     State(state): State<Arc<AppState>>,
     Json(req): Json<JournalSearchRequest>,
 ) -> Result<Json<ApiResponse<JournalSearchResponse>>, StatusCode> {
-    match state.rag_service.search_journal(&req.query, req.portfolio_id, req.limit).await {
+    match state
+        .rag_service
+        .search_journal(&req.query, req.portfolio_id, req.limit)
+        .await
+    {
         Ok(results) => {
-            let views: Vec<JournalResultView> = results.iter()
+            let views: Vec<JournalResultView> = results
+                .iter()
                 .map(|r| JournalResultView {
                     decision_id: r.decision_id,
                     ticker: r.ticker.clone(),
@@ -204,12 +213,12 @@ pub async fn rag_journal_search(
                     decision_date: r.decision_date.format("%Y-%m-%d").to_string(),
                 })
                 .collect();
-            
+
             let response = JournalSearchResponse {
                 query: req.query,
                 results: views,
             };
-            
+
             Ok(Json(ApiResponse::success(response)))
         }
         Err(e) => {
@@ -252,20 +261,19 @@ pub async fn process_sec_filing(
             ))));
         }
     };
-    
-    match state.rag_service.process_sec_filing(
-        &req.ticker,
-        doc_type,
-        &req.content,
-        req.filing_date,
-    ).await {
+
+    match state
+        .rag_service
+        .process_sec_filing(&req.ticker, doc_type, &req.content, req.filing_date)
+        .await
+    {
         Ok(chunks) => {
             let response = SecFilingResponse {
                 ticker: req.ticker,
                 chunks_processed: chunks.len(),
                 document_type: req.document_type,
             };
-            
+
             Ok(Json(ApiResponse::success(response)))
         }
         Err(e) => {
@@ -295,17 +303,17 @@ pub async fn process_earnings_call(
     State(state): State<Arc<AppState>>,
     Json(req): Json<EarningsRequest>,
 ) -> Result<Json<ApiResponse<EarningsResponse>>, StatusCode> {
-    match state.rag_service.process_earnings_call(
-        &req.ticker,
-        &req.transcript,
-        req.call_date,
-    ).await {
+    match state
+        .rag_service
+        .process_earnings_call(&req.ticker, &req.transcript, req.call_date)
+        .await
+    {
         Ok(chunks) => {
             let response = EarningsResponse {
                 ticker: req.ticker,
                 chunks_processed: chunks.len(),
             };
-            
+
             Ok(Json(ApiResponse::success(response)))
         }
         Err(e) => {

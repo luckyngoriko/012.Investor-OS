@@ -91,35 +91,35 @@ pub struct DataSource {
     pub provider: String,
     pub category: DataSourceCategory,
     pub source_type: SourceType,
-    
+
     // API info
     pub base_url: Option<String>,
     pub api_version: Option<String>,
     pub documentation_url: Option<String>,
-    
+
     // Auth
     pub auth_type: AuthType,
     pub api_key_env_var: Option<String>,
-    
+
     // Rate limits
     pub rate_limit_requests: Option<i32>,
     pub rate_limit_window: Option<String>,
-    
+
     // Status
     pub status: DataSourceStatus,
     pub is_enabled: bool,
     pub priority: i32,
-    
+
     // ML
     pub used_for_training: bool,
     pub training_data_volume: i64,
-    
+
     // Metadata
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub last_tested_at: Option<DateTime<Utc>>,
     pub last_error: Option<String>,
-    
+
     // Config
     pub config: serde_json::Value,
 }

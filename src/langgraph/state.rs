@@ -12,17 +12,17 @@ pub struct SharedState {
     pub run_id: String,
     pub session_id: String,
     pub started_at: DateTime<Utc>,
-    
+
     // Input
     pub ticker: String,
     pub timestamp: DateTime<Utc>,
-    
+
     // Market Data
     pub current_price: Option<Decimal>,
     pub ohlcv: Vec<OHLCV>,
     pub market_regime: MarketRegime,
     pub vix_level: Option<f64>,
-    
+
     // Signals (всички 0.0 - 1.0)
     pub quality_score: Option<f64>,
     pub insider_score: Option<f64>,
@@ -30,31 +30,31 @@ pub struct SharedState {
     pub regime_fit: Option<f64>,
     pub breakout_score: Option<f64>,
     pub atr_trend: Option<f64>,
-    
+
     // CQ
     pub conviction_quotient: Option<f64>,
-    
+
     // Decision
     pub action: Option<TradingAction>,
     pub confidence: Option<f64>,
     pub position_size: Option<Decimal>,
-    
+
     // Risk
     pub risk_approved: bool,
     pub risk_checks: Vec<RiskCheck>,
-    
+
     // Execution
     pub order_id: Option<String>,
     pub execution_price: Option<Decimal>,
     pub execution_status: ExecutionStatus,
-    
+
     // Meta
     pub current_node: String,
     pub node_history: Vec<NodeExecution>,
     pub llm_calls: u32,
     pub tool_calls: u32,
     pub errors: Vec<ExecutionError>,
-    
+
     // User data
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -94,12 +94,12 @@ impl SharedState {
             metadata: HashMap::new(),
         }
     }
-    
+
     pub fn with_session(mut self, session_id: impl Into<String>) -> Self {
         self.session_id = session_id.into();
         self
     }
-    
+
     /// Изчислява CQ ако всички scores са налични
     pub fn calculate_cq(&mut self) -> Option<f64> {
         let cq = match (
@@ -110,8 +110,14 @@ impl SharedState {
             self.breakout_score,
             self.atr_trend,
         ) {
-            (Some(pegy), Some(insider), Some(sentiment), 
-             Some(regime), Some(breakout), Some(atr)) => {
+            (
+                Some(pegy),
+                Some(insider),
+                Some(sentiment),
+                Some(regime),
+                Some(breakout),
+                Some(atr),
+            ) => {
                 // CQ v2.0 formula
                 pegy * 0.20
                     + insider * 0.20
@@ -122,18 +128,18 @@ impl SharedState {
             }
             _ => return None,
         };
-        
+
         self.conviction_quotient = Some(cq);
         Some(cq)
     }
-    
+
     /// Проверява дали трябва re-evaluation
     pub fn should_recheck(&self) -> bool {
         // Пример: ако цената се е променила значително
         // или имаме нови данни
         false
     }
-    
+
     /// Snapshot на състоянието за logging/debugging
     pub fn snapshot(&self) -> StateSnapshot {
         StateSnapshot {
@@ -145,12 +151,15 @@ impl SharedState {
             risk_approved: self.risk_approved,
         }
     }
-    
+
     /// Проверява дали графът е завършил успешно
     pub fn is_complete(&self) -> bool {
-        matches!(self.execution_status, ExecutionStatus::Completed | ExecutionStatus::Skipped)
+        matches!(
+            self.execution_status,
+            ExecutionStatus::Completed | ExecutionStatus::Skipped
+        )
     }
-    
+
     /// Добавя грешка
     pub fn add_error(&mut self, node: &str, error: &str) {
         self.errors.push(ExecutionError {
@@ -159,7 +168,7 @@ impl SharedState {
             timestamp: Utc::now(),
         });
     }
-    
+
     /// Записва изпълнение на node
     pub fn record_node_execution(&mut self, node: &str, duration_ms: u64) {
         self.node_history.push(NodeExecution {
@@ -174,10 +183,10 @@ impl SharedState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MarketRegime {
     Unknown,
-    Trending,      // Пазарът има ясна посока
-    RangeBound,    // Странично движение
-    Volatile,      // Висока волатилност
-    LowLiquidity,  // Ниска ликвидност
+    Trending,     // Пазарът има ясна посока
+    RangeBound,   // Странично движение
+    Volatile,     // Висока волатилност
+    LowLiquidity, // Ниска ликвидност
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -252,32 +261,32 @@ impl StateBuilder {
             state: SharedState::new(ticker),
         }
     }
-    
+
     pub fn with_price(mut self, price: Decimal) -> Self {
         self.state.current_price = Some(price);
         self
     }
-    
+
     pub fn with_regime(mut self, regime: MarketRegime) -> Self {
         self.state.market_regime = regime;
         self
     }
-    
+
     pub fn with_quality_score(mut self, score: f64) -> Self {
         self.state.quality_score = Some(score);
         self
     }
-    
+
     pub fn with_insider_score(mut self, score: f64) -> Self {
         self.state.insider_score = Some(score);
         self
     }
-    
+
     pub fn with_sentiment_score(mut self, score: f64) -> Self {
         self.state.sentiment_score = Some(score);
         self
     }
-    
+
     pub fn build(self) -> SharedState {
         self.state
     }

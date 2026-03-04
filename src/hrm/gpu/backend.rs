@@ -27,14 +27,14 @@ impl BackendType {
             BackendType::Cpu => "CPU (NdArray)",
         }
     }
-    
+
     /// Get priority (lower = higher priority)
     pub fn priority(&self) -> u8 {
         match self {
-            BackendType::Cuda => 1,     // Fastest
+            BackendType::Cuda => 1, // Fastest
             BackendType::Rocm => 2,
             BackendType::OneApi => 3,
-            BackendType::Cpu => 100,    // Last resort
+            BackendType::Cpu => 100, // Last resort
         }
     }
 }
@@ -53,16 +53,16 @@ pub struct DeviceInfo {
 pub trait GpuBackend: Send + Sync + Debug {
     /// Backend type identifier
     fn backend_type(&self) -> BackendType;
-    
+
     /// Human-readable name
     fn name(&self) -> &'static str;
-    
+
     /// Check if backend is functional
     fn is_available(&self) -> bool;
-    
+
     /// Get device information
     fn device_info(&self) -> Option<DeviceInfo>;
-    
+
     /// Get inference latency estimate (ms)
     fn estimated_latency_ms(&self) -> f32;
 }
@@ -87,15 +87,15 @@ impl GpuBackend for CpuBackend {
     fn backend_type(&self) -> BackendType {
         BackendType::Cpu
     }
-    
+
     fn name(&self) -> &'static str {
         "CPU (NdArray)"
     }
-    
+
     fn is_available(&self) -> bool {
         true // Always available
     }
-    
+
     fn device_info(&self) -> Option<DeviceInfo> {
         Some(DeviceInfo {
             backend_type: BackendType::Cpu,
@@ -107,7 +107,7 @@ impl GpuBackend for CpuBackend {
             driver_version: None,
         })
     }
-    
+
     fn estimated_latency_ms(&self) -> f32 {
         0.3 // Baseline
     }
@@ -128,24 +128,23 @@ impl CudaBackend {
             Err("CUDA not available".to_string())
         }
     }
-    
+
     fn is_cuda_available() -> bool {
         // Check for CUDA devices via burn-cuda
         // This is a simplified check
-        std::env::var("CUDA_VISIBLE_DEVICES").is_ok() || 
-        Self::check_cuda_devices()
+        std::env::var("CUDA_VISIBLE_DEVICES").is_ok() || Self::check_cuda_devices()
     }
-    
+
     fn check_cuda_devices() -> bool {
         // Try to detect via /proc/driver/nvidia/gpus or nvidia-smi
-        std::path::Path::new("/proc/driver/nvidia/gpus").exists() ||
-        std::process::Command::new("nvidia-smi")
-            .arg("-L")
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
+        std::path::Path::new("/proc/driver/nvidia/gpus").exists()
+            || std::process::Command::new("nvidia-smi")
+                .arg("-L")
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false)
     }
-    
+
     fn get_gpu_name() -> Option<String> {
         std::process::Command::new("nvidia-smi")
             .args(["--query-gpu=name", "--format=csv,noheader"])
@@ -154,7 +153,7 @@ impl CudaBackend {
             .and_then(|o| String::from_utf8(o.stdout).ok())
             .map(|s| s.trim().to_string())
     }
-    
+
     fn get_memory_mb() -> Option<u64> {
         std::process::Command::new("nvidia-smi")
             .args(["--query-gpu=memory.total", "--format=csv,noheader,nounits"])
@@ -163,7 +162,7 @@ impl CudaBackend {
             .and_then(|o| String::from_utf8(o.stdout).ok())
             .and_then(|s| s.trim().parse::<u64>().ok())
     }
-    
+
     fn get_driver_version() -> Option<String> {
         std::process::Command::new("nvidia-smi")
             .args(["--query-gpu=driver_version", "--format=csv,noheader"])
@@ -179,15 +178,15 @@ impl GpuBackend for CudaBackend {
     fn backend_type(&self) -> BackendType {
         BackendType::Cuda
     }
-    
+
     fn name(&self) -> &'static str {
         "CUDA (NVIDIA)"
     }
-    
+
     fn is_available(&self) -> bool {
         Self::is_cuda_available()
     }
-    
+
     fn device_info(&self) -> Option<DeviceInfo> {
         Some(DeviceInfo {
             backend_type: BackendType::Cuda,
@@ -197,7 +196,7 @@ impl GpuBackend for CudaBackend {
             driver_version: Self::get_driver_version(),
         })
     }
-    
+
     fn estimated_latency_ms(&self) -> f32 {
         0.1 // Fastest
     }
@@ -217,16 +216,16 @@ impl RocmBackend {
             Err("ROCm not available".to_string())
         }
     }
-    
+
     fn is_rocm_available() -> bool {
-        std::path::Path::new("/opt/rocm").exists() ||
-        std::process::Command::new("rocm-smi")
-            .arg("-l")
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
+        std::path::Path::new("/opt/rocm").exists()
+            || std::process::Command::new("rocm-smi")
+                .arg("-l")
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false)
     }
-    
+
     fn get_gpu_name() -> Option<String> {
         std::process::Command::new("rocm-smi")
             .args(["--showproductname"])
@@ -247,15 +246,15 @@ impl GpuBackend for RocmBackend {
     fn backend_type(&self) -> BackendType {
         BackendType::Rocm
     }
-    
+
     fn name(&self) -> &'static str {
         "ROCm (AMD)"
     }
-    
+
     fn is_available(&self) -> bool {
         Self::is_rocm_available()
     }
-    
+
     fn device_info(&self) -> Option<DeviceInfo> {
         Some(DeviceInfo {
             backend_type: BackendType::Rocm,
@@ -265,7 +264,7 @@ impl GpuBackend for RocmBackend {
             driver_version: None,
         })
     }
-    
+
     fn estimated_latency_ms(&self) -> f32 {
         0.2
     }
@@ -285,13 +284,13 @@ impl OneApiBackend {
             Err("oneAPI not available".to_string())
         }
     }
-    
+
     fn is_oneapi_available() -> bool {
-        std::env::var("ONEAPI_ROOT").is_ok() ||
-        std::process::Command::new("sycl-ls")
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
+        std::env::var("ONEAPI_ROOT").is_ok()
+            || std::process::Command::new("sycl-ls")
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false)
     }
 }
 
@@ -300,15 +299,15 @@ impl GpuBackend for OneApiBackend {
     fn backend_type(&self) -> BackendType {
         BackendType::OneApi
     }
-    
+
     fn name(&self) -> &'static str {
         "oneAPI (Intel)"
     }
-    
+
     fn is_available(&self) -> bool {
         Self::is_oneapi_available()
     }
-    
+
     fn device_info(&self) -> Option<DeviceInfo> {
         Some(DeviceInfo {
             backend_type: BackendType::OneApi,
@@ -318,7 +317,7 @@ impl GpuBackend for OneApiBackend {
             driver_version: None,
         })
     }
-    
+
     fn estimated_latency_ms(&self) -> f32 {
         0.25
     }

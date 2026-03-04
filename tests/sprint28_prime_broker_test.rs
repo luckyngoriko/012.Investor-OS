@@ -7,15 +7,14 @@
 //! - Execution quality tracking
 //! - Cost optimization
 
+use chrono::Utc;
 use investor_os::prime_broker::{
-    MultiPrimeManager, PrimeBroker, BrokerId, BrokerTier,
-    OrderSide, Position, ExecutionRecord,
-    cross_margin::{CrossMarginingEngine, CrossMarginBenefitCalculator},
-    financing::{FinancingCalculator, FinancingRates, FinancingCostTracker, DailyFinancingRecord},
-    router::{PrimeBrokerRouter, RoutingCriteria, SmartOrderRouter, OrderUrgency},
+    cross_margin::{CrossMarginBenefitCalculator, CrossMarginingEngine},
+    financing::{DailyFinancingRecord, FinancingCalculator, FinancingCostTracker, FinancingRates},
+    router::{OrderUrgency, PrimeBrokerRouter, RoutingCriteria, SmartOrderRouter},
+    BrokerId, BrokerTier, ExecutionRecord, MultiPrimeManager, OrderSide, Position, PrimeBroker,
 };
 use rust_decimal::Decimal;
-use chrono::Utc;
 use std::collections::HashMap;
 
 // ============================================================================
@@ -25,8 +24,11 @@ use std::collections::HashMap;
 #[test]
 fn test_prime_manager_creation() {
     let manager = MultiPrimeManager::new();
-    
-    assert!(manager.broker_count() >= 3, "Should have at least 3 brokers");
+
+    assert!(
+        manager.broker_count() >= 3,
+        "Should have at least 3 brokers"
+    );
 }
 
 // ============================================================================
@@ -36,11 +38,11 @@ fn test_prime_manager_creation() {
 #[test]
 fn test_major_broker_registration() {
     let manager = MultiPrimeManager::new();
-    
+
     let ibkr = manager.get_broker(&BrokerId("IBKR".to_string()));
     assert!(ibkr.is_some(), "Interactive Brokers should be registered");
     assert_eq!(ibkr.unwrap().tier, BrokerTier::Tier2);
-    
+
     let gs = manager.get_broker(&BrokerId("GS".to_string()));
     assert!(gs.is_some(), "Goldman Sachs should be registered");
     assert_eq!(gs.unwrap().tier, BrokerTier::Tier1);
@@ -53,15 +55,21 @@ fn test_major_broker_registration() {
 #[test]
 fn test_broker_tier_classification() {
     let manager = MultiPrimeManager::new();
-    
+
     let tier1 = manager.get_brokers_by_tier(BrokerTier::Tier1);
     let tier2 = manager.get_brokers_by_tier(BrokerTier::Tier2);
-    
-    assert!(!tier1.is_empty() || !tier2.is_empty(), "Should have brokers in different tiers");
-    
+
+    assert!(
+        !tier1.is_empty() || !tier2.is_empty(),
+        "Should have brokers in different tiers"
+    );
+
     // Tier 1 should have higher min account size
     for broker in &tier1 {
-        assert!(broker.min_account_size >= Decimal::from(1_000_000), "Tier 1 should have high min account");
+        assert!(
+            broker.min_account_size >= Decimal::from(1_000_000),
+            "Tier 1 should have high min account"
+        );
     }
 }
 
@@ -72,22 +80,34 @@ fn test_broker_tier_classification() {
 #[test]
 fn test_financing_rate_comparison() {
     let manager = MultiPrimeManager::new();
-    
+
     let long_rates = manager.compare_financing_rates(OrderSide::Buy);
-    
+
     assert!(!long_rates.is_empty(), "Should have financing rates");
-    
+
     // Should be sorted by rate (lowest first)
     for i in 1..long_rates.len() {
-        assert!(long_rates[i].rate >= long_rates[i-1].rate, "Rates should be sorted");
+        assert!(
+            long_rates[i].rate >= long_rates[i - 1].rate,
+            "Rates should be sorted"
+        );
     }
-    
+
     // Tier 1 brokers should have lower rates
-    let tier1_rates: Vec<_> = long_rates.iter().filter(|r| r.tier == BrokerTier::Tier1).collect();
-    let tier3_rates: Vec<_> = long_rates.iter().filter(|r| r.tier == BrokerTier::Tier3).collect();
-    
+    let tier1_rates: Vec<_> = long_rates
+        .iter()
+        .filter(|r| r.tier == BrokerTier::Tier1)
+        .collect();
+    let tier3_rates: Vec<_> = long_rates
+        .iter()
+        .filter(|r| r.tier == BrokerTier::Tier3)
+        .collect();
+
     if !tier1_rates.is_empty() && !tier3_rates.is_empty() {
-        assert!(tier1_rates[0].rate <= tier3_rates[0].rate, "Tier 1 should have lower rates");
+        assert!(
+            tier1_rates[0].rate <= tier3_rates[0].rate,
+            "Tier 1 should have lower rates"
+        );
     }
 }
 
@@ -98,7 +118,7 @@ fn test_financing_rate_comparison() {
 #[test]
 fn test_cheapest_financing_selection() {
     let manager = MultiPrimeManager::new();
-    
+
     // All rates should be reasonable (under 20%)
     let rates = manager.compare_financing_rates(OrderSide::Buy);
     for rate in &rates {
@@ -113,10 +133,10 @@ fn test_cheapest_financing_selection() {
 #[test]
 fn test_broker_selection_by_cost() {
     let manager = MultiPrimeManager::new();
-    
+
     let criteria = RoutingCriteria::lowest_cost();
     let best = manager.select_broker("AAPL", Decimal::from(1000), OrderSide::Buy, criteria);
-    
+
     assert!(best.is_some(), "Should select a broker");
 }
 
@@ -127,12 +147,12 @@ fn test_broker_selection_by_cost() {
 #[test]
 fn test_broker_selection_by_latency() {
     let manager = MultiPrimeManager::new();
-    
+
     let criteria = RoutingCriteria::lowest_latency();
     let best = manager.select_broker("AAPL", Decimal::from(1000), OrderSide::Buy, criteria);
-    
+
     assert!(best.is_some(), "Should select a broker");
-    
+
     // Should prefer low latency
     if let Some(score) = best {
         assert!(score.latency_score > 0.0, "Should have latency score");
@@ -146,7 +166,7 @@ fn test_broker_selection_by_latency() {
 #[test]
 fn test_overnight_financing_calculation() {
     let manager = MultiPrimeManager::new();
-    
+
     let position = Position {
         symbol: "AAPL".to_string(),
         quantity: Decimal::from(100),
@@ -154,13 +174,16 @@ fn test_overnight_financing_calculation() {
         market_price: Decimal::from(150),
         market_value: Decimal::from(15_000),
     };
-    
+
     let cost = manager.calculate_overnight_cost(&BrokerId("IBKR".to_string()), &position);
-    
+
     assert!(cost.is_ok(), "Should calculate cost");
-    
+
     let cost = cost.unwrap();
-    assert!(cost.daily_cost > Decimal::ZERO, "Should have positive daily cost");
+    assert!(
+        cost.daily_cost > Decimal::ZERO,
+        "Should have positive daily cost"
+    );
     assert_eq!(cost.market_value, Decimal::from(15_000));
 }
 
@@ -176,14 +199,11 @@ fn test_cross_margining_hedge_efficiency() {
         Decimal::from(100_000),
     );
     assert_eq!(eff, 1.0, "Perfect hedge should be 100%");
-    
+
     // No hedge: $100K long, $0 short = 0% efficiency
-    let eff = CrossMarginBenefitCalculator::hedge_efficiency(
-        Decimal::from(100_000),
-        Decimal::ZERO,
-    );
+    let eff = CrossMarginBenefitCalculator::hedge_efficiency(Decimal::from(100_000), Decimal::ZERO);
     assert_eq!(eff, 0.0, "No hedge should be 0%");
-    
+
     // Partial hedge: $100K long, $50K short = 50% efficiency
     let eff = CrossMarginBenefitCalculator::hedge_efficiency(
         Decimal::from(100_000),
@@ -199,11 +219,11 @@ fn test_cross_margining_hedge_efficiency() {
 #[test]
 fn test_cross_margin_savings() {
     let savings = CrossMarginBenefitCalculator::calculate_savings(
-        Decimal::from(200_000), // Gross exposure
-        Decimal::from(20_000),  // Net exposure
+        Decimal::from(200_000),           // Gross exposure
+        Decimal::from(20_000),            // Net exposure
         Decimal::try_from(0.25).unwrap(), // 25% margin rate
     );
-    
+
     // Savings = (200K - 20K) * 0.25 = 45K
     let savings_f64: f64 = savings.try_into().unwrap();
     assert!(savings_f64 > 40_000.0 && savings_f64 < 50_000.0);
@@ -216,7 +236,7 @@ fn test_cross_margin_savings() {
 #[test]
 fn test_financing_cost_tracking() {
     let mut tracker = FinancingCostTracker::new();
-    
+
     // Record 10 days of financing
     for i in 0..10 {
         tracker.record_day(DailyFinancingRecord {
@@ -227,10 +247,10 @@ fn test_financing_cost_tracking() {
             positions_count: 10,
         });
     }
-    
+
     assert_eq!(tracker.average_daily_cost(), Decimal::from(50));
     assert_eq!(tracker.get_period_costs(5), Decimal::from(250));
-    
+
     let annual = tracker.annual_projection();
     assert_eq!(annual, Decimal::from(50 * 365));
 }
@@ -242,20 +262,20 @@ fn test_financing_cost_tracking() {
 #[test]
 fn test_commission_calculation() {
     use investor_os::prime_broker::broker::CommissionStructure;
-    
+
     let per_share = CommissionStructure::per_share(
         Decimal::try_from(0.005).unwrap(), // $0.005 per share
-        Decimal::from(1) // $1 minimum
+        Decimal::from(1),                  // $1 minimum
     );
-    
+
     // 1000 shares @ $0.005 = $5
     let comm = per_share.calculate(Decimal::from(1000), Decimal::from(100));
     assert_eq!(comm, Decimal::from(5));
-    
+
     // 100 shares @ $0.005 = $0.50, but min is $1
     let comm = per_share.calculate(Decimal::from(100), Decimal::from(100));
     assert_eq!(comm, Decimal::from(1));
-    
+
     // Zero commission
     let zero = CommissionStructure::zero_commission();
     let comm = zero.calculate(Decimal::from(10000), Decimal::from(100));
@@ -269,13 +289,13 @@ fn test_commission_calculation() {
 #[test]
 fn test_margin_requirements() {
     use investor_os::prime_broker::broker::MarginRequirements;
-    
+
     let standard = MarginRequirements::standard();
-    
+
     // $100K long position, 50% initial margin = $50K
     let margin = standard.calculate_margin(Decimal::from(100_000), false);
     assert_eq!(margin, Decimal::from(50_000));
-    
+
     // $100K short position, 150% margin = $150K
     let margin = standard.calculate_margin(Decimal::from(100_000), true);
     assert_eq!(margin, Decimal::from(150_000));
@@ -289,12 +309,12 @@ fn test_margin_requirements() {
 fn test_smart_order_router() {
     let manager = MultiPrimeManager::new();
     let router = PrimeBrokerRouter::new();
-    
+
     // Add brokers to router
     for broker in manager.get_all_brokers() {
         // Would add brokers here
     }
-    
+
     // Test routing with different urgency
     // Low urgency = prefer financing cost
     // High urgency = prefer latency
@@ -307,15 +327,15 @@ fn test_smart_order_router() {
 #[test]
 fn test_broker_performance_ranking() {
     let manager = MultiPrimeManager::new();
-    
+
     let rankings = manager.get_broker_rankings();
-    
+
     // Should have rankings for all brokers
     assert_eq!(rankings.len(), manager.broker_count());
-    
+
     // Should be sorted by score
     for i in 1..rankings.len() {
-        assert!(rankings[i].overall_score <= rankings[i-1].overall_score);
+        assert!(rankings[i].overall_score <= rankings[i - 1].overall_score);
     }
 }
 
@@ -326,22 +346,23 @@ fn test_broker_performance_ranking() {
 #[test]
 fn test_total_financing_costs() {
     let manager = MultiPrimeManager::new();
-    
+
     let mut positions = investor_os::prime_broker::BrokerPositions::default();
-    
+
     // Add positions
-    positions.0.insert(BrokerId("IBKR".to_string()), vec![
-        Position {
+    positions.0.insert(
+        BrokerId("IBKR".to_string()),
+        vec![Position {
             symbol: "AAPL".to_string(),
             quantity: Decimal::from(100),
             avg_price: Decimal::from(150),
             market_price: Decimal::from(150),
             market_value: Decimal::from(15_000),
-        },
-    ]);
-    
+        }],
+    );
+
     let costs = manager.calculate_total_financing_costs(&positions);
-    
+
     // Should calculate costs
     assert!(costs.long_cost >= Decimal::ZERO);
 }

@@ -10,8 +10,8 @@ pub mod social;
 pub mod trends;
 
 pub use alt::{AlternativeDataEngine, AlternativeSignal, SignalStrength};
-pub use news::{NewsCollector, NewsArticle, SentimentScore};
-pub use options::{OptionsFlowCollector, OptionsFlow, FlowSignal, FlowSentiment};
-pub use scraper::{WebScraper, CorporateIntelligence, SecFiling, InsiderSentiment};
+pub use news::{NewsArticle, NewsCollector, SentimentScore};
+pub use options::{FlowSentiment, FlowSignal, OptionsFlow, OptionsFlowCollector};
+pub use scraper::{CorporateIntelligence, InsiderSentiment, SecFiling, WebScraper};
 pub use social::{SocialCollector, SocialSentiment};
-pub use trends::{TrendsCollector, TrendData, SearchSentiment, AttentionTrend};
+pub use trends::{AttentionTrend, SearchSentiment, TrendData, TrendsCollector};

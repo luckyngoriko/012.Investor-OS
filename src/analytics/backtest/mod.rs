@@ -20,7 +20,7 @@ pub struct BacktestConfig {
     pub start_date: DateTime<Utc>,
     pub end_date: DateTime<Utc>,
     pub initial_capital: Decimal,
-    pub commission_rate: Decimal,     // Per trade (e.g., 0.001 = 0.1%)
+    pub commission_rate: Decimal, // Per trade (e.g., 0.001 = 0.1%)
     pub slippage_model: SlippageModel,
     pub rebalance_frequency: Duration,
     pub max_positions: usize,
@@ -46,8 +46,8 @@ impl Default for BacktestConfig {
 #[derive(Debug, Clone)]
 pub enum SlippageModel {
     None,
-    Fixed(Decimal),        // Fixed percentage (e.g., 0.001 = 0.1%)
-    Variable(Decimal),     // Percentage based on volatility
+    Fixed(Decimal),    // Fixed percentage (e.g., 0.001 = 0.1%)
+    Variable(Decimal), // Percentage based on volatility
 }
 
 impl SlippageModel {
@@ -58,8 +58,8 @@ impl SlippageModel {
             SlippageModel::Fixed(pct) => {
                 let adjustment = price * *pct;
                 match side {
-                    OrderSide::Buy => price + adjustment,    // Pay more
-                    OrderSide::Sell => price - adjustment,   // Receive less
+                    OrderSide::Buy => price + adjustment,  // Pay more
+                    OrderSide::Sell => price - adjustment, // Receive less
                 }
             }
             SlippageModel::Variable(pct) => {
@@ -89,14 +89,14 @@ pub struct Backtest {
 #[derive(Debug, Clone)]
 pub struct BacktestResult {
     pub config: BacktestConfig,
-    pub total_return: Decimal,           // Total return percentage
+    pub total_return: Decimal, // Total return percentage
     pub annualized_return: Decimal,
     pub total_trades: usize,
     pub winning_trades: usize,
     pub losing_trades: usize,
     pub win_rate: Decimal,
     pub avg_trade_return: Decimal,
-    pub max_drawdown: Decimal,           // Maximum drawdown percentage
+    pub max_drawdown: Decimal, // Maximum drawdown percentage
     pub sharpe_ratio: Decimal,
     pub sortino_ratio: Decimal,
     pub daily_returns: Vec<DailyReturn>,
@@ -124,17 +124,17 @@ pub struct EquityPoint {
 /// Walk-forward configuration
 #[derive(Debug, Clone)]
 pub struct WalkForwardConfig {
-    pub train_window: Duration,      // Training period
-    pub test_window: Duration,       // Testing period
-    pub step_size: Duration,         // How much to advance each iteration
+    pub train_window: Duration, // Training period
+    pub test_window: Duration,  // Testing period
+    pub step_size: Duration,    // How much to advance each iteration
 }
 
 impl Default for WalkForwardConfig {
     fn default() -> Self {
         Self {
-            train_window: Duration::days(252),  // 1 year
-            test_window: Duration::days(63),    // 3 months
-            step_size: Duration::days(63),      // 3 months
+            train_window: Duration::days(252), // 1 year
+            test_window: Duration::days(63),   // 3 months
+            step_size: Duration::days(63),     // 3 months
         }
     }
 }
@@ -163,7 +163,7 @@ impl Backtest {
     pub fn new(config: BacktestConfig, strategy: Box<dyn Strategy>) -> Self {
         let cash = config.initial_capital;
         let current_date = config.start_date;
-        
+
         Self {
             config,
             strategy,
@@ -176,8 +176,12 @@ impl Backtest {
     }
 
     /// Run the backtest
-    pub async fn run(&mut self, historical_data: &HashMap<String, Vec<PriceBar>>) -> Result<BacktestResult> {
-        info!("Starting backtest from {} to {}", 
+    pub async fn run(
+        &mut self,
+        historical_data: &HashMap<String, Vec<PriceBar>>,
+    ) -> Result<BacktestResult> {
+        info!(
+            "Starting backtest from {} to {}",
             self.config.start_date.format("%Y-%m-%d"),
             self.config.end_date.format("%Y-%m-%d")
         );
@@ -187,16 +191,16 @@ impl Backtest {
         while current_date < self.config.end_date {
             // Get market data for current date
             let market_data = self.get_market_data(current_date, historical_data);
-            
+
             if !market_data.prices.is_empty() {
                 // Generate signals from strategy
                 let signals = self.strategy.generate_signals(&market_data).await;
-                
+
                 // Execute trades based on signals
                 for signal in signals {
                     self.process_signal(signal, &market_data).await?;
                 }
-                
+
                 // Record daily snapshot
                 self.record_snapshot(current_date, &market_data);
             }
@@ -206,8 +210,9 @@ impl Backtest {
 
         // Calculate results
         let result = self.calculate_result();
-        
-        info!("Backtest complete. Total return: {}%, Sharpe: {}",
+
+        info!(
+            "Backtest complete. Total return: {}%, Sharpe: {}",
             result.total_return, result.sharpe_ratio
         );
 
@@ -265,7 +270,10 @@ impl Backtest {
         let target_quantity = self.strategy.position_size(&signal, portfolio_value);
 
         // Get current position
-        let current_quantity = *self.current_positions.get(&signal.ticker).unwrap_or(&Decimal::ZERO);
+        let current_quantity = *self
+            .current_positions
+            .get(&signal.ticker)
+            .unwrap_or(&Decimal::ZERO);
 
         // Calculate order quantity
         let order_quantity = target_quantity - current_quantity;
@@ -279,7 +287,7 @@ impl Backtest {
 
             // Apply slippage
             let execution_price = self.config.slippage_model.apply(current_price, side);
-            
+
             // Calculate commission
             let trade_value = execution_price * order_quantity.abs();
             let commission = trade_value * self.config.commission_rate;
@@ -293,7 +301,8 @@ impl Backtest {
             if new_quantity == Decimal::ZERO {
                 self.current_positions.remove(&signal.ticker);
             } else {
-                self.current_positions.insert(signal.ticker.clone(), new_quantity);
+                self.current_positions
+                    .insert(signal.ticker.clone(), new_quantity);
             }
 
             // Record trade
@@ -311,7 +320,8 @@ impl Backtest {
     }
 
     fn calculate_portfolio_value(&self, market_data: &MarketData) -> Decimal {
-        let positions_value: Decimal = self.current_positions
+        let positions_value: Decimal = self
+            .current_positions
             .iter()
             .map(|(ticker, qty)| {
                 if let Some(bar) = market_data.prices.get(ticker) {
@@ -326,7 +336,8 @@ impl Backtest {
     }
 
     fn record_snapshot(&mut self, date: DateTime<Utc>, market_data: &MarketData) {
-        let positions: Vec<PositionSnapshot> = self.current_positions
+        let positions: Vec<PositionSnapshot> = self
+            .current_positions
             .iter()
             .map(|(ticker, qty)| {
                 if let Some(bar) = market_data.prices.get(ticker) {
@@ -390,8 +401,9 @@ impl Backtest {
         }
 
         // Calculate total return
-        let total_return = if let (Some(first), Some(last)) = 
-            (self.daily_snapshots.first(), self.daily_snapshots.last()) {
+        let total_return = if let (Some(first), Some(last)) =
+            (self.daily_snapshots.first(), self.daily_snapshots.last())
+        {
             if first.nav > Decimal::ZERO {
                 (last.nav - first.nav) / first.nav
             } else {
@@ -401,11 +413,46 @@ impl Backtest {
             Decimal::ZERO
         };
 
-        // Calculate win/loss
-        let winning_trades = self.trades.iter().filter(|_| false).count(); // Simplified
-        let losing_trades = self.trades.len() - winning_trades;
-        let win_rate = if !self.trades.is_empty() {
-            Decimal::from(winning_trades as i32) / Decimal::from(self.trades.len() as i32)
+        // Calculate win/loss by matching buy/sell pairs (FIFO)
+        let mut entry_prices: HashMap<String, Vec<Decimal>> = HashMap::new();
+        let mut winning_count = 0usize;
+        let mut total_trade_pnl = Decimal::ZERO;
+        let mut round_trips = 0usize;
+
+        for trade in &self.trades {
+            match trade.side {
+                OrderSide::Buy => {
+                    entry_prices
+                        .entry(trade.ticker.clone())
+                        .or_default()
+                        .push(trade.price);
+                }
+                OrderSide::Sell => {
+                    if let Some(entries) = entry_prices.get_mut(&trade.ticker) {
+                        if let Some(entry_price) = entries.first().copied() {
+                            let pnl =
+                                (trade.price - entry_price) * trade.quantity - trade.commission;
+                            total_trade_pnl += pnl;
+                            if pnl > Decimal::ZERO {
+                                winning_count += 1;
+                            }
+                            round_trips += 1;
+                            entries.remove(0);
+                        }
+                    }
+                }
+            }
+        }
+
+        let winning_trades = winning_count;
+        let losing_trades = round_trips.saturating_sub(winning_count);
+        let win_rate = if round_trips > 0 {
+            Decimal::from(winning_count as i32) / Decimal::from(round_trips as i32)
+        } else {
+            Decimal::ZERO
+        };
+        let avg_trade_return = if round_trips > 0 {
+            total_trade_pnl / Decimal::from(round_trips as i32) / self.config.initial_capital
         } else {
             Decimal::ZERO
         };
@@ -424,7 +471,7 @@ impl Backtest {
             winning_trades,
             losing_trades,
             win_rate,
-            avg_trade_return: Decimal::ZERO, // Would calculate properly
+            avg_trade_return,
             max_drawdown,
             sharpe_ratio,
             sortino_ratio: sharpe_ratio, // Simplified
@@ -442,7 +489,7 @@ impl Backtest {
             if point.equity > peak {
                 peak = point.equity;
             }
-            
+
             if peak > Decimal::ZERO {
                 let dd = (peak - point.equity) / peak;
                 if dd > max_dd {
@@ -459,17 +506,17 @@ impl Backtest {
             return Decimal::ZERO;
         }
 
-        let returns: Vec<Decimal> = daily_returns.iter()
-            .map(|r| r.return_pct)
-            .collect();
+        let returns: Vec<Decimal> = daily_returns.iter().map(|r| r.return_pct).collect();
 
         let mean = returns.iter().sum::<Decimal>() / Decimal::from(returns.len() as i32);
-        
+
         // Calculate standard deviation
-        let variance = returns.iter()
+        let variance = returns
+            .iter()
             .map(|r| (*r - mean) * (*r - mean))
-            .sum::<Decimal>() / Decimal::from(returns.len() as i32);
-        
+            .sum::<Decimal>()
+            / Decimal::from(returns.len() as i32);
+
         let std_dev = variance.sqrt().unwrap_or(Decimal::ONE);
 
         if std_dev > Decimal::ZERO {

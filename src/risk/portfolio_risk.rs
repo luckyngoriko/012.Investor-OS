@@ -5,11 +5,10 @@ use rust_decimal::Decimal;
 use std::collections::VecDeque;
 use tracing::debug;
 
-use super::{RiskError, Result};
+use super::{Result, RiskError};
 
 /// Value at Risk calculation method
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum VaRMethod {
     /// Historical simulation
     #[default]
@@ -19,7 +18,6 @@ pub enum VaRMethod {
     /// Monte Carlo simulation (simplified)
     MonteCarlo,
 }
-
 
 /// VaR configuration
 #[derive(Debug, Clone)]
@@ -120,7 +118,7 @@ impl PortfolioRisk {
     pub fn update_equity(&mut self, value: Decimal) {
         let now = Utc::now();
         self.equity_curve.push_back((now, value));
-        
+
         // Keep only recent history
         let cutoff = now - Duration::days(self.config.lookback_days as i64 * 2);
         while let Some((time, _)) = self.equity_curve.front() {
@@ -138,7 +136,7 @@ impl PortfolioRisk {
     }
 
     /// Calculate Value at Risk
-    /// 
+    ///
     /// VaR estimates how much a portfolio might lose with a given probability
     /// over a specific time period.
     pub fn calculate_var(&self, returns: &[Decimal], confidence: Decimal) -> Result<Decimal> {
@@ -162,7 +160,8 @@ impl PortfolioRisk {
 
         // Find the percentile
         let index_f = (Decimal::ONE - confidence) * Decimal::from(sorted_returns.len() as i64);
-        let index = index_f.to_string()
+        let index = index_f
+            .to_string()
             .split('.')
             .next()
             .and_then(|s| s.parse::<usize>().ok())
@@ -175,14 +174,15 @@ impl PortfolioRisk {
     /// Parametric VaR: assume normal distribution
     fn parametric_var(&self, returns: &[Decimal], confidence: Decimal) -> Result<Decimal> {
         let mean = returns.iter().sum::<Decimal>() / Decimal::from(returns.len() as i64);
-        
+
         let variance = returns
             .iter()
             .map(|r| {
                 let diff = *r - mean;
                 diff * diff
             })
-            .sum::<Decimal>() / Decimal::from(returns.len() as i64);
+            .sum::<Decimal>()
+            / Decimal::from(returns.len() as i64);
 
         let std_dev = approx_sqrt(variance);
 
@@ -204,16 +204,12 @@ impl PortfolioRisk {
     }
 
     /// Calculate Conditional VaR (Expected Shortfall)
-    /// 
+    ///
     /// CVaR is the average of returns worse than VaR
     pub fn calculate_cvar(&self, returns: &[Decimal], confidence: Decimal) -> Result<Decimal> {
         let var = self.calculate_var(returns, confidence)?;
 
-        let tail_returns: Vec<Decimal> = returns
-            .iter()
-            .filter(|r| **r <= var)
-            .copied()
-            .collect();
+        let tail_returns: Vec<Decimal> = returns.iter().filter(|r| **r <= var).copied().collect();
 
         if tail_returns.is_empty() {
             return Ok(var); // Fallback to VaR
@@ -224,7 +220,7 @@ impl PortfolioRisk {
     }
 
     /// Calculate maximum drawdown
-    /// 
+    ///
     /// Drawdown is the decline from peak to trough
     pub fn calculate_max_drawdown(&self) -> (Decimal, Decimal) {
         let mut max_dd = Decimal::ZERO;
@@ -264,13 +260,18 @@ impl PortfolioRisk {
                 let diff = *r - mean;
                 diff * diff
             })
-            .sum::<Decimal>() / Decimal::from(returns.len() as i64);
+            .sum::<Decimal>()
+            / Decimal::from(returns.len() as i64);
 
         Ok(approx_sqrt(variance))
     }
 
     /// Calculate Sharpe ratio
-    pub fn calculate_sharpe(&self, returns: &[Decimal], risk_free_rate: Decimal) -> Result<Decimal> {
+    pub fn calculate_sharpe(
+        &self,
+        returns: &[Decimal],
+        risk_free_rate: Decimal,
+    ) -> Result<Decimal> {
         let volatility = self.calculate_volatility(returns)?;
 
         if volatility.is_zero() {
@@ -284,7 +285,11 @@ impl PortfolioRisk {
     }
 
     /// Calculate Sortino ratio (downside risk only)
-    pub fn calculate_sortino(&self, returns: &[Decimal], risk_free_rate: Decimal) -> Result<Decimal> {
+    pub fn calculate_sortino(
+        &self,
+        returns: &[Decimal],
+        risk_free_rate: Decimal,
+    ) -> Result<Decimal> {
         let mean_return = returns.iter().sum::<Decimal>() / Decimal::from(returns.len() as i64);
 
         // Calculate downside deviation (only negative returns)
@@ -298,10 +303,8 @@ impl PortfolioRisk {
             return Ok(Decimal::ZERO);
         }
 
-        let downside_variance = downside_returns
-            .iter()
-            .map(|r| *r * *r)
-            .sum::<Decimal>() / Decimal::from(downside_returns.len() as i64);
+        let downside_variance = downside_returns.iter().map(|r| *r * *r).sum::<Decimal>()
+            / Decimal::from(downside_returns.len() as i64);
 
         let downside_deviation = approx_sqrt(downside_variance);
 
@@ -345,7 +348,7 @@ impl PortfolioRisk {
     }
 
     /// Calculate position concentration risk
-    /// 
+    ///
     /// Returns true if any position exceeds the max weight
     pub fn check_concentration(positions: &[Position], max_weight: Decimal) -> Option<String> {
         for pos in positions {
@@ -360,7 +363,7 @@ impl PortfolioRisk {
     }
 
     /// Calculate portfolio correlation risk
-    /// 
+    ///
     /// Returns warning if portfolio is too correlated
     pub fn check_correlation_risk(correlation_matrix: &[Vec<Decimal>], threshold: Decimal) -> bool {
         for row in correlation_matrix {
@@ -435,7 +438,9 @@ mod tests {
         let risk = PortfolioRisk::new(config);
 
         let returns = create_test_returns();
-        let var = risk.calculate_var(&returns, Decimal::try_from(0.95).unwrap()).unwrap();
+        let var = risk
+            .calculate_var(&returns, Decimal::try_from(0.95).unwrap())
+            .unwrap();
 
         // VaR should be negative (potential loss)
         assert!(var < Decimal::ZERO);
@@ -447,8 +452,12 @@ mod tests {
         let risk = PortfolioRisk::new(config);
 
         let returns = create_test_returns();
-        let var = risk.calculate_var(&returns, Decimal::try_from(0.95).unwrap()).unwrap();
-        let cvar = risk.calculate_cvar(&returns, Decimal::try_from(0.95).unwrap()).unwrap();
+        let var = risk
+            .calculate_var(&returns, Decimal::try_from(0.95).unwrap())
+            .unwrap();
+        let cvar = risk
+            .calculate_cvar(&returns, Decimal::try_from(0.95).unwrap())
+            .unwrap();
 
         // CVaR should be worse (more negative) than VaR
         assert!(cvar <= var);
@@ -515,10 +524,12 @@ mod tests {
             },
         ];
 
-        let warning = PortfolioRisk::check_concentration(&positions, Decimal::try_from(0.5).unwrap());
+        let warning =
+            PortfolioRisk::check_concentration(&positions, Decimal::try_from(0.5).unwrap());
         assert!(warning.is_some()); // BTC exceeds 50%
 
-        let warning = PortfolioRisk::check_concentration(&positions, Decimal::try_from(0.7).unwrap());
+        let warning =
+            PortfolioRisk::check_concentration(&positions, Decimal::try_from(0.7).unwrap());
         assert!(warning.is_none()); // All under 70%
     }
 

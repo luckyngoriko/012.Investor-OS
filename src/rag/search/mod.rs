@@ -3,7 +3,7 @@
 //! S5-D8: Journal AI Search - Semantic search on decision journal
 //! S5-D9: API Endpoints - /api/rag/search, /api/rag/summarize
 
-use crate::rag::{DocumentChunk, DocumentType, Result, RagError, SearchQuery, SearchResult};
+use crate::rag::{DocumentChunk, DocumentType, RagError, Result, SearchQuery, SearchResult};
 use chrono::{DateTime, Utc};
 use sqlx::postgres::PgRow;
 use sqlx::{FromRow, PgPool, Row};
@@ -32,15 +32,17 @@ impl DocumentSearch {
         let pool = PgPool::connect(database_url)
             .await
             .map_err(|e| RagError::Database(e.to_string()))?;
-        
+
         Ok(Self { pool })
     }
-    
+
     /// Store a document chunk with its embedding
     pub async fn store_chunk(&self, chunk: &DocumentChunk) -> Result<()> {
-        let embedding = chunk.embedding.as_ref()
+        let embedding = chunk
+            .embedding
+            .as_ref()
             .ok_or_else(|| RagError::Embedding("Chunk missing embedding".to_string()))?;
-        
+
         sqlx::query(
             r#"
             INSERT INTO document_embeddings 
@@ -66,10 +68,10 @@ impl DocumentSearch {
         .execute(&self.pool)
         .await
         .map_err(|e| RagError::Database(e.to_string()))?;
-        
+
         Ok(())
     }
-    
+
     /// Search documents by semantic similarity
     pub async fn search(
         &self,
@@ -84,60 +86,63 @@ impl DocumentSearch {
                 embedding <=> $1 as distance
             FROM document_embeddings
             WHERE 1=1
-            "#
+            "#,
         );
-        
+
         let mut bind_idx = 2;
-        
+
         // Add ticker filter
         if query.ticker.is_some() {
             sql.push_str(&format!(" AND ticker = ${}", bind_idx));
             bind_idx += 1;
         }
-        
+
         // Add document type filter
         if !query.document_types.is_empty() {
-            let types: Vec<String> = query.document_types.iter()
+            let types: Vec<String> = query
+                .document_types
+                .iter()
                 .map(|t| format!("'{}'", t.as_str()))
                 .collect();
             sql.push_str(&format!(" AND document_type IN ({})", types.join(",")));
         }
-        
+
         // Add date range filter
         if query.date_range.is_some() {
-            sql.push_str(&format!(" AND document_date >= ${} AND document_date <= ${}", bind_idx, bind_idx + 1));
+            sql.push_str(&format!(
+                " AND document_date >= ${} AND document_date <= ${}",
+                bind_idx,
+                bind_idx + 1
+            ));
         }
-        
+
         // Order by similarity and limit
-        sql.push_str(&format!(
-            " ORDER BY embedding <=> $1 LIMIT {}",
-            query.limit
-        ));
-        
+        sql.push_str(&format!(" ORDER BY embedding <=> $1 LIMIT {}", query.limit));
+
         // Build the query
-        let mut db_query = sqlx::query_as::<_, DocumentEmbeddingRow>(&sql)
-            .bind(query_embedding);
-        
+        let mut db_query = sqlx::query_as::<_, DocumentEmbeddingRow>(&sql).bind(query_embedding);
+
         // Bind ticker if present
         if let Some(ticker) = &query.ticker {
             db_query = db_query.bind(ticker);
         }
-        
+
         // Bind date range if present
         if let Some((start, end)) = &query.date_range {
             db_query = db_query.bind(start).bind(end);
         }
-        
+
         let rows: Vec<DocumentEmbeddingRow> = db_query
             .fetch_all(&self.pool)
             .await
             .map_err(|e| RagError::Database(e.to_string()))?;
-        
+
         // Convert to SearchResults
-        let results: Vec<SearchResult> = rows.into_iter()
+        let results: Vec<SearchResult> = rows
+            .into_iter()
             .map(|row| {
                 let similarity = 1.0 - row.distance; // Convert distance to similarity
-                
+
                 let chunk = DocumentChunk {
                     id: row.id,
                     ticker: row.ticker,
@@ -148,11 +153,10 @@ impl DocumentSearch {
                     embedding: None, // Don't return embeddings
                     chunk_index: row.chunk_index as usize,
                     total_chunks: row.total_chunks as usize,
-                    metadata: serde_json::from_value(row.metadata)
-                        .unwrap_or_default(),
+                    metadata: serde_json::from_value(row.metadata).unwrap_or_default(),
                     created_at: Utc::now(),
                 };
-                
+
                 SearchResult {
                     chunk,
                     similarity_score: similarity.max(0.0),
@@ -160,10 +164,10 @@ impl DocumentSearch {
                 }
             })
             .collect();
-        
+
         Ok(results)
     }
-    
+
     /// Fetch all chunks for a ticker
     pub async fn fetch_for_ticker(
         &self,
@@ -178,39 +182,43 @@ impl DocumentSearch {
                 content_chunk, chunk_index, total_chunks, metadata
             FROM document_embeddings
             WHERE ticker = $1
-            "#
+            "#,
         );
-        
+
         let mut bind_idx = 2;
-        
+
         if document_type.is_some() {
             sql.push_str(&format!(" AND document_type = ${}", bind_idx));
             bind_idx += 1;
         }
-        
+
         if date_range.is_some() {
-            sql.push_str(&format!(" AND document_date >= ${} AND document_date <= ${}", bind_idx, bind_idx + 1));
+            sql.push_str(&format!(
+                " AND document_date >= ${} AND document_date <= ${}",
+                bind_idx,
+                bind_idx + 1
+            ));
         }
-        
+
         sql.push_str(" ORDER BY document_date DESC, chunk_index ASC");
-        
-        let mut query = sqlx::query_as::<_, DocumentEmbeddingRow>(&sql)
-            .bind(ticker);
-        
+
+        let mut query = sqlx::query_as::<_, DocumentEmbeddingRow>(&sql).bind(ticker);
+
         if let Some(doc_type) = document_type {
             query = query.bind(doc_type.as_str());
         }
-        
+
         if let Some((start, end)) = date_range {
             query = query.bind(start).bind(end);
         }
-        
+
         let rows: Vec<DocumentEmbeddingRow> = query
             .fetch_all(&self.pool)
             .await
             .map_err(|e| RagError::Database(e.to_string()))?;
-        
-        let chunks: Vec<DocumentChunk> = rows.into_iter()
+
+        let chunks: Vec<DocumentChunk> = rows
+            .into_iter()
             .map(|row| DocumentChunk {
                 id: row.id,
                 ticker: row.ticker,
@@ -225,54 +233,57 @@ impl DocumentSearch {
                 created_at: Utc::now(),
             })
             .collect();
-        
+
         Ok(chunks)
     }
-    
-    /// Semantic search on decision journal
+
+    /// Semantic search on decision journal using pgvector cosine similarity
+    ///
+    /// Computes `dot(a,b) / (‖a‖·‖b‖)` between the query embedding and stored
+    /// decision embeddings via the pgvector `<=>` (cosine distance) operator.
+    /// Results are ranked by similarity score descending.
     pub async fn search_journal(
         &self,
-        _query_embedding: &[f32],
+        query_embedding: &[f32],
         portfolio_id: Option<Uuid>,
         limit: usize,
     ) -> Result<Vec<JournalSearchResult>> {
-        // For journal search, we need to generate embeddings for journal entries on-the-fly
-        // or have a separate table for journal embeddings
-        // This is a simplified implementation that does text search
-        
         let mut sql = String::from(
             r#"
-            SELECT 
-                d.id, d.portfolio_id, d.ticker, d.action, d.journal_entry, d.created_at
+            SELECT
+                d.id, d.portfolio_id, d.ticker, d.action, d.journal_entry, d.created_at,
+                d.embedding <=> $1 as distance
             FROM decisions d
             WHERE d.journal_entry IS NOT NULL
-            "#
+              AND d.embedding IS NOT NULL
+            "#,
         );
-        
+
         if portfolio_id.is_some() {
-            sql.push_str(" AND d.portfolio_id = $2");
+            sql.push_str(" AND d.portfolio_id = $3");
         }
-        
-        sql.push_str(" ORDER BY d.created_at DESC LIMIT $1");
-        
-        let mut query = sqlx::query_as::<_, DecisionRow>(&sql)
+
+        sql.push_str(" ORDER BY d.embedding <=> $1 LIMIT $2");
+
+        let mut query = sqlx::query_as::<_, JournalDecisionRow>(&sql)
+            .bind(query_embedding)
             .bind(limit as i64);
-        
+
         if let Some(pid) = portfolio_id {
             query = query.bind(pid);
         }
-        
-        let rows: Vec<DecisionRow> = query
+
+        let rows: Vec<JournalDecisionRow> = query
             .fetch_all(&self.pool)
             .await
             .map_err(|e| RagError::Database(e.to_string()))?;
-        
-        // Calculate similarity scores (in production, would use embeddings)
-        let results: Vec<JournalSearchResult> = rows.into_iter()
+
+        let results: Vec<JournalSearchResult> = rows
+            .into_iter()
             .map(|row| {
-                // Placeholder similarity - in production would compare embeddings
-                let similarity = 0.5; 
-                
+                // Convert cosine distance to similarity: similarity = 1 - distance
+                let similarity = (1.0 - row.distance).max(0.0);
+
                 JournalSearchResult {
                     decision_id: row.id,
                     portfolio_id: row.portfolio_id,
@@ -284,10 +295,10 @@ impl DocumentSearch {
                 }
             })
             .collect();
-        
+
         Ok(results)
     }
-    
+
     /// Log a RAG query for analytics
     pub async fn log_query(
         &self,
@@ -311,7 +322,7 @@ impl DocumentSearch {
         .execute(&self.pool)
         .await
         .map_err(|e| RagError::Database(e.to_string()))?;
-        
+
         Ok(())
     }
 }
@@ -376,6 +387,31 @@ impl<'r> FromRow<'r, PgRow> for DecisionRow {
     }
 }
 
+/// Database row for decisions with pgvector cosine distance
+struct JournalDecisionRow {
+    id: Uuid,
+    portfolio_id: Uuid,
+    ticker: String,
+    action: String,
+    journal_entry: Option<String>,
+    created_at: DateTime<Utc>,
+    distance: f32,
+}
+
+impl<'r> FromRow<'r, PgRow> for JournalDecisionRow {
+    fn from_row(row: &'r PgRow) -> std::result::Result<Self, sqlx::Error> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            portfolio_id: row.try_get("portfolio_id")?,
+            ticker: row.try_get("ticker")?,
+            action: row.try_get("action")?,
+            journal_entry: row.try_get("journal_entry")?,
+            created_at: row.try_get("created_at")?,
+            distance: row.try_get("distance")?,
+        })
+    }
+}
+
 fn parse_document_type(s: &str) -> DocumentType {
     match s {
         "10-K" => DocumentType::Form10K,
@@ -399,7 +435,10 @@ mod tests {
     #[test]
     fn test_parse_document_type() {
         assert!(matches!(parse_document_type("10-K"), DocumentType::Form10K));
-        assert!(matches!(parse_document_type("earnings_call"), DocumentType::EarningsCall));
+        assert!(matches!(
+            parse_document_type("earnings_call"),
+            DocumentType::EarningsCall
+        ));
         assert!(matches!(parse_document_type("unknown"), DocumentType::News));
     }
 }

@@ -1,5 +1,5 @@
 //! Phoenix Graduation Criteria v2.0
-//! 
+//!
 //! Реалистична система за оценка готовността на AI трейдинг система
 //! за live trading с постепенно увеличаване на капитала.
 
@@ -12,22 +12,22 @@ use serde::{Deserialize, Serialize};
 pub struct GraduationConfig {
     /// Начален капитал за симулация
     pub initial_capital: Decimal,
-    
+
     /// Реалистични CAGR цели по нива
     pub cagr_targets: CagrTargets,
-    
+
     /// Риск лимити
     pub risk_limits: RiskLimits,
-    
+
     /// Статистически изисквания
     pub statistical_requirements: StatisticalRequirements,
-    
+
     /// Period конфигурация
     pub periods: PeriodConfig,
-    
+
     /// Разходи и такси
     pub cost_model: CostModel,
-    
+
     /// Stress test конфигурация
     pub stress_test: StressTestConfig,
 }
@@ -63,11 +63,11 @@ pub struct CagrTargets {
 impl Default for CagrTargets {
     fn default() -> Self {
         Self {
-            level1_min: 0.15,        // 15%
-            level2_target: 0.20,     // 20%
-            level3_target: 0.25,     // 25%
-            level4_optimal: 0.30,    // 30%
-            max_suspicious: 0.50,    // 50% - над това = overfitting alarm
+            level1_min: 0.15,     // 15%
+            level2_target: 0.20,  // 20%
+            level3_target: 0.25,  // 25%
+            level4_optimal: 0.30, // 30%
+            max_suspicious: 0.50, // 50% - над това = overfitting alarm
         }
     }
 }
@@ -91,9 +91,12 @@ pub struct RiskLimits {
 impl Default for RiskLimits {
     fn default() -> Self {
         Self {
-            max_drawdown: Decimal::from_str_exact("0.15").unwrap_or(Decimal::from(15) / Decimal::from(100)),
-            max_daily_loss: Decimal::from_str_exact("0.03").unwrap_or(Decimal::from(3) / Decimal::from(100)),
-            max_weekly_loss: Decimal::from_str_exact("0.05").unwrap_or(Decimal::from(5) / Decimal::from(100)),
+            max_drawdown: Decimal::from_str_exact("0.15")
+                .unwrap_or(Decimal::from(15) / Decimal::from(100)),
+            max_daily_loss: Decimal::from_str_exact("0.03")
+                .unwrap_or(Decimal::from(3) / Decimal::from(100)),
+            max_weekly_loss: Decimal::from_str_exact("0.05")
+                .unwrap_or(Decimal::from(5) / Decimal::from(100)),
             max_risk_of_ruin: 0.01,
             max_beta: 0.7,
             min_calmar: 2.0,
@@ -185,11 +188,16 @@ impl Default for CostModel {
     fn default() -> Self {
         Self {
             commission_per_trade: Decimal::from_str_exact("1.00").unwrap_or(Decimal::from(1)),
-            slippage_pct: Decimal::from_str_exact("0.001").unwrap_or(Decimal::from(1) / Decimal::from(1000)),
-            spread_pct: Decimal::from_str_exact("0.0005").unwrap_or(Decimal::from(5) / Decimal::from(10000)),
-            market_impact_factor: Decimal::from_str_exact("0.0001").unwrap_or(Decimal::from(1) / Decimal::from(10000)),
-            borrow_cost_annual: Decimal::from_str_exact("0.03").unwrap_or(Decimal::from(3) / Decimal::from(100)),
-            finra_fee_per_share: Decimal::from_str_exact("0.000145").unwrap_or(Decimal::from(145) / Decimal::from(1000000)),
+            slippage_pct: Decimal::from_str_exact("0.001")
+                .unwrap_or(Decimal::from(1) / Decimal::from(1000)),
+            spread_pct: Decimal::from_str_exact("0.0005")
+                .unwrap_or(Decimal::from(5) / Decimal::from(10000)),
+            market_impact_factor: Decimal::from_str_exact("0.0001")
+                .unwrap_or(Decimal::from(1) / Decimal::from(10000)),
+            borrow_cost_annual: Decimal::from_str_exact("0.03")
+                .unwrap_or(Decimal::from(3) / Decimal::from(100)),
+            finra_fee_per_share: Decimal::from_str_exact("0.000145")
+                .unwrap_or(Decimal::from(145) / Decimal::from(1000000)),
         }
     }
 }
@@ -219,7 +227,8 @@ impl Default for StressTestConfig {
                 StressScenario::new(CovidRecovery, "2020-03-23", "2021-12-31", 1.00),
             ],
             min_survival_rate: 0.70,
-            max_crisis_drawdown: Decimal::from_str_exact("0.30").unwrap_or(Decimal::from(30) / Decimal::from(100)),
+            max_crisis_drawdown: Decimal::from_str_exact("0.30")
+                .unwrap_or(Decimal::from(30) / Decimal::from(100)),
         }
     }
 }
@@ -234,14 +243,14 @@ pub struct PerformanceMetrics {
     pub volatility: f64,
     pub max_drawdown: Decimal,
     pub max_drawdown_duration_days: u32,
-    
+
     // Risk-adjusted
     pub sharpe_ratio: f64,
     pub sortino_ratio: f64,
     pub calmar_ratio: f64,
     pub treynor_ratio: f64,
     pub information_ratio: f64,
-    
+
     // Trade statistics
     pub total_trades: u32,
     pub winning_trades: u32,
@@ -252,7 +261,7 @@ pub struct PerformanceMetrics {
     pub payoff_ratio: f64,
     pub profit_factor: f64,
     pub expectancy: f64,
-    
+
     // Consistency
     pub monthly_returns: Vec<MonthlyReturn>,
     pub profitable_months: u32,
@@ -260,12 +269,12 @@ pub struct PerformanceMetrics {
     pub avg_monthly_return: f64,
     pub monthly_return_std: f64,
     pub max_consecutive_loss_months: u32,
-    
+
     // Correlation & Beta
     pub correlation_with_market: f64,
     pub beta: f64,
     pub alpha: f64,
-    
+
     // Costs
     pub gross_return: Decimal,
     pub total_costs: Decimal,
@@ -347,7 +356,7 @@ pub enum GraduationLevel {
         reasons: Vec<FailReason>,
         recommendations: Vec<String>,
     },
-    
+
     /// Ниво 1: Paper Trading Approved
     PaperTrading {
         max_position_size: Decimal,
@@ -355,7 +364,7 @@ pub enum GraduationLevel {
         max_leverage: f64,
         duration_months: u32,
     },
-    
+
     /// Ниво 2: Micro Live
     MicroLive {
         max_capital: Decimal,
@@ -364,7 +373,7 @@ pub enum GraduationLevel {
         max_positions: u32,
         duration_months: u32,
     },
-    
+
     /// Ниво 3: Small Live
     SmallLive {
         max_capital: Decimal,
@@ -373,7 +382,7 @@ pub enum GraduationLevel {
         allow_margin: bool,
         duration_months: u32,
     },
-    
+
     /// Ниво 4: Full Strategy
     FullStrategy {
         max_capital: Decimal,
@@ -382,7 +391,7 @@ pub enum GraduationLevel {
         allow_short: bool,
         allow_margin: bool,
     },
-    
+
     /// Ниво 5: Master Level
     MasterLevel {
         max_aum: Decimal,
@@ -402,7 +411,7 @@ impl GraduationLevel {
             Self::MasterLevel { .. } => "Master Level",
         }
     }
-    
+
     pub fn max_capital(&self) -> Option<Decimal> {
         match self {
             Self::PaperTrading { .. } => None,
@@ -451,67 +460,155 @@ pub enum Priority {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum FailReason {
-    InsufficientReturns { current: f64, required: f64 },
-    ExcessiveDrawdown { current: Decimal, max_allowed: Decimal },
-    LowSharpe { current: f64, required: f64 },
-    LowWinRate { current: f64, required: f64 },
-    InsufficientTrades { current: u32, required: u32 },
-    InsufficientProfitableMonths { current: u32, required: u32 },
-    HighPayoffRatio { current: f64, max_allowed: f64 },
-    HighBeta { current: f64, max_allowed: f64 },
-    FailedStressTest { scenario: String, loss: Decimal },
-    OverfittingDetected { in_sample_cagr: f64, out_of_sample_cagr: f64 },
-    HighCostImpact { cost_pct: f64 },
-    InconsistentWalkForward { correlation: f64 },
-    HighRiskOfRuin { probability: f64 },
-    PoorCrisisPerformance { regime: String, return_pct: f64 },
-    SuspiciousPerformance { cagr: f64, explanation: String },
+    InsufficientReturns {
+        current: f64,
+        required: f64,
+    },
+    ExcessiveDrawdown {
+        current: Decimal,
+        max_allowed: Decimal,
+    },
+    LowSharpe {
+        current: f64,
+        required: f64,
+    },
+    LowWinRate {
+        current: f64,
+        required: f64,
+    },
+    InsufficientTrades {
+        current: u32,
+        required: u32,
+    },
+    InsufficientProfitableMonths {
+        current: u32,
+        required: u32,
+    },
+    HighPayoffRatio {
+        current: f64,
+        max_allowed: f64,
+    },
+    HighBeta {
+        current: f64,
+        max_allowed: f64,
+    },
+    FailedStressTest {
+        scenario: String,
+        loss: Decimal,
+    },
+    OverfittingDetected {
+        in_sample_cagr: f64,
+        out_of_sample_cagr: f64,
+    },
+    HighCostImpact {
+        cost_pct: f64,
+    },
+    InconsistentWalkForward {
+        correlation: f64,
+    },
+    HighRiskOfRuin {
+        probability: f64,
+    },
+    PoorCrisisPerformance {
+        regime: String,
+        return_pct: f64,
+    },
+    SuspiciousPerformance {
+        cagr: f64,
+        explanation: String,
+    },
 }
 
 impl FailReason {
     pub fn description(&self) -> String {
         match self {
             Self::InsufficientReturns { current, required } => {
-                format!("CAGR {:.1}% is below minimum {:.1}%", current * 100.0, required * 100.0)
+                format!(
+                    "CAGR {:.1}% is below minimum {:.1}%",
+                    current * 100.0,
+                    required * 100.0
+                )
             }
-            Self::ExcessiveDrawdown { current, max_allowed } => {
+            Self::ExcessiveDrawdown {
+                current,
+                max_allowed,
+            } => {
                 format!("Max drawdown {}% exceeds limit {}%", current, max_allowed)
             }
             Self::LowSharpe { current, required } => {
-                format!("Sharpe ratio {:.2} is below required {:.2}", current, required)
+                format!(
+                    "Sharpe ratio {:.2} is below required {:.2}",
+                    current, required
+                )
             }
             Self::LowWinRate { current, required } => {
-                format!("Win rate {:.1}% is below required {:.1}%", current * 100.0, required * 100.0)
+                format!(
+                    "Win rate {:.1}% is below required {:.1}%",
+                    current * 100.0,
+                    required * 100.0
+                )
             }
             Self::InsufficientTrades { current, required } => {
-                format!("Only {} trades, need at least {} for statistical significance", current, required)
+                format!(
+                    "Only {} trades, need at least {} for statistical significance",
+                    current, required
+                )
             }
             Self::InsufficientProfitableMonths { current, required } => {
-                format!("Only {} profitable months, need at least {}", current, required)
+                format!(
+                    "Only {} profitable months, need at least {}",
+                    current, required
+                )
             }
-            Self::HighPayoffRatio { current, max_allowed } => {
-                format!("Payoff ratio {:.2} suggests lottery-ticket strategy (max {})", current, max_allowed)
+            Self::HighPayoffRatio {
+                current,
+                max_allowed,
+            } => {
+                format!(
+                    "Payoff ratio {:.2} suggests lottery-ticket strategy (max {})",
+                    current, max_allowed
+                )
             }
-            Self::HighBeta { current, max_allowed } => {
-                format!("Beta {:.2} too high - just following the market (max {})", current, max_allowed)
+            Self::HighBeta {
+                current,
+                max_allowed,
+            } => {
+                format!(
+                    "Beta {:.2} too high - just following the market (max {})",
+                    current, max_allowed
+                )
             }
             Self::FailedStressTest { scenario, loss } => {
                 format!("Failed stress test '{}': lost {}%", scenario, loss)
             }
-            Self::OverfittingDetected { in_sample_cagr, out_of_sample_cagr } => {
-                format!("Overfitting: in-sample {:.1}% vs out-of-sample {:.1}%", in_sample_cagr * 100.0, out_of_sample_cagr * 100.0)
+            Self::OverfittingDetected {
+                in_sample_cagr,
+                out_of_sample_cagr,
+            } => {
+                format!(
+                    "Overfitting: in-sample {:.1}% vs out-of-sample {:.1}%",
+                    in_sample_cagr * 100.0,
+                    out_of_sample_cagr * 100.0
+                )
             }
             Self::HighCostImpact { cost_pct } => {
                 format!("Transaction costs eat {:.1}% of returns", cost_pct * 100.0)
             }
             Self::InconsistentWalkForward { correlation } => {
-                format!("Walk-forward inconsistent: correlation only {:.2}", correlation)
+                format!(
+                    "Walk-forward inconsistent: correlation only {:.2}",
+                    correlation
+                )
             }
             Self::HighRiskOfRuin { probability } => {
                 format!("Risk of ruin is {:.1}% - too high", probability * 100.0)
             }
             Self::PoorCrisisPerformance { regime, return_pct } => {
-                format!("Poor performance in {} regime: {:.1}%", regime, return_pct * 100.0)
+                format!(
+                    "Poor performance in {} regime: {:.1}%",
+                    regime,
+                    return_pct * 100.0
+                )
             }
             Self::SuspiciousPerformance { cagr, explanation } => {
                 format!("Suspicious CAGR {:.1}%: {}", cagr * 100.0, explanation)
@@ -560,7 +657,12 @@ pub struct StressScenario {
 }
 
 impl StressScenario {
-    pub fn new(scenario_type: StressScenarioType, start: &str, end: &str, market_return: f64) -> Self {
+    pub fn new(
+        scenario_type: StressScenarioType,
+        start: &str,
+        end: &str,
+        market_return: f64,
+    ) -> Self {
         Self {
             scenario_type,
             start_date: start.to_string(),

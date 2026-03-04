@@ -74,14 +74,14 @@ impl CircuitBreaker {
     /// Check if request should be allowed
     pub fn check(&self) -> CircuitResult {
         let state = *self.state.read().unwrap();
-        
+
         match state {
             CircuitState::Closed => CircuitResult::Allowed,
             CircuitState::Open => {
                 let last_failure = self.last_failure_time.load(Ordering::SeqCst);
                 let now = Instant::now().elapsed().as_secs();
                 let elapsed = Duration::from_secs(now - last_failure);
-                
+
                 if elapsed >= self.config.timeout_duration {
                     // Transition to half-open
                     *self.state.write().unwrap() = CircuitState::HalfOpen;
@@ -102,7 +102,7 @@ impl CircuitBreaker {
     /// Record a successful call
     pub fn record_success(&self) {
         let state = *self.state.read().unwrap();
-        
+
         match state {
             CircuitState::HalfOpen => {
                 let successes = self.success_count.fetch_add(1, Ordering::SeqCst) + 1;
@@ -110,7 +110,10 @@ impl CircuitBreaker {
                     *self.state.write().unwrap() = CircuitState::Closed;
                     self.failure_count.store(0, Ordering::SeqCst);
                     self.success_count.store(0, Ordering::SeqCst);
-                    info!("Circuit '{}' closed after {} successes", self.name, successes);
+                    info!(
+                        "Circuit '{}' closed after {} successes",
+                        self.name, successes
+                    );
                 }
             }
             CircuitState::Closed => {
@@ -126,16 +129,13 @@ impl CircuitBreaker {
         let state = *self.state.read().unwrap();
         let now = Instant::now().elapsed().as_secs();
         self.last_failure_time.store(now, Ordering::SeqCst);
-        
+
         match state {
             CircuitState::Closed | CircuitState::HalfOpen => {
                 let failures = self.failure_count.fetch_add(1, Ordering::SeqCst) + 1;
                 if failures >= self.config.failure_threshold {
                     *self.state.write().unwrap() = CircuitState::Open;
-                    warn!(
-                        "Circuit '{}' opened after {} failures",
-                        self.name, failures
-                    );
+                    warn!("Circuit '{}' opened after {} failures", self.name, failures);
                 }
             }
             _ => {}
@@ -154,18 +154,16 @@ impl CircuitBreaker {
         Fut: std::future::Future<Output = Result<T, E>>,
     {
         match self.check() {
-            CircuitResult::Allowed => {
-                match f().await {
-                    Ok(result) => {
-                        self.record_success();
-                        Ok(result)
-                    }
-                    Err(e) => {
-                        self.record_failure();
-                        Err(CircuitError::Inner(e))
-                    }
+            CircuitResult::Allowed => match f().await {
+                Ok(result) => {
+                    self.record_success();
+                    Ok(result)
                 }
-            }
+                Err(e) => {
+                    self.record_failure();
+                    Err(CircuitError::Inner(e))
+                }
+            },
             CircuitResult::Open { retry_after } => Err(CircuitError::Open {
                 circuit: self.name.clone(),
                 retry_after,
@@ -189,8 +187,15 @@ pub enum CircuitError<E> {
 impl<E: std::fmt::Display> std::fmt::Display for CircuitError<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CircuitError::Open { circuit, retry_after } => {
-                write!(f, "Circuit '{}' is open, retry after {:?}", circuit, retry_after)
+            CircuitError::Open {
+                circuit,
+                retry_after,
+            } => {
+                write!(
+                    f,
+                    "Circuit '{}' is open, retry after {:?}",
+                    circuit, retry_after
+                )
             }
             CircuitError::Inner(e) => write!(f, "Operation failed: {}", e),
         }
@@ -222,13 +227,13 @@ impl CircuitBreakerRegistry {
                 return cb.clone();
             }
         }
-        
+
         let mut breakers = self.breakers.write().unwrap();
         // Double-check
         if let Some(cb) = breakers.get(name) {
             return cb.clone();
         }
-        
+
         let cb = CircuitBreaker::new(name, self.default_config.clone());
         breakers.insert(name.to_string(), cb.clone());
         cb
@@ -298,7 +303,7 @@ mod tests {
     #[test]
     fn test_circuit_records_success() {
         let cb = CircuitBreaker::new("test", CircuitBreakerConfig::default());
-        
+
         cb.record_success();
         assert!(matches!(cb.state(), CircuitState::Closed));
     }
@@ -306,11 +311,9 @@ mod tests {
     #[tokio::test]
     async fn test_circuit_call_success() {
         let cb = CircuitBreaker::new("test", CircuitBreakerConfig::default());
-        
-        let result: Result<i32, CircuitError<&str>> = cb
-            .call(|| async { Ok(42) })
-            .await;
-        
+
+        let result: Result<i32, CircuitError<&str>> = cb.call(|| async { Ok(42) }).await;
+
         assert_eq!(result.unwrap(), 42);
         assert!(matches!(cb.state(), CircuitState::Closed));
     }
@@ -327,29 +330,25 @@ mod tests {
         );
 
         // First call fails
-        let result: Result<i32, CircuitError<&str>> = cb
-            .call(|| async { Err("error") })
-            .await;
-        
+        let result: Result<i32, CircuitError<&str>> = cb.call(|| async { Err("error") }).await;
+
         assert!(result.is_err());
         assert!(matches!(cb.state(), CircuitState::Open));
 
         // Subsequent calls are blocked
-        let result: Result<i32, CircuitError<&str>> = cb
-            .call(|| async { Ok(42) })
-            .await;
-        
+        let result: Result<i32, CircuitError<&str>> = cb.call(|| async { Ok(42) }).await;
+
         assert!(matches!(result, Err(CircuitError::Open { .. })));
     }
 
     #[test]
     fn test_registry() {
         let registry = CircuitBreakerRegistry::new();
-        
+
         let cb1 = registry.get_or_create("service-a");
         let cb2 = registry.get_or_create("service-a");
         let cb3 = registry.get_or_create("service-b");
-        
+
         // Same name returns same instance
         assert!(Arc::ptr_eq(&cb1, &cb2));
         // Different name returns different instance

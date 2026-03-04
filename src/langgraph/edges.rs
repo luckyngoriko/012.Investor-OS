@@ -21,7 +21,6 @@ impl EdgeCondition {
     }
 }
 
-
 /// Trait за edge
 pub trait Edge: Send + Sync {
     fn from(&self) -> &str;
@@ -44,7 +43,7 @@ impl ConditionalEdge {
             condition,
         }
     }
-    
+
     pub fn with_predicate<F>(from: impl Into<String>, to: impl Into<String>, predicate: F) -> Self
     where
         F: Fn(&SharedState) -> bool + Send + Sync + 'static,
@@ -54,8 +53,12 @@ impl ConditionalEdge {
 }
 
 impl Edge for ConditionalEdge {
-    fn from(&self) -> &str { &self.from }
-    fn to(&self) -> &str { &self.to }
+    fn from(&self) -> &str {
+        &self.from
+    }
+    fn to(&self) -> &str {
+        &self.to
+    }
     fn can_transition(&self, state: &SharedState) -> bool {
         self.condition.evaluate(state)
     }
@@ -64,44 +67,51 @@ impl Edge for ConditionalEdge {
 /// Common conditions for trading graphs
 pub mod conditions {
     use super::SharedState;
-    
+
     /// Пазарът е trending
     pub fn is_trending(state: &SharedState) -> bool {
-        matches!(state.market_regime, super::super::state::MarketRegime::Trending)
+        matches!(
+            state.market_regime,
+            super::super::state::MarketRegime::Trending
+        )
     }
-    
+
     /// Пазарът е range-bound
     pub fn is_range_bound(state: &SharedState) -> bool {
-        matches!(state.market_regime, super::super::state::MarketRegime::RangeBound)
+        matches!(
+            state.market_regime,
+            super::super::state::MarketRegime::RangeBound
+        )
     }
-    
+
     /// Висока волатилност
     pub fn is_volatile(state: &SharedState) -> bool {
-        matches!(state.market_regime, super::super::state::MarketRegime::Volatile)
+        matches!(
+            state.market_regime,
+            super::super::state::MarketRegime::Volatile
+        )
     }
-    
+
     /// CQ е достатъчно висок
     pub fn cq_above(threshold: f64) -> impl Fn(&SharedState) -> bool {
-        move |state: &SharedState| {
-            state.conviction_quotient.is_some_and(|cq| cq >= threshold)
-        }
+        move |state: &SharedState| state.conviction_quotient.is_some_and(|cq| cq >= threshold)
     }
-    
+
     /// Risk approved
     pub fn risk_approved(state: &SharedState) -> bool {
         state.risk_approved
     }
-    
+
     /// Има action
     pub fn has_action(state: &SharedState) -> bool {
         state.action.is_some()
     }
-    
+
     /// Няма грешки
     pub fn no_errors(state: &SharedState) -> bool {
         state.errors.is_empty()
     }
-    
+
     /// Комбинирано условие: AND
     pub fn and<A, B>(a: A, b: B) -> impl Fn(&SharedState) -> bool
     where
@@ -110,7 +120,7 @@ pub mod conditions {
     {
         move |state: &SharedState| a(state) && b(state)
     }
-    
+
     /// Комбинирано условие: OR
     pub fn or<A, B>(a: A, b: B) -> impl Fn(&SharedState) -> bool
     where
@@ -119,7 +129,7 @@ pub mod conditions {
     {
         move |state: &SharedState| a(state) || b(state)
     }
-    
+
     /// Комбинирано условие: NOT
     pub fn not<F>(f: F) -> impl Fn(&SharedState) -> bool
     where
@@ -136,15 +146,13 @@ pub struct EdgeBuilder {
 
 impl EdgeBuilder {
     pub fn from(node: impl Into<String>) -> Self {
-        Self {
-            from: node.into(),
-        }
+        Self { from: node.into() }
     }
-    
+
     pub fn to(self, node: impl Into<String>) -> ConditionalEdge {
         ConditionalEdge::new(self.from, node, EdgeCondition::Always)
     }
-    
+
     pub fn when<F>(self, condition: F) -> ConditionalEdgeBuilder
     where
         F: Fn(&SharedState) -> bool + Send + Sync + 'static,
@@ -184,7 +192,7 @@ impl LoopConfig {
             exit_condition: EdgeCondition::Always,
         }
     }
-    
+
     pub fn exit_when<F>(mut self, condition: F) -> Self
     where
         F: Fn(&SharedState) -> bool + Send + Sync + 'static,

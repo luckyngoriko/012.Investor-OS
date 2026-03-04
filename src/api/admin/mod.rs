@@ -10,14 +10,16 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::env;
+use std::sync::Arc;
 
+use crate::api::admin::connectors::{ConnectionTestResult, ConnectorFactory};
 use crate::api::handlers::ApiResponse;
 use crate::api::AppState;
 
-pub mod registry;
 pub mod connectors;
+pub mod registry;
 
 use registry::{IntegrationRegistry, IntegrationStatus, IntegrationType};
 
@@ -69,37 +71,57 @@ pub async fn list_integrations(
 ) -> Result<Json<ApiResponse<IntegrationsListResponse>>, StatusCode> {
     let registry = IntegrationRegistry::new();
     let integrations = registry.get_all_integrations();
-    
+
     let total = integrations.len();
-    let connected = integrations.iter().filter(|i| matches!(i.status, IntegrationStatus::Connected)).count();
-    let disconnected = integrations.iter().filter(|i| matches!(i.status, IntegrationStatus::Disconnected)).count();
-    let hardcoded = integrations.iter().filter(|i| matches!(i.status, IntegrationStatus::Hardcoded)).count();
-    
-    let views: Vec<IntegrationView> = integrations.iter().map(|i| IntegrationView {
-        id: i.id.clone(),
-        name: i.name.clone(),
-        description: i.description.clone(),
-        integration_type: format!("{:?}", i.integration_type),
-        status: format!("{:?}", i.status),
-        priority: format!("{:?}", i.priority),
-        endpoints: i.endpoints.iter().map(|e| EndpointView {
-            method: e.method.clone(),
-            path: e.path.clone(),
-            description: e.description.clone(),
-            status: format!("{:?}", e.implementation_status),
-        }).collect(),
-        config_required: i.config_fields.iter().map(|f| ConfigFieldView {
-            name: f.name.clone(),
-            field_type: f.field_type.clone(),
-            required: f.required,
-            description: f.description.clone(),
-            current_value: f.current_value.clone(),
-        }).collect(),
-        last_check: i.last_check,
-        error_message: i.error_message.clone(),
-        documentation_url: i.documentation_url.clone(),
-    }).collect();
-    
+    let connected = integrations
+        .iter()
+        .filter(|i| matches!(i.status, IntegrationStatus::Connected))
+        .count();
+    let disconnected = integrations
+        .iter()
+        .filter(|i| matches!(i.status, IntegrationStatus::Disconnected))
+        .count();
+    let hardcoded = integrations
+        .iter()
+        .filter(|i| matches!(i.status, IntegrationStatus::Hardcoded))
+        .count();
+
+    let views: Vec<IntegrationView> = integrations
+        .iter()
+        .map(|i| IntegrationView {
+            id: i.id.clone(),
+            name: i.name.clone(),
+            description: i.description.clone(),
+            integration_type: format!("{:?}", i.integration_type),
+            status: format!("{:?}", i.status),
+            priority: format!("{:?}", i.priority),
+            endpoints: i
+                .endpoints
+                .iter()
+                .map(|e| EndpointView {
+                    method: e.method.clone(),
+                    path: e.path.clone(),
+                    description: e.description.clone(),
+                    status: format!("{:?}", e.implementation_status),
+                })
+                .collect(),
+            config_required: i
+                .config_fields
+                .iter()
+                .map(|f| ConfigFieldView {
+                    name: f.name.clone(),
+                    field_type: f.field_type.clone(),
+                    required: f.required,
+                    description: f.description.clone(),
+                    current_value: f.current_value.clone(),
+                })
+                .collect(),
+            last_check: i.last_check,
+            error_message: i.error_message.clone(),
+            documentation_url: i.documentation_url.clone(),
+        })
+        .collect();
+
     Ok(Json(ApiResponse::success(IntegrationsListResponse {
         integrations: views,
         total,
@@ -129,7 +151,7 @@ pub async fn get_integration_detail(
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<IntegrationDetailResponse>>, StatusCode> {
     let registry = IntegrationRegistry::new();
-    
+
     match registry.get_integration(&id) {
         Some(i) => {
             let view = IntegrationView {
@@ -139,36 +161,47 @@ pub async fn get_integration_detail(
                 integration_type: format!("{:?}", i.integration_type),
                 status: format!("{:?}", i.status),
                 priority: format!("{:?}", i.priority),
-                endpoints: i.endpoints.iter().map(|e| EndpointView {
-                    method: e.method.clone(),
-                    path: e.path.clone(),
-                    description: e.description.clone(),
-                    status: format!("{:?}", e.implementation_status),
-                }).collect(),
-                config_required: i.config_fields.iter().map(|f| ConfigFieldView {
-                    name: f.name.clone(),
-                    field_type: f.field_type.clone(),
-                    required: f.required,
-                    description: f.description.clone(),
-                    current_value: f.current_value.clone(),
-                }).collect(),
+                endpoints: i
+                    .endpoints
+                    .iter()
+                    .map(|e| EndpointView {
+                        method: e.method.clone(),
+                        path: e.path.clone(),
+                        description: e.description.clone(),
+                        status: format!("{:?}", e.implementation_status),
+                    })
+                    .collect(),
+                config_required: i
+                    .config_fields
+                    .iter()
+                    .map(|f| ConfigFieldView {
+                        name: f.name.clone(),
+                        field_type: f.field_type.clone(),
+                        required: f.required,
+                        description: f.description.clone(),
+                        current_value: f.current_value.clone(),
+                    })
+                    .collect(),
                 last_check: i.last_check,
                 error_message: i.error_message.clone(),
                 documentation_url: i.documentation_url.clone(),
             };
-            
+
             let guide = ConnectionGuide {
                 steps: i.connection_steps.clone(),
                 example_config: i.example_config.clone(),
                 testing_commands: i.testing_commands.clone(),
             };
-            
+
             Ok(Json(ApiResponse::success(IntegrationDetailResponse {
                 integration: view,
                 connection_guide: guide,
             })))
         }
-        None => Ok(Json(ApiResponse::error(format!("Integration '{}' not found", id)))),
+        None => Ok(Json(ApiResponse::error(format!(
+            "Integration '{}' not found",
+            id
+        )))),
     }
 }
 
@@ -193,13 +226,13 @@ pub async fn configure_integration(
 ) -> Result<Json<ApiResponse<ConfigureIntegrationResponse>>, StatusCode> {
     // Тук ще се запазва конфигурацията в базата данни
     // и ще се тества връзката
-    
+
     let response = ConfigureIntegrationResponse {
         success: true,
         message: format!("Configuration for '{}' saved successfully", id),
         test_result: Some("Connection test passed".to_string()),
     };
-    
+
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -217,15 +250,68 @@ pub async fn test_integration(
     State(_state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<TestIntegrationResponse>>, StatusCode> {
-    // Тук ще се изпълни реален тест на връзката
-    
-    let result = TestIntegrationResponse {
-        success: false,
-        response_time_ms: 0,
-        details: format!("Integration '{}' test not yet implemented. This will test the actual connection.", id),
-        errors: vec!["Not implemented".to_string()],
+    let integration_test = match id.as_str() {
+        "broker-ibkr" => {
+            let mut config = HashMap::new();
+            config.insert(
+                "IBKR_API_KEY".to_string(),
+                env::var("IBKR_API_KEY").unwrap_or_default(),
+            );
+            config.insert(
+                "IBKR_API_SECRET".to_string(),
+                env::var("IBKR_API_SECRET").unwrap_or_default(),
+            );
+            config.insert(
+                "IBKR_BASE_URL".to_string(),
+                env::var("IBKR_BASE_URL")
+                    .unwrap_or_else(|_| "https://paper-api.ibkr.com".to_string()),
+            );
+
+            match ConnectorFactory::create_connector("ibkr", config) {
+                Ok(connector) => connector.test_connection().await,
+                Err(err) => ConnectionTestResult {
+                    success: false,
+                    response_time_ms: 0,
+                    message: "Unable to configure IBKR connector".to_string(),
+                    errors: vec![err],
+                },
+            }
+        }
+        "market-data" => {
+            let mut config = HashMap::new();
+            config.insert(
+                "POLYGON_API_KEY".to_string(),
+                env::var("POLYGON_API_KEY").unwrap_or_default(),
+            );
+
+            match ConnectorFactory::create_connector("polygon", config) {
+                Ok(connector) => connector.test_connection().await,
+                Err(err) => ConnectionTestResult {
+                    success: false,
+                    response_time_ms: 0,
+                    message: "Unable to configure Polygon connector".to_string(),
+                    errors: vec![err],
+                },
+            }
+        }
+        _ => ConnectionTestResult {
+            success: false,
+            response_time_ms: 0,
+            message: format!(
+                "Integration '{}' does not expose an automated connection test yet.",
+                id
+            ),
+            errors: vec!["Not implemented".to_string()],
+        },
     };
-    
+
+    let result = TestIntegrationResponse {
+        success: integration_test.success,
+        response_time_ms: integration_test.response_time_ms,
+        details: integration_test.message,
+        errors: integration_test.errors,
+    };
+
     Ok(Json(ApiResponse::success(result)))
 }
 
@@ -269,23 +355,32 @@ pub async fn get_admin_stats(
 ) -> Result<Json<ApiResponse<AdminStatsResponse>>, StatusCode> {
     let registry = IntegrationRegistry::new();
     let integrations = registry.get_all_integrations();
-    
-    let external = integrations.iter()
+
+    let external = integrations
+        .iter()
         .filter(|i| matches!(i.integration_type, IntegrationType::ExternalApi))
         .count();
-    
-    let internal = integrations.iter()
+
+    let internal = integrations
+        .iter()
         .filter(|i| matches!(i.integration_type, IntegrationType::InternalModule))
         .count();
-    
-    let stubs = integrations.iter()
-        .filter(|i| matches!(i.status, IntegrationStatus::Hardcoded | IntegrationStatus::Stub))
+
+    let stubs = integrations
+        .iter()
+        .filter(|i| {
+            matches!(
+                i.status,
+                IntegrationStatus::Hardcoded | IntegrationStatus::Stub
+            )
+        })
         .count();
-    
-    let ready = integrations.iter()
+
+    let ready = integrations
+        .iter()
         .filter(|i| matches!(i.status, IntegrationStatus::Connected))
         .count();
-    
+
     let response = AdminStatsResponse {
         system_status: "Development".to_string(),
         api_integrations: ApiIntegrationStats {
@@ -328,6 +423,6 @@ pub async fn get_admin_stats(
             },
         },
     };
-    
+
     Ok(Json(ApiResponse::success(response)))
 }

@@ -8,40 +8,40 @@ use serde::{Deserialize, Serialize};
 /// Тип на интеграцията
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum IntegrationType {
-    ExternalApi,      // Външно API (broker, market data)
-    InternalModule,   // Вътрешен модул (analytics, ML)
-    Database,         // База данни
-    MessageQueue,     // Message queue (Redis, Kafka)
+    ExternalApi,    // Външно API (broker, market data)
+    InternalModule, // Вътрешен модул (analytics, ML)
+    Database,       // База данни
+    MessageQueue,   // Message queue (Redis, Kafka)
 }
 
 /// Статус на интеграцията
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum IntegrationStatus {
-    Connected,        // Свързано и работи
-    Disconnected,     // Изключено/недостъпно
-    Hardcoded,        // Hardcoded стойности (както е сега analytics)
-    Stub,             // Stub имплементация
-    NotImplemented,   // Не е имплементирано
-    RequiresLicense,  // Изисква лиценз (FiatGateway)
+    Connected,       // Свързано и работи
+    Disconnected,    // Изключено/недостъпно
+    Hardcoded,       // Hardcoded стойности (както е сега analytics)
+    Stub,            // Stub имплементация
+    NotImplemented,  // Не е имплементирано
+    RequiresLicense, // Изисква лиценз (FiatGateway)
 }
 
 /// Приоритет на интеграцията
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum IntegrationPriority {
-    Critical,         // Блокер за production
-    High,             // Важно
-    Medium,           // Нормално
-    Low,              // Ниско
-    Deprecated,       // Не се поддържа вече
+    Critical,   // Блокер за production
+    High,       // Важно
+    Medium,     // Нормално
+    Low,        // Ниско
+    Deprecated, // Не се поддържа вече
 }
 
 /// Статус на имплементация на endpoint
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ImplementationStatus {
-    Implemented,      // Имплементирано и работи
-    Stub,             // Stub/мок
-    Hardcoded,        // Hardcoded стойности
-    NotImplemented,   // Не е имплементирано
+    Implemented,    // Имплементирано и работи
+    Stub,           // Stub/мок
+    Hardcoded,      // Hardcoded стойности
+    NotImplemented, // Не е имплементирано
 }
 
 /// Поле за конфигурация
@@ -89,7 +89,7 @@ impl IntegrationRegistry {
     pub fn new() -> Self {
         Self
     }
-    
+
     /// Връща всички интеграции
     pub fn get_all_integrations(&self) -> Vec<Integration> {
         vec![
@@ -107,14 +107,14 @@ impl IntegrationRegistry {
             self.redis_integration(),
         ]
     }
-    
+
     /// Намира интеграция по ID
     pub fn get_integration(&self, id: &str) -> Option<Integration> {
         self.get_all_integrations().into_iter().find(|i| i.id == id)
     }
-    
+
     // ==================== ANALYTICS INTEGRATIONS ====================
-    
+
     fn analytics_integration(&self) -> Integration {
         Integration {
             id: "analytics-backtest".to_string(),
@@ -123,14 +123,12 @@ impl IntegrationRegistry {
             integration_type: IntegrationType::InternalModule,
             status: IntegrationStatus::Connected,
             priority: IntegrationPriority::Critical,
-            endpoints: vec![
-                ApiEndpoint {
-                    method: "POST".to_string(),
-                    path: "/api/analytics/backtest".to_string(),
-                    description: "Run backtest with strategy".to_string(),
-                    implementation_status: ImplementationStatus::Implemented,
-                },
-            ],
+            endpoints: vec![ApiEndpoint {
+                method: "POST".to_string(),
+                path: "/api/analytics/backtest".to_string(),
+                description: "Run backtest with strategy".to_string(),
+                implementation_status: ImplementationStatus::Implemented,
+            }],
             config_fields: vec![],
             connection_steps: vec![
                 "✅ Свързано с BacktestEngine модула".to_string(),
@@ -144,10 +142,11 @@ impl IntegrationRegistry {
             ],
             last_check: Some(Utc::now()),
             error_message: None,
-            documentation_url: "https://github.com/investor-os/docs/blob/main/analytics.md".to_string(),
+            documentation_url: "https://github.com/investor-os/docs/blob/main/analytics.md"
+                .to_string(),
         }
     }
-    
+
     fn risk_metrics_integration(&self) -> Integration {
         Integration {
             id: "analytics-risk".to_string(),
@@ -156,14 +155,12 @@ impl IntegrationRegistry {
             integration_type: IntegrationType::InternalModule,
             status: IntegrationStatus::Connected,
             priority: IntegrationPriority::Critical,
-            endpoints: vec![
-                ApiEndpoint {
-                    method: "GET".to_string(),
-                    path: "/api/analytics/risk".to_string(),
-                    description: "Get portfolio risk metrics".to_string(),
-                    implementation_status: ImplementationStatus::Implemented,
-                },
-            ],
+            endpoints: vec![ApiEndpoint {
+                method: "GET".to_string(),
+                path: "/api/analytics/risk".to_string(),
+                description: "Get portfolio risk metrics".to_string(),
+                implementation_status: ImplementationStatus::Implemented,
+            }],
             config_fields: vec![],
             connection_steps: vec![
                 "✅ Свързано с RiskAnalyzer модула".to_string(),
@@ -180,7 +177,7 @@ impl IntegrationRegistry {
             documentation_url: "https://github.com/investor-os/docs/blob/main/risk.md".to_string(),
         }
     }
-    
+
     fn attribution_integration(&self) -> Integration {
         Integration {
             id: "analytics-attribution".to_string(),
@@ -189,14 +186,12 @@ impl IntegrationRegistry {
             integration_type: IntegrationType::InternalModule,
             status: IntegrationStatus::Connected,
             priority: IntegrationPriority::High,
-            endpoints: vec![
-                ApiEndpoint {
-                    method: "GET".to_string(),
-                    path: "/api/analytics/attribution".to_string(),
-                    description: "Get performance attribution by sector".to_string(),
-                    implementation_status: ImplementationStatus::Implemented,
-                },
-            ],
+            endpoints: vec![ApiEndpoint {
+                method: "GET".to_string(),
+                path: "/api/analytics/attribution".to_string(),
+                description: "Get performance attribution by sector".to_string(),
+                implementation_status: ImplementationStatus::Implemented,
+            }],
             config_fields: vec![],
             connection_steps: vec![
                 "✅ Свързано с AttributionAnalyzer модула".to_string(),
@@ -211,10 +206,11 @@ impl IntegrationRegistry {
             ],
             last_check: Some(Utc::now()),
             error_message: None,
-            documentation_url: "https://github.com/investor-os/docs/blob/main/attribution.md".to_string(),
+            documentation_url: "https://github.com/investor-os/docs/blob/main/attribution.md"
+                .to_string(),
         }
     }
-    
+
     fn ml_prediction_integration(&self) -> Integration {
         Integration {
             id: "ml-prediction".to_string(),
@@ -223,14 +219,12 @@ impl IntegrationRegistry {
             integration_type: IntegrationType::InternalModule,
             status: IntegrationStatus::Connected,
             priority: IntegrationPriority::High,
-            endpoints: vec![
-                ApiEndpoint {
-                    method: "POST".to_string(),
-                    path: "/api/analytics/predict".to_string(),
-                    description: "Get ML prediction for ticker".to_string(),
-                    implementation_status: ImplementationStatus::Implemented,
-                },
-            ],
+            endpoints: vec![ApiEndpoint {
+                method: "POST".to_string(),
+                path: "/api/analytics/predict".to_string(),
+                description: "Get ML prediction for ticker".to_string(),
+                implementation_status: ImplementationStatus::Implemented,
+            }],
             config_fields: vec![],
             connection_steps: vec![
                 "✅ Свързано с CQPredictor модула".to_string(),
@@ -252,9 +246,9 @@ impl IntegrationRegistry {
             documentation_url: "https://github.com/investor-os/docs/blob/main/ml.md".to_string(),
         }
     }
-    
+
     // ==================== BROKER INTEGRATIONS ====================
-    
+
     fn broker_integration(&self) -> Integration {
         Integration {
             id: "broker-ibkr".to_string(),
@@ -311,7 +305,7 @@ impl IntegrationRegistry {
             documentation_url: "https://github.com/investor-os/docs/blob/main/paper-trading.md".to_string(),
         }
     }
-    
+
     fn market_data_integration(&self) -> Integration {
         Integration {
             id: "market-data".to_string(),
@@ -375,7 +369,8 @@ impl IntegrationRegistry {
             }),
             testing_commands: vec![
                 "curl '/api/market-data/quote/AAPL'".to_string(),
-                "curl '/api/market-data/historical/BTC-USD?from=2024-01-01&to=2024-12-31'".to_string(),
+                "curl '/api/market-data/historical/BTC-USD?from=2024-01-01&to=2024-12-31'"
+                    .to_string(),
                 "curl '/api/market-data/status'".to_string(),
             ],
             last_check: Some(Utc::now()),
@@ -383,9 +378,9 @@ impl IntegrationRegistry {
             documentation_url: "https://polygon.io/docs/".to_string(),
         }
     }
-    
+
     // ==================== INTERNAL MODULES ====================
-    
+
     fn rag_integration(&self) -> Integration {
         Integration {
             id: "rag".to_string(),
@@ -423,7 +418,7 @@ impl IntegrationRegistry {
             documentation_url: "https://github.com/investor-os/docs/blob/main/rag.md".to_string(),
         }
     }
-    
+
     fn treasury_integration(&self) -> Integration {
         Integration {
             id: "treasury".to_string(),
@@ -452,15 +447,13 @@ impl IntegrationRegistry {
                     implementation_status: ImplementationStatus::Implemented,
                 },
             ],
-            config_fields: vec![
-                ConfigField {
-                    name: "FIREBLOCKS_API_KEY".to_string(),
-                    field_type: "secret".to_string(),
-                    required: false,
-                    description: "Fireblocks API Key (за реални crypto транзакции)".to_string(),
-                    current_value: None,
-                },
-            ],
+            config_fields: vec![ConfigField {
+                name: "FIREBLOCKS_API_KEY".to_string(),
+                field_type: "secret".to_string(),
+                required: false,
+                description: "Fireblocks API Key (за реални crypto транзакции)".to_string(),
+                current_value: None,
+            }],
             connection_steps: vec![
                 "✅ Treasury модулът работи (paper trading)".to_string(),
                 "За реални транзакции: свържи Fireblocks".to_string(),
@@ -472,12 +465,13 @@ impl IntegrationRegistry {
             testing_commands: vec!["cargo test treasury".to_string()],
             last_check: Some(Utc::now()),
             error_message: None,
-            documentation_url: "https://github.com/investor-os/docs/blob/main/treasury.md".to_string(),
+            documentation_url: "https://github.com/investor-os/docs/blob/main/treasury.md"
+                .to_string(),
         }
     }
-    
+
     // ==================== DEPRECATED ====================
-    
+
     fn fiat_gateway_integration(&self) -> Integration {
         Integration {
             id: "fiat-gateway".to_string(),
@@ -495,11 +489,14 @@ impl IntegrationRegistry {
             example_config: serde_json::json!({}),
             testing_commands: vec![],
             last_check: None,
-            error_message: Some("Fiat operations not supported - requires banking license".to_string()),
-            documentation_url: "https://github.com/investor-os/docs/blob/main/deprecated/fiat.md".to_string(),
+            error_message: Some(
+                "Fiat operations not supported - requires banking license".to_string(),
+            ),
+            documentation_url: "https://github.com/investor-os/docs/blob/main/deprecated/fiat.md"
+                .to_string(),
         }
     }
-    
+
     fn fx_converter_integration(&self) -> Integration {
         Integration {
             id: "fx-converter".to_string(),
@@ -518,12 +515,13 @@ impl IntegrationRegistry {
             testing_commands: vec![],
             last_check: None,
             error_message: Some("FX operations not supported".to_string()),
-            documentation_url: "https://github.com/investor-os/docs/blob/main/deprecated/fx.md".to_string(),
+            documentation_url: "https://github.com/investor-os/docs/blob/main/deprecated/fx.md"
+                .to_string(),
         }
     }
-    
+
     // ==================== INFRASTRUCTURE ====================
-    
+
     fn database_integration(&self) -> Integration {
         Integration {
             id: "database".to_string(),
@@ -533,15 +531,13 @@ impl IntegrationRegistry {
             status: IntegrationStatus::Connected,
             priority: IntegrationPriority::Critical,
             endpoints: vec![],
-            config_fields: vec![
-                ConfigField {
-                    name: "DATABASE_URL".to_string(),
-                    field_type: "secret".to_string(),
-                    required: true,
-                    description: "PostgreSQL connection string".to_string(),
-                    current_value: Some("postgresql://localhost/investor_os".to_string()),
-                },
-            ],
+            config_fields: vec![ConfigField {
+                name: "DATABASE_URL".to_string(),
+                field_type: "secret".to_string(),
+                required: true,
+                description: "PostgreSQL connection string".to_string(),
+                current_value: Some("postgresql://localhost/investor_os".to_string()),
+            }],
             connection_steps: vec![
                 "1. PostgreSQL трябва да е инсталиран".to_string(),
                 "2. DATABASE_URL трябва да е конфигурирана".to_string(),
@@ -552,10 +548,11 @@ impl IntegrationRegistry {
             testing_commands: vec!["psql $DATABASE_URL -c 'SELECT 1'".to_string()],
             last_check: Some(Utc::now()),
             error_message: None,
-            documentation_url: "https://github.com/investor-os/docs/blob/main/database.md".to_string(),
+            documentation_url: "https://github.com/investor-os/docs/blob/main/database.md"
+                .to_string(),
         }
     }
-    
+
     fn redis_integration(&self) -> Integration {
         Integration {
             id: "redis".to_string(),
@@ -565,15 +562,13 @@ impl IntegrationRegistry {
             status: IntegrationStatus::Connected,
             priority: IntegrationPriority::Medium,
             endpoints: vec![],
-            config_fields: vec![
-                ConfigField {
-                    name: "REDIS_URL".to_string(),
-                    field_type: "string".to_string(),
-                    required: true,
-                    description: "Redis connection URL".to_string(),
-                    current_value: Some("redis://localhost:6379".to_string()),
-                },
-            ],
+            config_fields: vec![ConfigField {
+                name: "REDIS_URL".to_string(),
+                field_type: "string".to_string(),
+                required: true,
+                description: "Redis connection URL".to_string(),
+                current_value: Some("redis://localhost:6379".to_string()),
+            }],
             connection_steps: vec![
                 "1. Redis трябва да е инсталиран и пуснат".to_string(),
                 "2. REDIS_URL трябва да е конфигурирана".to_string(),

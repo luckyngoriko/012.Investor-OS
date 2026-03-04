@@ -3,7 +3,7 @@
 ## Metadata
 
 - Sprint ID: 87
-- Status: queued
+- Status: done
 - Gate: G34
 - Owner: ML + Platform
 - Dependencies: 85, 86
@@ -43,6 +43,7 @@ Replace placeholder HRM inference logic with real model-backed inference and det
 ```bash
 cargo test --lib --locked hrm::inference::tests::
 cargo test --lib --locked hrm::weights::tests::
+cargo test --locked --test hrm_validation_test
 ```
 
 ## Gate Condition

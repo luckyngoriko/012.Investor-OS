@@ -1,7 +1,7 @@
 //! Treasury Module - Sprint 15
 //!
 //! Управление на капитал: крипто депозити, тегления, yield
-//! 
+//!
 //! NOTE: Fiat banking and FX conversion removed - requires banking license.
 //! For fiat operations, use external payment processors (Stripe, Wise, etc.)
 //! and integrate via webhooks to deposit crypto (USDC/USDT).
@@ -14,71 +14,78 @@ use thiserror::Error;
 use uuid::Uuid;
 
 pub mod crypto;
-pub mod yield_optimizer;
 pub mod security;
+pub mod yield_optimizer;
+use crate::treasury::crypto::CryptoCustodyTrait;
 
 // Real custody integrations (feature-gated)
 #[cfg(feature = "fireblocks")]
 pub mod fireblocks;
 
 pub use crypto::CryptoCustody;
+pub use security::{SecurityCheck, SecurityManager, TfaMethod};
 pub use yield_optimizer::YieldOptimizer;
-pub use security::{SecurityManager, SecurityCheck, TfaMethod};
 
 #[cfg(feature = "fireblocks")]
-pub use fireblocks::{FireblocksCustody, FireblocksConfig};
+pub use fireblocks::{FireblocksConfig, FireblocksCustody};
 
 /// Errors that can occur in treasury operations
 #[derive(Error, Debug)]
 pub enum TreasuryError {
     #[error("Insufficient funds: requested {requested}, available {available}")]
-    InsufficientFunds { requested: Decimal, available: Decimal, asset: String },
-    
+    InsufficientFunds {
+        requested: Decimal,
+        available: Decimal,
+        asset: String,
+    },
+
     #[error("Currency not supported: {0}")]
     UnsupportedCurrency(String),
-    
+
     #[error("Withdrawal limit exceeded: requested {requested}, limit {limit}")]
     WithdrawalLimitExceeded { requested: Decimal, limit: Decimal },
-    
+
     #[error("Deposit not found: {0}")]
     DepositNotFound(Uuid),
-    
+
     #[error("Transaction failed: {0}")]
     TransactionFailed(String),
-    
+
     #[error("Security check failed: {0}")]
     SecurityCheckFailed(String),
-    
+
     #[error("Gateway error: {0}")]
     GatewayError(String),
-    
-    #[error("Fiat operations not supported. Use external payment processor and deposit USDC/USDT.")]
+
+    #[error(
+        "Fiat operations not supported. Use external payment processor and deposit USDC/USDT."
+    )]
     FiatNotSupported,
-    
+
     #[error("Invalid amount: {0}")]
     InvalidAmount(String),
-    
+
     #[error("Asset not found: {0}")]
     AssetNotFound(String),
-    
+
     #[error("Transaction not found: {0}")]
     TransactionNotFound(String),
-    
+
     #[error("Configuration error: {0}")]
     ConfigError(String),
-    
+
     #[error("API error: {0}")]
     ApiError(String),
-    
+
     #[error("Connection error: {0}")]
     ConnectionError(String),
-    
+
     #[error("Authentication error: {0}")]
     AuthenticationError(String),
-    
+
     #[error("Parse error: {0}")]
     ParseError(String),
-    
+
     #[error("Security policy violation: {0}")]
     SecurityError(String),
 }
@@ -90,9 +97,18 @@ pub type TreasuryResult<T> = std::result::Result<T, TreasuryError>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Currency {
     // Crypto
-    BTC, ETH, USDT, USDC, SOL, ADA, DOT, DAI,
+    BTC,
+    ETH,
+    USDT,
+    USDC,
+    SOL,
+    ADA,
+    DOT,
+    DAI,
     // Fiat - deprecated, returns error when used
-    USD, EUR, GBP,
+    USD,
+    EUR,
+    GBP,
 }
 
 impl std::fmt::Display for Currency {
@@ -117,15 +133,15 @@ impl Currency {
             Currency::GBP => "GBP",
         }
     }
-    
+
     pub fn is_fiat(&self) -> bool {
         matches!(self, Currency::USD | Currency::EUR | Currency::GBP)
     }
-    
+
     pub fn is_crypto(&self) -> bool {
         !self.is_fiat()
     }
-    
+
     pub fn decimals(&self) -> u32 {
         match self {
             Currency::BTC => 8,
@@ -134,7 +150,7 @@ impl Currency {
             Currency::USD | Currency::EUR | Currency::GBP => 2,
         }
     }
-    
+
     /// Get approximate USD price for equity calculations
     pub fn usd_price_estimate(&self) -> Decimal {
         match self {
@@ -153,7 +169,7 @@ impl Currency {
 
 impl std::str::FromStr for Currency {
     type Err = TreasuryError;
-    
+
     fn from_str(s: &str) -> Result<Self> {
         match s.to_uppercase().as_str() {
             "BTC" => Ok(Currency::BTC),
@@ -173,13 +189,13 @@ impl std::str::FromStr for Currency {
 /// Transaction status
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TransactionStatus {
-    Pending,           // Чака обработка
-    Processing,        // В процес
-    Cleared,           // Завършено успешно (old name)
-    Confirmed,         // Завършено успешно (Fireblocks compatible)
-    Failed(String),    // Неуспешно
-    FailedStatus,      // Неуспешно (simple variant)
-    Cancelled,         // Отказано
+    Pending,        // Чака обработка
+    Processing,     // В процес
+    Cleared,        // Завършено успешно (old name)
+    Confirmed,      // Завършено успешно (Fireblocks compatible)
+    Failed(String), // Неуспешно
+    FailedStatus,   // Неуспешно (simple variant)
+    Cancelled,      // Отказано
 }
 
 /// Deposit transaction
@@ -198,9 +214,18 @@ pub struct Deposit {
 /// Source of deposit
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DepositSource {
-    CryptoWallet { address: String, chain: String, tx_hash: String },
-    BankTransfer { bank_name: String, account_last4: String },
-    Internal { from_account: Uuid },
+    CryptoWallet {
+        address: String,
+        chain: String,
+        tx_hash: String,
+    },
+    BankTransfer {
+        bank_name: String,
+        account_last4: String,
+    },
+    Internal {
+        from_account: Uuid,
+    },
 }
 
 /// Withdrawal transaction
@@ -220,9 +245,17 @@ pub struct Withdrawal {
 /// Withdrawal destination
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum WithdrawalDestination {
-    CryptoWallet { address: String, chain: String },
-    BankAccount { bank_name: String, account_number: String },
-    Internal { to_account: Uuid },
+    CryptoWallet {
+        address: String,
+        chain: String,
+    },
+    BankAccount {
+        bank_name: String,
+        account_number: String,
+    },
+    Internal {
+        to_account: Uuid,
+    },
 }
 
 /// Generic transaction (for custody providers)
@@ -242,10 +275,10 @@ pub struct Transaction {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Balance {
     pub currency: Currency,
-    pub available: Decimal,      // Свободни за търговия
-    pub locked: Decimal,         // Блокирани в поръчки
-    pub pending_deposit: Decimal,// Очаквани депозити
-    pub pending_withdrawal: Decimal,// Очаквани тегления
+    pub available: Decimal,          // Свободни за търговия
+    pub locked: Decimal,             // Блокирани в поръчки
+    pub pending_deposit: Decimal,    // Очаквани депозити
+    pub pending_withdrawal: Decimal, // Очаквани тегления
 }
 
 /// Currency conversion result (DEPRECATED - requires banking license)
@@ -259,6 +292,18 @@ pub struct Conversion {
     pub fees: Decimal,
 }
 
+/// Treasury audit event for transaction lifecycle visibility
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TreasuryAuditEvent {
+    pub id: Uuid,
+    pub timestamp: DateTime<Utc>,
+    pub action: String,
+    pub currency: Option<Currency>,
+    pub amount: Option<Decimal>,
+    pub reference: Option<String>,
+    pub details: String,
+}
+
 /// Treasury manager - основен интерфейс
 #[derive(Debug)]
 pub struct Treasury {
@@ -266,7 +311,8 @@ pub struct Treasury {
     crypto_custody: CryptoCustody,
     yield_optimizer: YieldOptimizer,
     security_manager: SecurityManager,
-    
+    audit_trail: Vec<TreasuryAuditEvent>,
+
     // Daily tracking
     daily_withdrawal_used: Decimal,
     last_reset: DateTime<Utc>,
@@ -279,31 +325,110 @@ impl Treasury {
             crypto_custody: CryptoCustody::new().await?,
             yield_optimizer: YieldOptimizer::new().await?,
             security_manager: SecurityManager::new(),
+            audit_trail: Vec::new(),
             daily_withdrawal_used: Decimal::ZERO,
             last_reset: Utc::now(),
         })
     }
-    
+
     /// Get deposit address for a currency
     pub async fn get_deposit_address(&self, currency: Currency) -> Result<String> {
         self.crypto_custody.get_deposit_address(currency).await
     }
-    
+
+    /// Initiate a deposit via custody provider.
+    pub async fn initiate_deposit(
+        &mut self,
+        currency: Currency,
+        amount: Decimal,
+    ) -> Result<Deposit> {
+        if !currency.is_crypto() {
+            return Err(TreasuryError::UnsupportedCurrency(format!(
+                "{} is not supported",
+                currency.as_str()
+            )));
+        }
+
+        if amount <= Decimal::ZERO {
+            return Err(TreasuryError::InvalidAmount(
+                "deposit amount must be positive".to_string(),
+            ));
+        }
+
+        let deposit = self
+            .crypto_custody
+            .initiate_deposit(currency, amount)
+            .await?;
+
+        let balance = self.balances.entry(currency).or_insert(Balance {
+            currency,
+            available: Decimal::ZERO,
+            locked: Decimal::ZERO,
+            pending_deposit: Decimal::ZERO,
+            pending_withdrawal: Decimal::ZERO,
+        });
+        balance.pending_deposit += amount;
+
+        self.record_audit_event(
+            "deposit_initiated",
+            Some(currency),
+            Some(amount),
+            deposit.reference.clone(),
+            "deposit initiated via custody provider",
+        );
+
+        Ok(deposit)
+    }
+
+    fn record_audit_event(
+        &mut self,
+        action: impl Into<String>,
+        currency: Option<Currency>,
+        amount: Option<Decimal>,
+        reference: Option<String>,
+        details: impl Into<String>,
+    ) {
+        self.audit_trail.push(TreasuryAuditEvent {
+            id: Uuid::new_v4(),
+            timestamp: Utc::now(),
+            action: action.into(),
+            currency,
+            amount,
+            reference,
+            details: details.into(),
+        });
+    }
+
+    /// Return current audit trail (append-only during runtime).
+    pub fn audit_trail(&self) -> &[TreasuryAuditEvent] {
+        &self.audit_trail
+    }
+
     /// Deposit crypto (process incoming deposit from external wallet)
     pub async fn process_deposit(
-        &mut self, 
-        currency: Currency, 
+        &mut self,
+        currency: Currency,
         amount: Decimal,
         tx_hash: String,
         from_address: String,
         chain: String,
     ) -> Result<Deposit> {
         if !currency.is_crypto() {
-            return Err(TreasuryError::UnsupportedCurrency(
-                format!("{} is not supported", currency.as_str())
+            return Err(TreasuryError::UnsupportedCurrency(format!(
+                "{} is not supported",
+                currency.as_str()
+            )));
+        }
+
+        if amount <= Decimal::ZERO {
+            return Err(TreasuryError::InvalidAmount(
+                "deposit amount must be positive".to_string(),
             ));
         }
-        
+
+        // Keep custody ledger in sync so confirmed withdrawals do not operate on stale balances.
+        self.crypto_custody.credit_balance(currency, amount)?;
+
         let deposit = Deposit {
             id: Uuid::new_v4(),
             currency,
@@ -311,14 +436,14 @@ impl Treasury {
             status: TransactionStatus::Cleared, // Assume confirmed when we see it
             created_at: Utc::now(),
             cleared_at: Some(Utc::now()),
-            source: DepositSource::CryptoWallet { 
-                address: from_address, 
+            source: DepositSource::CryptoWallet {
+                address: from_address,
                 chain,
                 tx_hash,
             },
             reference: None,
         };
-        
+
         // Update available balance immediately
         let balance = self.balances.entry(currency).or_insert(Balance {
             currency,
@@ -328,10 +453,18 @@ impl Treasury {
             pending_withdrawal: Decimal::ZERO,
         });
         balance.available += amount;
-        
+
+        self.record_audit_event(
+            "deposit_processed",
+            Some(currency),
+            Some(amount),
+            deposit.reference.clone(),
+            "crypto deposit processed and credited",
+        );
+
         Ok(deposit)
     }
-    
+
     /// Withdraw crypto with 2FA verification
     pub async fn withdraw(
         &mut self,
@@ -340,37 +473,43 @@ impl Treasury {
         destination: WithdrawalDestination,
         tfa_code: Option<&str>, // 2FA code for large withdrawals
     ) -> Result<Withdrawal> {
+        if amount <= Decimal::ZERO {
+            return Err(TreasuryError::InvalidAmount(
+                "withdrawal amount must be positive".to_string(),
+            ));
+        }
+
         // Reset daily limit if needed
         self.check_daily_reset();
-        
+
+        // Destination safety checks first (format, blacklist, chain)
+        self.check_destination_security(&destination).await?;
+
         // Check limits FIRST
-        self.security_manager.check_limits(
-            amount,
-            self.daily_withdrawal_used,
-            Decimal::ZERO,
-        ).map_err(|_e| TreasuryError::WithdrawalLimitExceeded {
-            requested: amount,
-            limit: self.security_manager.limits.daily_usd - self.daily_withdrawal_used,
-        })?;
-        
+        self.security_manager
+            .check_limits(amount, self.daily_withdrawal_used, Decimal::ZERO)
+            .map_err(|_e| TreasuryError::WithdrawalLimitExceeded {
+                requested: amount,
+                limit: self.security_manager.limits.daily_usd - self.daily_withdrawal_used,
+            })?;
+
         // Security check - 2FA required?
-        let security_check = self.security_manager.check_withdrawal_requirements(
-            amount,
-            currency,
-            &destination,
-        );
-        
+        let security_check =
+            self.security_manager
+                .check_withdrawal_requirements(amount, currency, &destination);
+
         match security_check {
             SecurityCheck::Requires2FA { method } => {
                 let code = tfa_code.ok_or_else(|| {
-                    TreasuryError::SecurityCheckFailed(
-                        format!("2FA required for this withdrawal (method: {:?})", method)
-                    )
+                    TreasuryError::SecurityCheckFailed(format!(
+                        "2FA required for this withdrawal (method: {:?})",
+                        method
+                    ))
                 })?;
-                
+
                 if !self.security_manager.verify_2fa(code) {
                     return Err(TreasuryError::SecurityCheckFailed(
-                        "Invalid 2FA code".to_string()
+                        "Invalid 2FA code".to_string(),
                     ));
                 }
             }
@@ -379,15 +518,17 @@ impl Treasury {
             }
             SecurityCheck::Passed => {}
         }
-        
+
         // Check balance
-        let balance = self.balances.get(&currency)
-            .ok_or(TreasuryError::InsufficientFunds { 
+        let balance = self
+            .balances
+            .get(&currency)
+            .ok_or(TreasuryError::InsufficientFunds {
                 requested: amount,
                 available: Decimal::ZERO,
                 asset: currency.to_string(),
             })?;
-        
+
         if balance.available < amount {
             return Err(TreasuryError::InsufficientFunds {
                 requested: amount,
@@ -395,58 +536,88 @@ impl Treasury {
                 available: balance.available,
             });
         }
-        
+
         // Execute withdrawal
-        let withdrawal = self.crypto_custody.initiate_withdrawal(
-            currency, amount, destination
-        ).await?;
-        
+        let withdrawal = self
+            .crypto_custody
+            .initiate_withdrawal(currency, amount, destination)
+            .await?;
+
         // Update balances
         let balance = self.balances.get_mut(&currency).unwrap();
         balance.available -= amount;
         balance.pending_withdrawal += amount;
         self.daily_withdrawal_used += amount;
-        
+
+        self.record_audit_event(
+            "withdrawal_initiated",
+            Some(currency),
+            Some(amount),
+            withdrawal.reference.clone(),
+            "withdrawal initiated and pending confirmation",
+        );
+
         Ok(withdrawal)
     }
-    
+
     /// Confirm withdrawal (when blockchain confirms)
     pub async fn confirm_withdrawal(&mut self, withdrawal_id: Uuid) -> Result<Withdrawal> {
-        let withdrawal = self.crypto_custody.confirm_withdrawal(withdrawal_id).await?;
-        
-        if let TransactionStatus::Cleared = withdrawal.status {
-            let balance = self.balances.get_mut(&withdrawal.currency)
-                .ok_or(TreasuryError::InsufficientFunds {
+        let withdrawal = self
+            .crypto_custody
+            .confirm_withdrawal(withdrawal_id)
+            .await?;
+
+        if matches!(
+            withdrawal.status,
+            TransactionStatus::Cleared | TransactionStatus::Confirmed
+        ) {
+            let balance = self.balances.get_mut(&withdrawal.currency).ok_or(
+                TreasuryError::InsufficientFunds {
                     requested: Decimal::ZERO,
                     available: Decimal::ZERO,
                     asset: withdrawal.currency.to_string(),
-                })?;
-            
-            balance.pending_withdrawal -= withdrawal.amount;
+                },
+            )?;
+
+            if balance.pending_withdrawal >= withdrawal.amount {
+                balance.pending_withdrawal -= withdrawal.amount;
+            } else {
+                balance.pending_withdrawal = Decimal::ZERO;
+            }
         }
-        
+
+        self.record_audit_event(
+            "withdrawal_confirmed",
+            Some(withdrawal.currency),
+            Some(withdrawal.amount),
+            withdrawal.reference.clone(),
+            "withdrawal confirmed by custody provider",
+        );
+
         Ok(withdrawal)
     }
-    
+
     /// Get balance for a currency
     pub fn get_balance(&self, currency: Currency) -> Option<&Balance> {
         self.balances.get(&currency)
     }
-    
+
     /// Get all balances
     pub fn get_all_balances(&self) -> &HashMap<Currency, Balance> {
         &self.balances
     }
-    
+
     /// Lock funds for trading
     pub fn lock_funds(&mut self, currency: Currency, amount: Decimal) -> Result<()> {
-        let balance = self.balances.get_mut(&currency)
+        let balance = self
+            .balances
+            .get_mut(&currency)
             .ok_or(TreasuryError::InsufficientFunds {
                 requested: amount,
                 asset: currency.to_string(),
                 available: Decimal::ZERO,
             })?;
-        
+
         if balance.available < amount {
             return Err(TreasuryError::InsufficientFunds {
                 requested: amount,
@@ -454,22 +625,24 @@ impl Treasury {
                 available: balance.available,
             });
         }
-        
+
         balance.available -= amount;
         balance.locked += amount;
-        
+
         Ok(())
     }
-    
+
     /// Release locked funds
     pub fn release_funds(&mut self, currency: Currency, amount: Decimal) -> Result<()> {
-        let balance = self.balances.get_mut(&currency)
+        let balance = self
+            .balances
+            .get_mut(&currency)
             .ok_or(TreasuryError::InsufficientFunds {
                 requested: amount,
                 asset: currency.to_string(),
                 available: Decimal::ZERO,
             })?;
-        
+
         if balance.locked < amount {
             return Err(TreasuryError::InsufficientFunds {
                 requested: amount,
@@ -477,61 +650,91 @@ impl Treasury {
                 available: balance.locked,
             });
         }
-        
+
         balance.locked -= amount;
         balance.available += amount;
-        
+
         Ok(())
     }
-    
+
     /// Calculate total equity in USD
     pub async fn total_equity_usd(&self) -> Result<Decimal> {
         let mut total = Decimal::ZERO;
-        
+
         for (currency, balance) in &self.balances {
             let available_usd = balance.available * currency.usd_price_estimate();
             let locked_usd = balance.locked * currency.usd_price_estimate();
             total += available_usd + locked_usd;
         }
-        
+
         // Add yield positions
         let yield_value = self.yield_optimizer.total_value_usd().await?;
         total += yield_value;
-        
+
         Ok(total)
     }
-    
+
     /// Get total equity (blocking version for compatibility)
-    /// 
+    ///
     /// NOTE: This method returns an approximate value and doesn't include yield positions.
     /// Use `total_equity_usd().await` for accurate async calculation.
     pub fn total_equity(&self) -> Decimal {
         let mut total = Decimal::ZERO;
-        
+
         for (currency, balance) in &self.balances {
             let available_usd = balance.available * currency.usd_price_estimate();
             let locked_usd = balance.locked * currency.usd_price_estimate();
             total += available_usd + locked_usd;
         }
-        
+
         total
     }
-    
+
     /// Get yield opportunities
     pub async fn get_yield_opportunities(&self) -> Result<Vec<yield_optimizer::YieldOpportunity>> {
         self.yield_optimizer.find_opportunities().await
     }
-    
+
     /// Deposit fiat (DEPRECATED - requires banking license)
     pub async fn deposit_fiat(&self, _currency: Currency, _amount: Decimal) -> Result<Deposit> {
         Err(TreasuryError::FiatNotSupported)
     }
-    
-    /// Confirm deposit (stub for backward compatibility)
-    pub async fn confirm_deposit(&self, _deposit_id: Uuid) -> Result<Deposit> {
-        Err(TreasuryError::InvalidAmount("Not implemented".to_string()))
+
+    /// Confirm a pending deposit through custody provider and reconcile treasury balance.
+    pub async fn confirm_deposit(&mut self, deposit_id: Uuid) -> Result<Deposit> {
+        let deposit = self.crypto_custody.confirm_deposit(deposit_id).await?;
+
+        if matches!(
+            deposit.status,
+            TransactionStatus::Cleared | TransactionStatus::Confirmed
+        ) {
+            let balance = self.balances.entry(deposit.currency).or_insert(Balance {
+                currency: deposit.currency,
+                available: Decimal::ZERO,
+                locked: Decimal::ZERO,
+                pending_deposit: Decimal::ZERO,
+                pending_withdrawal: Decimal::ZERO,
+            });
+
+            if balance.pending_deposit >= deposit.amount {
+                balance.pending_deposit -= deposit.amount;
+            } else {
+                balance.pending_deposit = Decimal::ZERO;
+            }
+            balance.available += deposit.amount;
+        }
+
+        self.record_audit_event(
+            "deposit_confirmed",
+            Some(deposit.currency),
+            Some(deposit.amount),
+            deposit.reference.clone(),
+            "deposit confirmation reconciled into treasury balance",
+        );
+
+        Ok(deposit)
     }
-    
+
     /// Convert between currencies (DEPRECATED - requires banking license)
     pub async fn convert(
         &self,
@@ -543,12 +746,12 @@ impl Treasury {
         if from.is_fiat() || to.is_fiat() {
             return Err(TreasuryError::FiatNotSupported);
         }
-        
+
         // For crypto-to-crypto, we would need DEX integration
-        // This is not implemented yet
+        // Crypto conversion is intentionally not implemented without on-chain integration
         Err(TreasuryError::FiatNotSupported)
     }
-    
+
     /// Allocate to yield
     pub async fn allocate_to_yield(
         &mut self,
@@ -557,13 +760,15 @@ impl Treasury {
         protocol: String,
     ) -> Result<yield_optimizer::YieldPosition> {
         // Check balance
-        let balance = self.balances.get(&currency)
+        let balance = self
+            .balances
+            .get(&currency)
             .ok_or(TreasuryError::InsufficientFunds {
                 requested: amount,
                 asset: currency.to_string(),
                 available: Decimal::ZERO,
             })?;
-        
+
         if balance.available < amount {
             return Err(TreasuryError::InsufficientFunds {
                 requested: amount,
@@ -571,55 +776,70 @@ impl Treasury {
                 available: balance.available,
             });
         }
-        
+
         // Allocate
-        let position = self.yield_optimizer.allocate(currency, amount, protocol).await?;
-        
+        let position = self
+            .yield_optimizer
+            .allocate(currency, amount, protocol)
+            .await?;
+
         // Update balance
         let balance = self.balances.get_mut(&currency).unwrap();
         balance.available -= amount;
-        
+
+        self.record_audit_event(
+            "yield_allocated",
+            Some(currency),
+            Some(amount),
+            Some(position.id.to_string()),
+            format!("allocated funds to yield protocol {}", position.protocol),
+        );
+
         Ok(position)
     }
-    
+
     fn check_daily_reset(&mut self) {
         let now = Utc::now();
         let days_since_reset = (now - self.last_reset).num_days();
-        
+
         if days_since_reset >= 1 {
             self.daily_withdrawal_used = Decimal::ZERO;
             self.last_reset = now;
         }
     }
-    
+
     async fn check_destination_security(&self, destination: &WithdrawalDestination) -> Result<()> {
         match destination {
             WithdrawalDestination::CryptoWallet { address, chain } => {
                 // Validate address format
                 if address.len() < 10 {
                     return Err(TreasuryError::SecurityCheckFailed(
-                        "Invalid wallet address format".to_string()
+                        "Invalid wallet address format".to_string(),
                     ));
                 }
-                
+
                 // Check against blacklist
                 if self.security_manager.is_blacklisted(address).await {
                     return Err(TreasuryError::SecurityCheckFailed(
-                        "Destination address is blacklisted".to_string()
+                        "Destination address is blacklisted".to_string(),
                     ));
                 }
-                
+
                 // Validate chain
                 let valid_chains = ["BTC", "ETH", "SOL", "ADA", "DOT"];
                 if !valid_chains.contains(&chain.as_str()) {
-                    return Err(TreasuryError::SecurityCheckFailed(
-                        format!("Unsupported chain: {}", chain)
-                    ));
+                    return Err(TreasuryError::SecurityCheckFailed(format!(
+                        "Unsupported chain: {}",
+                        chain
+                    )));
                 }
-                
+
                 Ok(())
             }
-            WithdrawalDestination::BankAccount { bank_name: _, account_number: _ } => {
+            WithdrawalDestination::BankAccount {
+                bank_name: _,
+                account_number: _,
+            } => {
                 // Fiat withdrawals are not supported without banking license
                 Err(TreasuryError::FiatNotSupported)
             }
@@ -635,40 +855,45 @@ mod tests {
     #[tokio::test]
     async fn test_treasury_lifecycle() {
         let mut treasury = Treasury::new().await.unwrap();
-        
+
         // === 1. DEPOSIT ===
-        let deposit = treasury.process_deposit(
-            Currency::USDC,
-            Decimal::from(10000),
-            "0xabc123".to_string(),
-            "0xfromaddress".to_string(),
-            "ETH".to_string(),
-        ).await.expect("Should process deposit");
-        
+        let deposit = treasury
+            .process_deposit(
+                Currency::USDC,
+                Decimal::from(10000),
+                "0xabc123".to_string(),
+                "0xfromaddress".to_string(),
+                "ETH".to_string(),
+            )
+            .await
+            .expect("Should process deposit");
+
         assert_eq!(deposit.amount, Decimal::from(10000));
         assert_eq!(deposit.currency, Currency::USDC);
-        
+
         // Check balance
         let usdc_balance = treasury.get_balance(Currency::USDC).unwrap();
         assert_eq!(usdc_balance.available, Decimal::from(10000));
         assert_eq!(usdc_balance.pending_deposit, Decimal::ZERO); // Already cleared
-        
+
         // === 2. LOCK FUNDS FOR TRADING ===
-        treasury.lock_funds(Currency::USDC, Decimal::from(5000))
+        treasury
+            .lock_funds(Currency::USDC, Decimal::from(5000))
             .expect("Should lock funds");
-        
+
         let usdc_balance = treasury.get_balance(Currency::USDC).unwrap();
         assert_eq!(usdc_balance.available, Decimal::from(5000));
         assert_eq!(usdc_balance.locked, Decimal::from(5000));
-        
+
         // === 3. RELEASE FUNDS ===
-        treasury.release_funds(Currency::USDC, Decimal::from(2000))
+        treasury
+            .release_funds(Currency::USDC, Decimal::from(2000))
             .expect("Should release funds");
-        
+
         let usdc_balance = treasury.get_balance(Currency::USDC).unwrap();
         assert_eq!(usdc_balance.available, Decimal::from(7000));
         assert_eq!(usdc_balance.locked, Decimal::from(3000));
-        
+
         // === 4. WITHDRAW (small, no 2FA needed) ===
         let withdrawal = treasury
             .withdraw(
@@ -682,22 +907,24 @@ mod tests {
             )
             .await
             .expect("Should initiate withdrawal");
-        
+
         assert_eq!(withdrawal.amount, Decimal::from(1000));
         assert!(withdrawal.fees >= Decimal::ZERO);
-        
+
         // Check final balance
         let usdc_final = treasury.get_balance(Currency::USDC).unwrap();
         assert_eq!(usdc_final.available, Decimal::from(6000)); // 7000 - 1000
         assert_eq!(usdc_final.pending_withdrawal, Decimal::from(1000));
-        
+
         // === 5. Total Equity ===
-        let total_equity = treasury.total_equity_usd().await
+        let total_equity = treasury
+            .total_equity_usd()
+            .await
             .expect("Should calculate total equity");
-        
+
         // Should be around 9000 USD (9000 USDC equivalent)
         assert!(total_equity >= Decimal::from(8000));
-        
+
         println!("✅ Treasury lifecycle completed successfully!");
         println!("   - Deposited: 10,000 USDC");
         println!("   - Locked: 5,000 USDC");
@@ -705,98 +932,223 @@ mod tests {
         println!("   - Withdrew: 1,000 USDC");
         println!("   - Total equity: ${}", total_equity);
     }
-    
+
     #[tokio::test]
     async fn test_withdrawal_2fa_required_for_large_amounts() {
         let mut treasury = Treasury::new().await.unwrap();
-        
+
         // Deposit first
-        treasury.process_deposit(
-            Currency::USDC,
-            Decimal::from(50000),
-            "0xabc123".to_string(),
-            "0xfromaddress".to_string(),
-            "ETH".to_string(),
-        ).await.unwrap();
-        
+        treasury
+            .process_deposit(
+                Currency::USDC,
+                Decimal::from(50000),
+                "0xabc123".to_string(),
+                "0xfromaddress".to_string(),
+                "ETH".to_string(),
+            )
+            .await
+            .unwrap();
+
         // Large withdrawal without 2FA should fail
-        let result = treasury.withdraw(
-            Currency::USDC,
-            Decimal::from(20000), // > $10k threshold
-            WithdrawalDestination::CryptoWallet {
-                address: "0x1234567890abcdef".to_string(),
-                chain: "ETH".to_string(),
-            },
-            None, // No 2FA code
-        ).await;
-        
+        let result = treasury
+            .withdraw(
+                Currency::USDC,
+                Decimal::from(20000), // > $10k threshold
+                WithdrawalDestination::CryptoWallet {
+                    address: "0x1234567890abcdef".to_string(),
+                    chain: "ETH".to_string(),
+                },
+                None, // No 2FA code
+            )
+            .await;
+
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("2FA required"));
-        
-        // Large withdrawal WITH 2FA should succeed (test code: "123456")
-        let withdrawal = treasury.withdraw(
-            Currency::USDC,
-            Decimal::from(20000),
-            WithdrawalDestination::CryptoWallet {
-                address: "0x1234567890abcdef".to_string(),
-                chain: "ETH".to_string(),
-            },
-            Some("123456"), // Valid test 2FA code
-        ).await;
-        
+
+        // Generate a valid 2FA code via the security manager
+        let valid_code = treasury.security_manager.generate_code();
+
+        // Large withdrawal WITH valid 2FA should succeed
+        let withdrawal = treasury
+            .withdraw(
+                Currency::USDC,
+                Decimal::from(20000),
+                WithdrawalDestination::CryptoWallet {
+                    address: "0x1234567890abcdef".to_string(),
+                    chain: "ETH".to_string(),
+                },
+                Some(&valid_code),
+            )
+            .await;
+
         assert!(withdrawal.is_ok());
     }
-    
+
     #[tokio::test]
     async fn test_withdrawal_limit_enforcement() {
         let mut treasury = Treasury::new().await.unwrap();
-        
+
         // Deposit
-        treasury.process_deposit(
-            Currency::USDC,
-            Decimal::from(200000),
-            "0xabc123".to_string(),
-            "0xfromaddress".to_string(),
-            "ETH".to_string(),
-        ).await.unwrap();
-        
+        treasury
+            .process_deposit(
+                Currency::USDC,
+                Decimal::from(200000),
+                "0xabc123".to_string(),
+                "0xfromaddress".to_string(),
+                "ETH".to_string(),
+            )
+            .await
+            .unwrap();
+
         // Try to withdraw more than daily limit ($100k)
-        let result = treasury.withdraw(
-            Currency::USDC,
-            Decimal::from(150000), // > $100k daily limit
-            WithdrawalDestination::CryptoWallet {
-                address: "0x1234567890abcdef".to_string(),
-                chain: "ETH".to_string(),
-            },
-            None,
-        ).await;
-        
+        let result = treasury
+            .withdraw(
+                Currency::USDC,
+                Decimal::from(150000), // > $100k daily limit
+                WithdrawalDestination::CryptoWallet {
+                    address: "0x1234567890abcdef".to_string(),
+                    chain: "ETH".to_string(),
+                },
+                None,
+            )
+            .await;
+
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("limit"));
     }
-    
+
     #[tokio::test]
     async fn test_fiat_not_supported() {
         // Verify fiat currencies are not supported
         let result = "USD".parse::<Currency>();
         assert!(result.is_err());
-        
+
         let result = "EUR".parse::<Currency>();
         assert!(result.is_err());
-        
+
         // But crypto works
         let result = "BTC".parse::<Currency>();
         assert!(result.is_ok());
     }
-    
+
     #[tokio::test]
-    async fn test_get_deposit_address() {
+    async fn test_get_deposit_address_requires_provider() {
         let treasury = Treasury::new().await.unwrap();
-        
-        let address = treasury.get_deposit_address(Currency::BTC).await;
-        assert!(address.is_ok());
-        
-        let address = treasury.get_deposit_address(Currency::ETH).await;
-        assert!(address.is_ok());
+
+        // Without custody provider configured, address generation returns an error
+        let btc = treasury.get_deposit_address(Currency::BTC).await;
+        assert!(
+            btc.is_err(),
+            "BTC address generation requires custody provider"
+        );
+
+        let eth = treasury.get_deposit_address(Currency::ETH).await;
+        assert!(
+            eth.is_err(),
+            "ETH address generation requires custody provider"
+        );
+
+        // Verify error message
+        let err_msg = btc.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("custody")
+                || err_msg.contains("configuration")
+                || err_msg.contains("configured"),
+            "Error should mention missing provider: {err_msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_initiate_deposit_requires_provider() {
+        let mut treasury = Treasury::new().await.unwrap();
+
+        // Without custody provider, initiate_deposit fails at address generation
+        let result = treasury
+            .initiate_deposit(Currency::BTC, Decimal::from(2))
+            .await;
+
+        assert!(
+            result.is_err(),
+            "initiate_deposit should fail without custody provider"
+        );
+
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("custody")
+                || err_msg.contains("configuration")
+                || err_msg.contains("configured"),
+            "Error should mention missing provider: {err_msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_process_deposit_syncs_custody_for_withdrawal_confirmation() {
+        let mut treasury = Treasury::new().await.unwrap();
+
+        treasury
+            .process_deposit(
+                Currency::USDC,
+                Decimal::from(3000),
+                "0xsync123".to_string(),
+                "0xsource".to_string(),
+                "ETH".to_string(),
+            )
+            .await
+            .expect("process deposit should succeed");
+
+        let withdrawal = treasury
+            .withdraw(
+                Currency::USDC,
+                Decimal::from(1000),
+                WithdrawalDestination::CryptoWallet {
+                    address: "0x1234567890abcdef".to_string(),
+                    chain: "ETH".to_string(),
+                },
+                None,
+            )
+            .await
+            .expect("withdrawal should be initiated");
+
+        treasury
+            .confirm_withdrawal(withdrawal.id)
+            .await
+            .expect("custody-confirmed withdrawal should succeed");
+
+        let usdc_balance = treasury
+            .get_balance(Currency::USDC)
+            .expect("USDC balance must exist");
+        assert_eq!(usdc_balance.available, Decimal::from(2000));
+        assert_eq!(usdc_balance.pending_withdrawal, Decimal::ZERO);
+    }
+
+    #[tokio::test]
+    async fn test_audit_trail_records_events() {
+        let mut treasury = Treasury::new().await.unwrap();
+
+        treasury
+            .process_deposit(
+                Currency::USDC,
+                Decimal::from(2500),
+                "0xaudit123".to_string(),
+                "0xfrom".to_string(),
+                "ETH".to_string(),
+            )
+            .await
+            .expect("deposit should succeed");
+
+        treasury
+            .allocate_to_yield(Currency::USDC, Decimal::from(500), "Aave".to_string())
+            .await
+            .expect("yield allocation should succeed");
+
+        let events = treasury.audit_trail();
+        assert!(
+            events.iter().any(|e| e.action == "deposit_processed"),
+            "audit should include processed deposit event"
+        );
+        assert!(
+            events.iter().any(|e| e.action == "yield_allocated"),
+            "audit should include yield allocation event"
+        );
     }
 }

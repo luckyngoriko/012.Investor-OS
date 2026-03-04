@@ -20,7 +20,7 @@ use uuid::Uuid;
 
 use crate::api::handlers::ApiResponse;
 use crate::api::AppState;
-use crate::broker::{Order, OrderSide, OrderType, TimeInForce, Broker};
+use crate::broker::{Broker, Order, OrderSide, OrderType, TimeInForce};
 
 /// Request to place an order
 #[derive(Serialize, Deserialize)]
@@ -88,11 +88,12 @@ pub async fn place_order(
         "sell" => OrderSide::Sell,
         _ => {
             return Ok(Json(ApiResponse::error(format!(
-                "Invalid order side: {}. Use 'buy' or 'sell'", req.side
+                "Invalid order side: {}. Use 'buy' or 'sell'",
+                req.side
             ))));
         }
     };
-    
+
     // Parse order type
     let order_type = match req.order_type.to_lowercase().as_str() {
         "market" => OrderType::Market,
@@ -101,22 +102,24 @@ pub async fn place_order(
         "stop_limit" => OrderType::StopLimit,
         _ => {
             return Ok(Json(ApiResponse::error(format!(
-                "Invalid order type: {}. Use 'market', 'limit', 'stop', or 'stop_limit'", 
+                "Invalid order type: {}. Use 'market', 'limit', 'stop', or 'stop_limit'",
                 req.order_type
             ))));
         }
     };
-    
+
     // Parse time in force
-    let time_in_force = req.time_in_force.as_ref().map(|t| {
-        match t.to_lowercase().as_str() {
+    let time_in_force = req
+        .time_in_force
+        .as_ref()
+        .map(|t| match t.to_lowercase().as_str() {
             "day" => TimeInForce::Day,
             "gtc" => TimeInForce::Gtc,
             "ioc" => TimeInForce::Ioc,
             _ => TimeInForce::Day,
-        }
-    }).unwrap_or(TimeInForce::Day);
-    
+        })
+        .unwrap_or(TimeInForce::Day);
+
     // Create order
     let mut order = Order {
         id: Uuid::new_v4(),
@@ -138,7 +141,7 @@ pub async fn place_order(
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };
-    
+
     // Place order through paper broker
     match state.broker.place_order(&mut order).await {
         Ok(_) => {
@@ -189,14 +192,12 @@ pub async fn cancel_order(
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };
-    
+
     match state.broker.cancel_order(&mut order).await {
-        Ok(_) => {
-            Ok(Json(ApiResponse::success(serde_json::json!({
-                "order_id": order_id,
-                "status": "cancelled"
-            }))))
-        }
+        Ok(_) => Ok(Json(ApiResponse::success(serde_json::json!({
+            "order_id": order_id,
+            "status": "cancelled"
+        })))),
         Err(e) => {
             tracing::error!("Order cancellation error: {}", e);
             Ok(Json(ApiResponse::error(e.to_string())))
@@ -210,8 +211,9 @@ pub async fn get_positions(
 ) -> Result<Json<ApiResponse<Vec<PositionResponse>>>, StatusCode> {
     match state.broker.get_positions().await {
         Ok(positions) => {
-            let responses: Vec<PositionResponse> = positions.into_iter().map(|p| {
-                PositionResponse {
+            let responses: Vec<PositionResponse> = positions
+                .into_iter()
+                .map(|p| PositionResponse {
                     id: Uuid::new_v4(),
                     ticker: p.ticker,
                     quantity: p.quantity,
@@ -220,8 +222,8 @@ pub async fn get_positions(
                     market_value: p.market_value,
                     unrealized_pnl: p.unrealized_pnl,
                     updated_at: Utc::now(),
-                }
-            }).collect();
+                })
+                .collect();
             Ok(Json(ApiResponse::success(responses)))
         }
         Err(e) => {

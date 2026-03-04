@@ -157,7 +157,11 @@ impl PolicyIntegration {
 
         // Rate limiting
         match self.check_rate_limit(&ctx.ip_address).await {
-            Ok(RateLimitStatus { allowed: false, retry_after: Some(retry), .. }) => {
+            Ok(RateLimitStatus {
+                allowed: false,
+                retry_after: Some(retry),
+                ..
+            }) => {
                 violations.push(format!("Rate limited, retry after {}s", retry));
             }
             Ok(_) => {}
@@ -175,7 +179,11 @@ impl PolicyIntegration {
 
         Ok(PolicyResult {
             allowed,
-            reason: if allowed { None } else { Some(violations.join(", ")) },
+            reason: if allowed {
+                None
+            } else {
+                Some(violations.join(", "))
+            },
             violations,
         })
     }
@@ -197,9 +205,7 @@ impl PolicyIntegration {
         }
 
         // XSS patterns
-        let xss_patterns = [
-            "<script>", "javascript:", "onerror=", "onload=", "alert(",
-        ];
+        let xss_patterns = ["<script>", "javascript:", "onerror=", "onload=", "alert("];
         for pattern in &xss_patterns {
             if path_lower.contains(pattern) {
                 warn!("Potential XSS detected: {}", ctx.path);
@@ -220,7 +226,7 @@ impl PolicyIntegration {
     async fn check_rate_limit(&self, ip: &str) -> Result<RateLimitStatus, PolicyError> {
         // In production, this would call AI-OS-PG rate limiter
         // For now, use in-memory tracking
-        
+
         // Simplified: always allow in mock mode
         Ok(RateLimitStatus {
             allowed: true,
@@ -305,13 +311,13 @@ pub struct ComplianceCheck {
 pub enum PolicyError {
     #[error("HTTP error: {0}")]
     Http(#[from] reqwest::Error),
-    
+
     #[error("Evaluation failed: {0}")]
     EvaluationFailed(String),
-    
+
     #[error("Service unavailable")]
     ServiceUnavailable,
-    
+
     #[error("Rate limited")]
     RateLimited,
 }
@@ -329,10 +335,12 @@ impl PolicyMiddleware {
     /// Check request before processing
     pub async fn check_request(&self, ctx: &RequestContext) -> Result<(), PolicyError> {
         let result = self.policy.evaluate(ctx).await?;
-        
+
         if !result.allowed {
             return Err(PolicyError::EvaluationFailed(
-                result.reason.unwrap_or_else(|| "Request denied".to_string())
+                result
+                    .reason
+                    .unwrap_or_else(|| "Request denied".to_string()),
             ));
         }
 
@@ -359,12 +367,9 @@ mod tests {
             ..Default::default()
         };
         let policy = PolicyIntegration::new(config);
-        
-        let ctx = RequestContext::new(
-            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-            "/api/test",
-        );
-        
+
+        let ctx = RequestContext::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), "/api/test");
+
         let result = policy.evaluate(&ctx).await.unwrap();
         assert!(result.allowed);
     }
@@ -373,12 +378,12 @@ mod tests {
     async fn test_waf_sql_injection() {
         let config = PolicyConfig::default();
         let policy = PolicyIntegration::new(config);
-        
+
         let ctx = RequestContext::new(
             IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             "/api/data'; DROP TABLE users;--",
         );
-        
+
         let result = policy.evaluate(&ctx).await.unwrap();
         assert!(!result.allowed);
         assert!(result.violations.iter().any(|v| v.contains("SQL")));
@@ -388,12 +393,12 @@ mod tests {
     async fn test_waf_xss() {
         let config = PolicyConfig::default();
         let policy = PolicyIntegration::new(config);
-        
+
         let ctx = RequestContext::new(
             IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             "/api/data?param=<script>alert(1)</script>",
         );
-        
+
         let result = policy.evaluate(&ctx).await.unwrap();
         assert!(!result.allowed);
         assert!(result.violations.iter().any(|v| v.contains("XSS")));
@@ -401,12 +406,9 @@ mod tests {
 
     #[test]
     fn test_request_context_builder() {
-        let ctx = RequestContext::new(
-            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)),
-            "/api/test",
-        )
-        .with_method("POST")
-        .with_user_agent("Test/1.0");
+        let ctx = RequestContext::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)), "/api/test")
+            .with_method("POST")
+            .with_user_agent("Test/1.0");
 
         assert_eq!(ctx.ip_address, "192.168.1.1");
         assert_eq!(ctx.path, "/api/test");

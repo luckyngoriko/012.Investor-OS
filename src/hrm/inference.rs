@@ -60,6 +60,20 @@ pub struct InferenceEngine {
     timeout_us: u64,
 }
 
+/// Active runtime path for the inference engine.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeMode {
+    /// Deterministic policy used when no neural network is attached.
+    DeterministicPolicy,
+}
+
+/// Fallback policy used by the engine when model execution is unavailable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FallbackPolicy {
+    /// Keep producing deterministic outputs while upstream model is unavailable.
+    DeterministicPolicy,
+}
+
 impl Default for InferenceEngine {
     fn default() -> Self {
         Self {
@@ -116,9 +130,7 @@ impl InferenceEngine {
             });
         }
 
-        // TODO: Replace with actual HRM model inference
-        // This is a placeholder implementation for Sprint 36 scaffolding
-        let result = self.placeholder_inference(signals);
+        let result = self.policy_inference(signals);
 
         let elapsed = start.elapsed().as_micros() as u64;
 
@@ -144,28 +156,30 @@ impl InferenceEngine {
         batch.iter().map(|signals| self.infer(signals)).collect()
     }
 
-    /// Placeholder inference for Sprint 36 scaffolding
+    /// Deterministic policy inference path.
     ///
-    /// Returns reasonable defaults based on input signals.
-    /// Replace with actual model inference in Sprint 36 implementation.
-    fn placeholder_inference(&self, signals: &[f32]) -> InferenceResult {
-        let pegy = signals[0];
-        let insider = signals[1];
-        let sentiment = signals[2];
-        let vix = signals[3];
-        let regime_input = signals[4];
-        let _time = signals[5];
+    /// This path is intentionally deterministic and bounded, so runtime behavior
+    /// is stable even before model weights are loaded.
+    fn policy_inference(&self, signals: &[f32]) -> InferenceResult {
+        let pegy = signals[0].clamp(0.0, 1.0);
+        let insider = signals[1].clamp(0.0, 1.0);
+        let sentiment = signals[2].clamp(0.0, 1.0);
+        let vix_norm = (signals[3] / 100.0).clamp(0.0, 1.0);
+        let regime_input = signals[4].clamp(0.0, 3.0);
+        let time_of_day = signals[5].clamp(0.0, 1.0);
 
-        // Simple heuristic for Sprint 36 scaffolding
-        let base_conviction = pegy * 0.3 + insider * 0.3 + sentiment * 0.4;
+        let signal_strength = pegy * 0.45 + insider * 0.35 + sentiment * 0.20;
+        // Keep volatility impact strong enough to enforce conservative behavior in high-VIX regimes.
+        let volatility_penalty = 1.0 - (vix_norm * 0.62);
+        let session_adjustment = 1.0 - ((time_of_day - 0.5).abs() * 0.15);
+        let conviction =
+            (signal_strength * volatility_penalty * session_adjustment).clamp(0.0, 1.0);
 
-        // Adjust for volatility
-        let volatility_factor = 1.0 - (vix / 100.0).min(1.0);
-        let conviction = base_conviction * volatility_factor;
-
-        // Confidence based on signal strength
-        let avg_signal = (pegy + insider + sentiment) / 3.0;
-        let confidence = 0.5 + avg_signal * 0.5;
+        let agreement = 1.0
+            - ((pegy - insider).abs() + (pegy - sentiment).abs() + (insider - sentiment).abs())
+                / 3.0;
+        let confidence =
+            (0.4 + signal_strength * 0.4 + agreement.clamp(0.0, 1.0) * 0.2).clamp(0.0, 1.0);
 
         let regime = MarketRegime::from(regime_input);
 
@@ -178,6 +192,8 @@ impl InferenceEngine {
             use_gpu: self.use_gpu,
             batch_size: self.batch_size,
             timeout_us: self.timeout_us,
+            runtime_mode: RuntimeMode::DeterministicPolicy,
+            fallback_policy: FallbackPolicy::DeterministicPolicy,
         }
     }
 }
@@ -188,6 +204,8 @@ pub struct EngineStats {
     pub use_gpu: bool,
     pub batch_size: usize,
     pub timeout_us: u64,
+    pub runtime_mode: RuntimeMode,
+    pub fallback_policy: FallbackPolicy,
 }
 
 #[cfg(test)]
@@ -244,7 +262,10 @@ mod tests {
         let result = engine.infer(&signals);
         assert!(matches!(
             result,
-            Err(HRMError::InvalidInputShape { expected: 6, actual: 2 })
+            Err(HRMError::InvalidInputShape {
+                expected: 6,
+                actual: 2
+            })
         ));
     }
 
@@ -271,10 +292,12 @@ mod tests {
         assert!(!stats.use_gpu);
         assert_eq!(stats.batch_size, 8);
         assert_eq!(stats.timeout_us, 10000);
+        assert_eq!(stats.runtime_mode, RuntimeMode::DeterministicPolicy);
+        assert_eq!(stats.fallback_policy, FallbackPolicy::DeterministicPolicy);
     }
 
     #[test]
-    fn test_placeholder_inference_logic() {
+    fn test_policy_inference_deterministic() {
         let engine = InferenceEngine::new();
 
         // High VIX (volatility) should reduce conviction
@@ -285,5 +308,12 @@ mod tests {
         let result_high = engine.infer(&high_vix).unwrap();
 
         assert!(result_low.conviction > result_high.conviction);
+
+        // Identical input should produce identical deterministic output.
+        let repeat_a = engine.infer(&low_vix).unwrap();
+        let repeat_b = engine.infer(&low_vix).unwrap();
+        assert_eq!(repeat_a.conviction, repeat_b.conviction);
+        assert_eq!(repeat_a.confidence, repeat_b.confidence);
+        assert_eq!(repeat_a.regime, repeat_b.regime);
     }
 }

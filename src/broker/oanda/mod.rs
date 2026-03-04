@@ -18,7 +18,7 @@ impl OandaClient {
         } else {
             "https://api-fxtrade.oanda.com".to_string()
         };
-        
+
         Self {
             api_key,
             account_id,
@@ -26,41 +26,55 @@ impl OandaClient {
             base_url,
         }
     }
-    
+
+    /// API base URL
+    pub fn base_url(&self) -> &str {
+        &self.base_url
+    }
+
     /// Get current price for a forex pair
     pub async fn get_price(&self, instrument: &str) -> Result<Decimal, OandaError> {
-        let url = format!("{}/v3/accounts/{}/pricing?instruments={}",
-            self.base_url, self.account_id, instrument);
-        
-        let response = self.client
+        let url = format!(
+            "{}/v3/accounts/{}/pricing?instruments={}",
+            self.base_url, self.account_id, instrument
+        );
+
+        let response = self
+            .client
             .get(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
             .send()
             .await
             .map_err(|e| OandaError::Network(e.to_string()))?;
-        
-        let data: PricingResponse = response.json().await
+
+        let data: PricingResponse = response
+            .json()
+            .await
             .map_err(|e| OandaError::Parse(e.to_string()))?;
-        
-        data.prices.first()
+
+        data.prices
+            .first()
             .map(|p| p.closeout_ask)
             .ok_or_else(|| OandaError::Api("No price data".to_string()))
     }
-    
+
     /// Get account summary
     pub async fn get_account(&self) -> Result<AccountSummary, OandaError> {
         let url = format!("{}/v3/accounts/{}/summary", self.base_url, self.account_id);
-        
-        let response = self.client
+
+        let response = self
+            .client
             .get(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
             .send()
             .await
             .map_err(|e| OandaError::Network(e.to_string()))?;
-        
-        let data: AccountResponse = response.json().await
+
+        let data: AccountResponse = response
+            .json()
+            .await
             .map_err(|e| OandaError::Parse(e.to_string()))?;
-        
+
         Ok(data.account)
     }
 }
@@ -103,21 +117,13 @@ pub struct AccountSummary {
 
 /// Major forex pairs
 pub const MAJOR_PAIRS: &[&str] = &[
-    "EUR_USD",
-    "GBP_USD",
-    "USD_JPY",
-    "USD_CHF",
-    "AUD_USD",
-    "USD_CAD",
-    "NZD_USD",
+    "EUR_USD", "GBP_USD", "USD_JPY", "USD_CHF", "AUD_USD", "USD_CAD", "NZD_USD",
 ];
 
 /// All 50+ pairs
 pub const ALL_PAIRS: &[&str] = &[
-    "EUR_USD", "GBP_USD", "USD_JPY", "USD_CHF", "AUD_USD", "USD_CAD", "NZD_USD",
-    "EUR_GBP", "EUR_JPY", "EUR_CHF", "EUR_AUD", "EUR_CAD", "EUR_NZD",
-    "GBP_JPY", "GBP_CHF", "GBP_AUD", "GBP_CAD", "GBP_NZD",
-    "AUD_JPY", "AUD_CHF", "AUD_CAD", "AUD_NZD",
-    "CAD_JPY", "CAD_CHF", "CHF_JPY",
-    "NZD_JPY", "NZD_CHF", "NZD_CAD",
+    "EUR_USD", "GBP_USD", "USD_JPY", "USD_CHF", "AUD_USD", "USD_CAD", "NZD_USD", "EUR_GBP",
+    "EUR_JPY", "EUR_CHF", "EUR_AUD", "EUR_CAD", "EUR_NZD", "GBP_JPY", "GBP_CHF", "GBP_AUD",
+    "GBP_CAD", "GBP_NZD", "AUD_JPY", "AUD_CHF", "AUD_CAD", "AUD_NZD", "CAD_JPY", "CAD_CHF",
+    "CHF_JPY", "NZD_JPY", "NZD_CHF", "NZD_CAD",
 ];

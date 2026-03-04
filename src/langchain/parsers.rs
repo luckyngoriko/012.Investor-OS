@@ -24,22 +24,18 @@ impl<T: DeserializeOwned> JsonParser<T> {
 impl<T: DeserializeOwned + Send + Sync> OutputParser for JsonParser<T> {
     fn parse(&self, output: &str) -> Result<serde_json::Value, super::ChainError> {
         // Търсим JSON блок в output (може да е обграден с ```json ... ```)
-        let json_str = extract_json(output)
-            .ok_or_else(|| super::ChainError::ParseError(
-                format!("No JSON found in output: {}", output)
-            ))?;
-        
+        let json_str = extract_json(output).ok_or_else(|| {
+            super::ChainError::ParseError(format!("No JSON found in output: {}", output))
+        })?;
+
         let value: serde_json::Value = serde_json::from_str(json_str)
-            .map_err(|e| super::ChainError::ParseError(
-                format!("JSON parse error: {}", e)
-            ))?;
-        
+            .map_err(|e| super::ChainError::ParseError(format!("JSON parse error: {}", e)))?;
+
         // Валидираме че може да се десериализира до T
-        let _: T = serde_json::from_value(value.clone())
-            .map_err(|e| super::ChainError::ParseError(
-                format!("Schema validation error: {}", e)
-            ))?;
-        
+        let _: T = serde_json::from_value(value.clone()).map_err(|e| {
+            super::ChainError::ParseError(format!("Schema validation error: {}", e))
+        })?;
+
         Ok(value)
     }
 }
@@ -58,7 +54,7 @@ fn extract_json(output: &str) -> Option<&str> {
             return Some(output[start..start + end].trim());
         }
     }
-    
+
     // Търсим ``` ... ```
     if let Some(start) = output.find("```") {
         let start = start + 3;
@@ -70,7 +66,7 @@ fn extract_json(output: &str) -> Option<&str> {
             }
         }
     }
-    
+
     // Търсим { ... } или [ ... ]
     if let Some(start) = output.find('{') {
         // Намираме съответстващата }
@@ -86,7 +82,7 @@ fn extract_json(output: &str) -> Option<&str> {
             }
         }
     }
-    
+
     None
 }
 
@@ -104,15 +100,31 @@ impl StructuredParser {
 impl OutputParser for StructuredParser {
     fn parse(&self, output: &str) -> Result<serde_json::Value, super::ChainError> {
         let json_str = extract_json(output)
-            .ok_or_else(|| super::ChainError::ParseError(
-                "No JSON found".to_string()
-            ))?;
-        
+            .ok_or_else(|| super::ChainError::ParseError("No JSON found".to_string()))?;
+
         let value: serde_json::Value = serde_json::from_str(json_str)
             .map_err(|e| super::ChainError::ParseError(format!("JSON error: {}", e)))?;
-        
-        // TODO: JSON Schema валидация
-        
+
+        // Validate required fields if the schema specifies them
+        if let Some(required) = self.schema.get("required").and_then(|r| r.as_array()) {
+            if let Some(obj) = value.as_object() {
+                for field in required {
+                    if let Some(field_name) = field.as_str() {
+                        if !obj.contains_key(field_name) {
+                            return Err(super::ChainError::ParseError(format!(
+                                "Missing required field: '{}'",
+                                field_name
+                            )));
+                        }
+                    }
+                }
+            } else {
+                return Err(super::ChainError::ParseError(
+                    "Expected JSON object but got a different type".to_string(),
+                ));
+            }
+        }
+
         Ok(value)
     }
 }
@@ -128,7 +140,7 @@ impl ListParser {
             separator: "\n".to_string(),
         }
     }
-    
+
     pub fn with_separator(mut self, sep: impl Into<String>) -> Self {
         self.separator = sep.into();
         self
@@ -142,7 +154,7 @@ impl OutputParser for ListParser {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect();
-        
+
         Ok(serde_json::json!(items))
     }
 }
@@ -170,21 +182,21 @@ impl OutputParser for CsvParser {
         if lines.is_empty() {
             return Ok(serde_json::json!([]));
         }
-        
+
         let mut result = vec![];
-        
+
         for line in lines {
             let values: Vec<&str> = line.split(',').map(|s| s.trim()).collect();
             let mut obj = serde_json::Map::new();
-            
+
             for (i, header) in self.headers.iter().enumerate() {
                 let value = values.get(i).unwrap_or(&"");
                 obj.insert(header.clone(), serde_json::json!(value));
             }
-            
+
             result.push(serde_json::Value::Object(obj));
         }
-        
+
         Ok(serde_json::json!(result))
     }
 }
@@ -199,12 +211,13 @@ impl OutputParser for BooleanParser {
             "yes" | "true" | "1" | "y" => true,
             "no" | "false" | "0" | "n" => false,
             _ => {
-                return Err(super::ChainError::ParseError(
-                    format!("Cannot parse '{}' as boolean", output)
-                ));
+                return Err(super::ChainError::ParseError(format!(
+                    "Cannot parse '{}' as boolean",
+                    output
+                )));
             }
         };
-        
+
         Ok(serde_json::json!(value))
     }
 }
@@ -215,18 +228,14 @@ pub struct ScoreParser;
 impl OutputParser for ScoreParser {
     fn parse(&self, output: &str) -> Result<serde_json::Value, super::ChainError> {
         let trimmed = output.trim();
-        
+
         // Опитваме да парснем като число
         if let Ok(num) = trimmed.parse::<f64>() {
             // Нормализираме към 0-1
-            let normalized = if num > 1.0 {
-                num / 100.0
-            } else {
-                num
-            };
+            let normalized = if num > 1.0 { num / 100.0 } else { num };
             return Ok(serde_json::json!(normalized.clamp(0.0, 1.0)));
         }
-        
+
         // Опитваме да извлечем число от текста
         let re = regex::Regex::new(r"(\d+\.?\d*)").unwrap();
         if let Some(caps) = re.captures(trimmed) {
@@ -237,10 +246,11 @@ impl OutputParser for ScoreParser {
                 }
             }
         }
-        
-        Err(super::ChainError::ParseError(
-            format!("Cannot parse '{}' as score", output)
-        ))
+
+        Err(super::ChainError::ParseError(format!(
+            "Cannot parse '{}' as score",
+            output
+        )))
     }
 }
 
@@ -271,7 +281,7 @@ impl<T: DeserializeOwned + Send + Sync> OutputParser for AutoFixParser<T> {
                 return Ok(v);
             }
         }
-        
+
         // Стратегия 2: Extract JSON block
         if let Some(json_str) = extract_json(output) {
             if let Ok(v) = serde_json::from_str::<serde_json::Value>(json_str) {
@@ -280,7 +290,7 @@ impl<T: DeserializeOwned + Send + Sync> OutputParser for AutoFixParser<T> {
                 }
             }
         }
-        
+
         // Стратегия 3: Fix common issues (trailing commas, etc.)
         let fixed = fix_common_json_issues(output);
         if let Ok(v) = serde_json::from_str::<serde_json::Value>(&fixed) {
@@ -288,23 +298,23 @@ impl<T: DeserializeOwned + Send + Sync> OutputParser for AutoFixParser<T> {
                 return Ok(v);
             }
         }
-        
+
         Err(super::ChainError::ParseError(
-            "All parsing strategies failed".to_string()
+            "All parsing strategies failed".to_string(),
         ))
     }
 }
 
 fn fix_common_json_issues(input: &str) -> String {
     let mut result = input.to_string();
-    
+
     // Премахваме trailing commas
     result = result.replace(",}", "}");
     result = result.replace(",]", "]");
-    
+
     // Добавяме quotes около ключове ако липсват
     // (simplified)
-    
+
     result
 }
 
@@ -312,13 +322,13 @@ fn fix_common_json_issues(input: &str) -> String {
 mod tests {
     use super::*;
     use serde::Deserialize;
-    
+
     #[derive(Debug, Deserialize)]
     struct TestData {
         name: String,
         score: f64,
     }
-    
+
     #[test]
     fn test_extract_json() {
         let text = r#"Some text
@@ -326,24 +336,24 @@ mod tests {
 {"name": "test", "score": 0.95}
 ```
 More text"#;
-        
+
         let json = extract_json(text).unwrap();
         assert!(json.contains("name"));
     }
-    
+
     #[test]
     fn test_json_parser() {
         let parser = JsonParser::<TestData>::new();
         let output = r#"{"name": "AAPL", "score": 0.85}"#;
-        
+
         let result = parser.parse(output).unwrap();
         assert_eq!(result["name"], "AAPL");
     }
-    
+
     #[test]
     fn test_score_parser() {
         let parser = ScoreParser;
-        
+
         assert_eq!(parser.parse("0.85").unwrap(), 0.85);
         assert_eq!(parser.parse("85").unwrap(), 0.85);
         assert_eq!(parser.parse("Score: 92").unwrap(), 0.92);

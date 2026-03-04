@@ -1,23 +1,21 @@
 //! Integration tests for Sprint 12: Real-Time Streaming
 
-use investor_os::streaming::{
-    MarketDataStream, SignalType, StreamingEngine, TradingSignal
-};
+use investor_os::streaming::{MarketDataStream, SignalType, StreamingEngine, TradingSignal};
 use rust_decimal::Decimal;
 
 /// Test streaming engine creation
 #[tokio::test]
 async fn test_streaming_engine_creation() {
     let engine = StreamingEngine::new();
-    assert!(true);
+    assert!(!engine.is_running());
 }
 
 /// Test streaming engine start
 #[tokio::test]
 async fn test_streaming_engine_start() {
     let mut engine = StreamingEngine::new();
-    let result = engine.start().await;
-    assert!(result.is_ok());
+    engine.start().await.expect("engine should start");
+    assert!(engine.is_running());
 }
 
 /// Test signal subscription
@@ -25,7 +23,7 @@ async fn test_streaming_engine_start() {
 async fn test_signal_subscription() {
     let engine = StreamingEngine::new();
     let rx = engine.subscribe_signals();
-    
+
     // Should be able to subscribe
     assert_eq!(rx.len(), 0); // No signals yet
 }
@@ -40,7 +38,7 @@ fn test_trading_signal() {
         cq_score: 0.82,
         timestamp: chrono::Utc::now(),
     };
-    
+
     assert_eq!(signal.symbol, "AAPL");
     assert!(matches!(signal.signal_type, SignalType::Buy));
     assert_eq!(signal.confidence, 0.85);
@@ -57,7 +55,7 @@ fn test_signal_types() {
         SignalType::StrongBuy,
         SignalType::StrongSell,
     ];
-    
+
     for signal_type in types {
         let signal = TradingSignal {
             symbol: "TEST".to_string(),
@@ -66,7 +64,7 @@ fn test_signal_types() {
             cq_score: 0.5,
             timestamp: chrono::Utc::now(),
         };
-        
+
         // Just verify it compiles and runs
         assert!(signal.confidence > 0.0);
     }
@@ -83,7 +81,7 @@ fn test_market_data_stream() {
         volume_24h: Decimal::from(1000000),
         timestamp: chrono::Utc::now(),
     };
-    
+
     assert_eq!(tick.symbol, "BTCUSDT");
     assert!(tick.bid < tick.ask); // Bid < Ask
     assert!(tick.volume_24h > Decimal::ZERO);
@@ -100,10 +98,10 @@ fn test_signal_confidence_thresholds() {
         cq_score: 0.88,
         timestamp: chrono::Utc::now(),
     };
-    
+
     assert!(strong_signal.confidence > 0.80);
     assert!(strong_signal.cq_score > 0.75);
-    
+
     // Low confidence signal
     let weak_signal = TradingSignal {
         symbol: "TSLA".to_string(),
@@ -112,7 +110,7 @@ fn test_signal_confidence_thresholds() {
         cq_score: 0.50,
         timestamp: chrono::Utc::now(),
     };
-    
+
     assert!(weak_signal.confidence < 0.50);
 }
 
@@ -120,7 +118,7 @@ fn test_signal_confidence_thresholds() {
 #[test]
 fn test_timestamp_ordering() {
     let now = chrono::Utc::now();
-    
+
     let signal1 = TradingSignal {
         symbol: "A".to_string(),
         signal_type: SignalType::Buy,
@@ -128,7 +126,7 @@ fn test_timestamp_ordering() {
         cq_score: 0.8,
         timestamp: now,
     };
-    
+
     let signal2 = TradingSignal {
         symbol: "B".to_string(),
         signal_type: SignalType::Sell,
@@ -136,7 +134,7 @@ fn test_timestamp_ordering() {
         cq_score: 0.7,
         timestamp: now + chrono::Duration::seconds(1),
     };
-    
+
     assert!(signal2.timestamp > signal1.timestamp);
 }
 
@@ -144,11 +142,11 @@ fn test_timestamp_ordering() {
 #[tokio::test]
 async fn test_multiple_subscribers() {
     let engine = StreamingEngine::new();
-    
+
     let rx1 = engine.subscribe_signals();
     let rx2 = engine.subscribe_signals();
     let rx3 = engine.subscribe_signals();
-    
+
     // All should be created successfully
     assert_eq!(rx1.len(), 0);
     assert_eq!(rx2.len(), 0);
@@ -165,9 +163,9 @@ fn test_signal_clone() {
         cq_score: 0.92,
         timestamp: chrono::Utc::now(),
     };
-    
+
     let cloned = original.clone();
-    
+
     assert_eq!(original.symbol, cloned.symbol);
     assert_eq!(original.confidence, cloned.confidence);
     assert_eq!(original.cq_score, cloned.cq_score);
@@ -183,7 +181,7 @@ fn test_cq_score_bounds() {
         cq_score: 0.75, // Valid: 0-1
         timestamp: chrono::Utc::now(),
     };
-    
+
     // CQ should be between 0 and 1
     assert!(valid_cq.cq_score >= 0.0);
     assert!(valid_cq.cq_score <= 1.0);
@@ -200,7 +198,7 @@ fn test_streaming_crypto_forex() {
         volume_24h: Decimal::from(1000000),
         timestamp: chrono::Utc::now(),
     };
-    
+
     let forex_tick = MarketDataStream {
         symbol: "EUR_USD".to_string(),
         bid: Decimal::from_str_exact("1.0850").unwrap(),
@@ -209,7 +207,7 @@ fn test_streaming_crypto_forex() {
         volume_24h: Decimal::from(100000),
         timestamp: chrono::Utc::now(),
     };
-    
+
     assert!(crypto_tick.volume_24h > forex_tick.volume_24h);
     assert_ne!(crypto_tick.symbol, forex_tick.symbol);
 }

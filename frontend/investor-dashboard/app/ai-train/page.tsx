@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { addNotification } from "@/components/notification-center";
 import {
   Brain,
   Sparkles,
@@ -31,10 +32,14 @@ import {
 // ============================================
 
 export default function AITrainPage() {
-  const [activeTab, setActiveTab] = useState<"train" | "monitor" | "compare" | "history">("train");
+  const [activeTab, setActiveTab] = useState<
+    "train" | "monitor" | "compare" | "history"
+  >("train");
   const [config, setConfig] = useState<TrainingConfig>(DEFAULT_TRAINING_CONFIG);
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
-  const [currentStatus, setCurrentStatus] = useState<"idle" | "running" | "paused" | "completed" | "error">("idle");
+  const [currentStatus, setCurrentStatus] = useState<
+    "idle" | "running" | "paused" | "completed" | "error"
+  >("idle");
   const [currentMetrics, setCurrentMetrics] = useState<any[]>([]);
   const [currentEpoch, setCurrentEpoch] = useState(0);
 
@@ -77,13 +82,27 @@ export default function AITrainPage() {
 
   // Select model
   const handleSelectModel = (session: TrainingSession) => {
-    alert(`Selected model: ${session.name}\nConfidence: ${session.bestConfidence.toFixed(2)}%`);
+    addNotification({
+      type: "ai",
+      title: "Model Selected",
+      message: `${session.name} — Confidence: ${session.bestConfidence.toFixed(2)}%`,
+    });
   };
 
   const tabs = [
     { id: "train" as const, label: "Train", icon: Brain, color: "blue" },
-    { id: "monitor" as const, label: "Monitor", icon: Activity, color: "emerald" },
-    { id: "compare" as const, label: "Compare", icon: GitCompare, color: "purple" },
+    {
+      id: "monitor" as const,
+      label: "Monitor",
+      icon: Activity,
+      color: "emerald",
+    },
+    {
+      id: "compare" as const,
+      label: "Compare",
+      icon: GitCompare,
+      color: "purple",
+    },
     { id: "history" as const, label: "History", icon: History, color: "gray" },
   ];
 
@@ -97,7 +116,7 @@ export default function AITrainPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <BackButton />
-              
+
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
                   <Brain className="w-6 h-6 text-white" />
@@ -106,13 +125,17 @@ export default function AITrainPage() {
                   <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                     AI Train
                   </h1>
-                  <p className="text-sm text-gray-500">Train models to target confidence</p>
+                  <p className="text-sm text-gray-500">
+                    Train models to target confidence
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Status Badge */}
-            <div className={`px-4 py-2 rounded-lg border ${getStatusStyles(currentStatus)}`}>
+            <div
+              className={`px-4 py-2 rounded-lg border ${getStatusStyles(currentStatus)}`}
+            >
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4" />
                 <span className="font-medium capitalize">{currentStatus}</span>
@@ -136,7 +159,9 @@ export default function AITrainPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-400">Target Confidence</p>
-                <p className="text-3xl font-bold text-white">{config.targetConfidence}%</p>
+                <p className="text-3xl font-bold text-white">
+                  {config.targetConfidence}%
+                </p>
               </div>
             </div>
 
@@ -164,7 +189,9 @@ export default function AITrainPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-400">Training Sessions</p>
-                <p className="text-3xl font-bold text-white">{sessions.length}</p>
+                <p className="text-3xl font-bold text-white">
+                  {sessions.length}
+                </p>
               </div>
             </div>
 
@@ -176,7 +203,9 @@ export default function AITrainPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-400">Model Type</p>
-                <p className="text-3xl font-bold text-white capitalize">{config.modelType}</p>
+                <p className="text-3xl font-bold text-white capitalize">
+                  {config.modelType}
+                </p>
               </div>
             </div>
           </div>
@@ -193,9 +222,10 @@ export default function AITrainPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all whitespace-nowrap
-                  ${isActive
-                    ? `bg-${tab.color}-600 text-white shadow-lg shadow-${tab.color}-500/20`
-                    : "bg-gray-800/50 text-gray-400 hover:text-white hover:bg-gray-800"
+                  ${
+                    isActive
+                      ? `bg-${tab.color}-600 text-white shadow-lg shadow-${tab.color}-500/20`
+                      : "bg-gray-800/50 text-gray-400 hover:text-white hover:bg-gray-800"
                   }
                 `}
               >
@@ -259,9 +289,7 @@ export default function AITrainPage() {
             />
           )}
 
-          {activeTab === "history" && (
-            <TrainingHistory sessions={sessions} />
-          )}
+          {activeTab === "history" && <TrainingHistory sessions={sessions} />}
         </motion.div>
       </main>
     </div>

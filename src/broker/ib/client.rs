@@ -97,14 +97,13 @@ impl IbClient {
         trace!("IB API Response: {}", status);
 
         match status {
-            StatusCode::OK | StatusCode::CREATED => {
-                response.json::<T>().await.map_err(|e| {
-                    BrokerError::ExternalApi(format!("Failed to parse response: {}", e))
-                })
-            }
-            StatusCode::UNAUTHORIZED => {
-                Err(BrokerError::Authentication("Invalid credentials".to_string()))
-            }
+            StatusCode::OK | StatusCode::CREATED => response
+                .json::<T>()
+                .await
+                .map_err(|e| BrokerError::ExternalApi(format!("Failed to parse response: {}", e))),
+            StatusCode::UNAUTHORIZED => Err(BrokerError::Authentication(
+                "Invalid credentials".to_string(),
+            )),
             StatusCode::FORBIDDEN => {
                 Err(BrokerError::Authentication("Access forbidden".to_string()))
             }

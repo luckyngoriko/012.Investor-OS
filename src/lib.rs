@@ -17,25 +17,39 @@
 pub mod prelude {
     //! Re-export the most commonly used RAG types for Investor OS
     pub use neurocod_rag::{
-        // L29
-        ModelRouter, ModelProfile, RoutingDecision,
-        // L30
-        CognitiveKernel, QueryPriority, RagStrategy,
-        // L31
-        ContextBudget, BudgetPreset,
-        // L32
-        StreamingIndexer, StreamEvent,
-        // L33
-        Ontology, RelationType,
-        // L34
-        CausalTracer, TraceRecord,
         // L35
-        AutonomousMonitor, HealthStatus,
+        AutonomousMonitor,
+        BudgetPreset,
+        // L34
+        CausalTracer,
+        // L30
+        CognitiveKernel,
+        // L31
+        ContextBudget,
+        HealthStatus,
+        ModelProfile,
+        // L29
+        ModelRouter,
+        // L33
+        Ontology,
+        QueryPriority,
+        RagStrategy,
+        RelationType,
+        RoutingDecision,
+        StreamEvent,
+        // L32
+        StreamingIndexer,
+        TraceRecord,
     };
 }
 
+/// Production-grade RBAC & Multi-User Authentication (Sprint 101)
+///
+/// PostgreSQL-backed users/sessions, Argon2id passwords, JWT access tokens.
+pub mod auth;
+
 /// RAG (Retrieval-Augmented Generation) module for financial document analysis
-/// 
+///
 /// Sprint 5: PostgreSQL Optimization + RAG Integration
 /// - SEC filings parsing (10-K, 10-Q)
 /// - Earnings call transcript analysis
@@ -94,6 +108,11 @@ pub mod risk;
 /// Market data collection from various sources
 pub mod collectors;
 
+/// Data Sources Management module
+///
+/// Sprint 89: SQL-complete data source catalog and pricing flows
+pub mod data_sources;
+
 /// Phoenix recovery system
 ///
 /// Self-healing and state recovery
@@ -101,6 +120,9 @@ pub mod collectors;
 /// - LLM-powered decision making
 /// - Stress testing (8 historical crises)
 pub mod phoenix;
+
+/// Backup & Recovery system
+pub mod backup;
 
 /// Signals module
 ///
@@ -206,6 +228,17 @@ pub mod distributed;
 /// - Alerting
 pub mod monitoring;
 
+/// Maintenance system
+pub mod maintenance;
+
+/// Anti-fake protection module
+///
+/// Runtime anti-spoofing controls:
+/// - nonce replay protection
+/// - request signature validation
+/// - fingerprint binding and velocity checks
+pub mod anti_fake;
+
 /// EU AI Act & GDPR Compliance Module
 ///
 /// Sprint 52: EU Compliance Integration
@@ -215,3 +248,17 @@ pub mod monitoring;
 /// - DLP (Data Loss Prevention) via AI-OS-PG
 #[cfg(feature = "eu_compliance")]
 pub mod compliance;
+
+/// Tax & Compliance Engine — tax loss harvesting, wash sale monitoring,
+/// tax reporting and compliance (Schedule D, Form 8949).
+pub mod tax;
+
+/// ML Strategy Selector — regime detection, strategy selection,
+/// performance attribution, and dynamic switching.
+pub mod strategy_selector;
+
+/// Enterprise Project Tracking System (Sprint 111).
+///
+/// PostgreSQL-backed program/sprint/task tracking with dependency management,
+/// dashboard aggregates, and roadmap visualization.
+pub mod projects;

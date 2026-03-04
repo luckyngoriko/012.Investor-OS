@@ -9,22 +9,22 @@
 //! - Tool: Агенти могат да извикват външни функции
 //! - OutputParser: Структуриран output от LLM
 
+pub mod agent;
 pub mod chains;
+pub mod memory;
+pub mod parsers;
 pub mod prompts;
 pub mod tools;
-pub mod parsers;
-pub mod memory;
-pub mod agent;
 
-pub use chains::{Chain, SequentialChain, ParallelChain, LLMChain};
-pub use prompts::{PromptTemplate, Message, Role};
-pub use tools::{Tool, ToolRegistry, ToolCall, ToolResult};
-pub use parsers::{OutputParser, JsonParser, StructuredParser};
-pub use memory::{ConversationMemory, BufferMemory, VectorStoreMemory};
-pub use agent::{Agent, AgentBuilder, LLM};
 pub use agent::LLMError as AgentLLMError;
+pub use agent::{Agent, AgentBuilder, LLM};
+pub use chains::{Chain, LLMChain, ParallelChain, SequentialChain};
+pub use memory::{BufferMemory, ConversationMemory, VectorStoreMemory};
+pub use parsers::{JsonParser, OutputParser, StructuredParser};
+pub use prompts::{Message, PromptTemplate, Role};
+pub use tools::{Tool, ToolCall, ToolRegistry, ToolResult};
 
-use crate::ml::apis::{LLMProvider, LLMError};
+use crate::ml::apis::{LLMError, LLMProvider};
 use std::collections::HashMap;
 
 /// Основен контекст за изпълнение на chain
@@ -42,17 +42,17 @@ impl ChainContext {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     pub fn with_variable(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.variables.insert(key.into(), value.into());
         self
     }
-    
+
     pub fn with_metadata(mut self, key: impl Into<String>, value: serde_json::Value) -> Self {
         self.metadata.insert(key.into(), value);
         self
     }
-    
+
     pub fn get(&self, key: &str) -> Option<&str> {
         self.variables.get(key).map(|s| s.as_str())
     }
@@ -96,22 +96,22 @@ impl ChainBuilder {
             tools: ToolRegistry::new(),
         }
     }
-    
+
     pub fn with_llm(mut self, llm: LLMProvider) -> Self {
         self.llm = Some(llm);
         self
     }
-    
+
     pub fn with_memory<M: ConversationMemory + 'static>(mut self, memory: M) -> Self {
         self.memory = Some(Box::new(memory));
         self
     }
-    
+
     pub fn with_tool(mut self, tool: Box<dyn Tool>) -> Self {
         self.tools.register(tool);
         self
     }
-    
+
     /// Създава LLMChain с prompt template
     pub fn build_llm_chain(self, template: PromptTemplate) -> Result<LLMChain, ChainError> {
         let llm = self.llm.ok_or(ChainError::MissingLLM)?;
@@ -134,7 +134,7 @@ pub enum ChainError {
 }
 
 // Примерен usage за Investor OS:
-// 
+//
 // ```rust,ignore
 // // Анализ на SEC filing
 // let chain = ChainBuilder::new()
@@ -142,21 +142,21 @@ pub enum ChainError {
 //     .with_memory(BufferMemory::new(10))
 //     .build_llm_chain(PromptTemplate::new(r#"
 //         Analyze this SEC filing for {ticker}:
-//         
+//
 //         {filing_content}
-//         
+//
 //         Provide:
 //         1. Key risks (0-1 score)
-//         2. Growth indicators (0-1 score)  
+//         2. Growth indicators (0-1 score)
 //         3. Insider activity sentiment
-//         
+//
 //         Output as JSON.
 //     "#))?;
-// 
+//
 // let result = chain.run(ChainContext::new()
 //     .with_variable("ticker", "AAPL")
 //     .with_variable("filing_content", sec_text)
 // ).await?;
-// 
+//
 // let analysis: SecAnalysis = serde_json::from_str(&result.output)?;
 // ```

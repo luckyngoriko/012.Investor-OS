@@ -65,7 +65,10 @@ impl RiskChecker {
         }
 
         // Check 2: Maximum position size
-        if let Some(position_value) = self.calculate_position_value_after_order(order, positions).await? {
+        if let Some(position_value) = self
+            .calculate_position_value_after_order(order, positions)
+            .await?
+        {
             if position_value > self.config.max_position_size {
                 violations.push(RiskViolation {
                     rule: "MAX_POSITION_SIZE".to_string(),
@@ -79,7 +82,10 @@ impl RiskChecker {
         }
 
         // Check 3: Concentration limit (no more than 20% in single position)
-        if let Some(position_value) = self.calculate_position_value_after_order(order, positions).await? {
+        if let Some(position_value) = self
+            .calculate_position_value_after_order(order, positions)
+            .await?
+        {
             let concentration = position_value / account_value;
             if concentration > Decimal::from(20) / Decimal::from(100) {
                 violations.push(RiskViolation {
@@ -115,7 +121,8 @@ impl RiskChecker {
         }
 
         // Determine if check passed
-        let fatal_or_error = violations.iter()
+        let fatal_or_error = violations
+            .iter()
             .any(|v| matches!(v.severity, RiskSeverity::Fatal | RiskSeverity::Error));
 
         let result = RiskCheckResult {
@@ -126,7 +133,10 @@ impl RiskChecker {
         if result.passed {
             info!("Risk check passed for order {}", order.id);
         } else {
-            warn!("Risk check failed for order {}: {:?}", order.id, result.violations);
+            warn!(
+                "Risk check failed for order {}: {:?}",
+                order.id, result.violations
+            );
         }
 
         Ok(result)
@@ -135,7 +145,7 @@ impl RiskChecker {
     /// Quick check if order is allowed
     pub fn is_order_allowed(&self, order: &Order) -> bool {
         // Basic checks that don't require async
-        
+
         // Check quantity is positive
         if order.quantity <= Decimal::ZERO {
             return false;
@@ -143,9 +153,10 @@ impl RiskChecker {
 
         // Check limit price for limit orders
         if order.order_type == crate::broker::OrderType::Limit
-            && (order.limit_price.is_none() || order.limit_price.unwrap() <= Decimal::ZERO) {
-                return false;
-            }
+            && (order.limit_price.is_none() || order.limit_price.unwrap() <= Decimal::ZERO)
+        {
+            return false;
+        }
 
         true
     }
@@ -168,8 +179,7 @@ impl RiskChecker {
         positions: &[Position],
     ) -> Result<Option<Decimal>> {
         // Find existing position
-        let existing_position = positions.iter()
-            .find(|p| p.ticker == order.ticker);
+        let existing_position = positions.iter().find(|p| p.ticker == order.ticker);
 
         // Calculate new position size
         let new_quantity = if let Some(pos) = existing_position {
@@ -248,7 +258,7 @@ mod tests {
     fn test_risk_checker_allows_valid_order() {
         let config = BrokerConfig::default();
         let checker = RiskChecker::new(config);
-        
+
         let order = create_test_order();
         assert!(checker.is_order_allowed(&order));
     }
@@ -257,10 +267,10 @@ mod tests {
     fn test_risk_checker_rejects_zero_quantity() {
         let config = BrokerConfig::default();
         let checker = RiskChecker::new(config);
-        
+
         let mut order = create_test_order();
         order.quantity = Decimal::ZERO;
-        
+
         assert!(!checker.is_order_allowed(&order));
     }
 
@@ -268,7 +278,7 @@ mod tests {
     fn test_risk_checker_rejects_limit_order_without_price() {
         let config = BrokerConfig::default();
         let checker = RiskChecker::new(config);
-        
+
         let order = Order::new(
             "AAPL",
             OrderSide::Buy,
@@ -277,7 +287,7 @@ mod tests {
             Uuid::new_v4(),
         );
         // No limit price set
-        
+
         assert!(!checker.is_order_allowed(&order));
     }
 }

@@ -11,9 +11,15 @@ use super::{RetryPolicy, TemporalError};
 pub trait Activity: Send + Sync + Clone + 'static {
     type Input: Serialize + DeserializeOwned + Send + Sync + Clone;
     type Output: Serialize + DeserializeOwned + Send + Sync;
-    
-    fn name() -> &'static str where Self: Sized;
-    async fn execute(&self, ctx: ActivityContext, input: Self::Input) -> Result<Self::Output, ActivityError>;
+
+    fn name() -> &'static str
+    where
+        Self: Sized;
+    async fn execute(
+        &self,
+        ctx: ActivityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, ActivityError>;
 }
 
 /// Контекст за activity execution
@@ -42,21 +48,21 @@ impl ActivityContext {
             heartbeat_details: vec![],
         }
     }
-    
+
     pub fn with_attempt(mut self, attempt: u32) -> Self {
         self.attempt = attempt;
         self
     }
-    
+
     pub fn is_retry(&self) -> bool {
         self.attempt > 1
     }
-    
+
     pub fn elapsed(&self) -> Duration {
         let now = chrono::Utc::now();
         Duration::from_millis((now - self.started_at).num_milliseconds() as u64)
     }
-    
+
     pub fn has_time_remaining(&self) -> bool {
         match self.deadline {
             Some(deadline) => chrono::Utc::now() < deadline,
@@ -91,7 +97,7 @@ impl ActivityError {
             retryable: false,
         }
     }
-    
+
     pub fn retryable(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
@@ -100,7 +106,7 @@ impl ActivityError {
             retryable: true,
         }
     }
-    
+
     pub fn timeout(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
@@ -109,7 +115,7 @@ impl ActivityError {
             retryable: true,
         }
     }
-    
+
     pub fn with_details(mut self, details: serde_json::Value) -> Self {
         self.details = Some(details);
         self
@@ -142,16 +148,18 @@ pub struct ActivityExecutor {
 
 impl ActivityExecutor {
     pub fn new(policy: RetryPolicy) -> Self {
-        Self { retry_policy: policy }
+        Self {
+            retry_policy: policy,
+        }
     }
-    
+
     pub async fn execute<A: Activity>(
         &self,
         activity: &A,
         input: A::Input,
     ) -> Result<A::Output, TemporalError> {
         let mut attempt = 1u32;
-        
+
         loop {
             let ctx = ActivityContext {
                 attempt,
@@ -160,7 +168,7 @@ impl ActivityExecutor {
                 deadline: None,
                 heartbeat_details: vec![],
             };
-            
+
             match activity.execute(ctx, input.clone()).await {
                 Ok(output) => return Ok(output),
                 Err(e) if !e.retryable => {
@@ -169,16 +177,19 @@ impl ActivityExecutor {
                 Err(e) => {
                     if !self.retry_policy.should_retry(attempt, &e.message) {
                         return Err(TemporalError::ActivityFailed(format!(
-                            "Max retries exceeded: {}", e.message
+                            "Max retries exceeded: {}",
+                            e.message
                         )));
                     }
-                    
+
                     let backoff = self.retry_policy.calculate_backoff(attempt);
                     tracing::warn!(
                         "Activity failed (attempt {}), retrying in {:?}: {}",
-                        attempt, backoff, e.message
+                        attempt,
+                        backoff,
+                        e.message
                     );
-                    
+
                     tokio::time::sleep(backoff).await;
                     attempt += 1;
                 }
@@ -223,10 +234,16 @@ pub struct OhlcvData {
 impl Activity for FetchMarketData {
     type Input = FetchMarketDataInput;
     type Output = FetchMarketDataOutput;
-    
-    fn name() -> &'static str { "FetchMarketData" }
-    
-    async fn execute(&self, _ctx: ActivityContext, input: Self::Input) -> Result<Self::Output, ActivityError> {
+
+    fn name() -> &'static str {
+        "FetchMarketData"
+    }
+
+    async fn execute(
+        &self,
+        _ctx: ActivityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, ActivityError> {
         // Implementation would call market data service
         // For now, return mock data
         Ok(FetchMarketDataOutput {
@@ -262,10 +279,16 @@ pub struct CallLLMOutput {
 impl Activity for CallLLM {
     type Input = CallLLMInput;
     type Output = CallLLMOutput;
-    
-    fn name() -> &'static str { "CallLLM" }
-    
-    async fn execute(&self, _ctx: ActivityContext, input: Self::Input) -> Result<Self::Output, ActivityError> {
+
+    fn name() -> &'static str {
+        "CallLLM"
+    }
+
+    async fn execute(
+        &self,
+        _ctx: ActivityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, ActivityError> {
         // Would integrate with ml::apis
         Ok(CallLLMOutput {
             response: "Mock response".to_string(),
@@ -304,10 +327,16 @@ pub struct PlaceOrderOutput {
 impl Activity for PlaceOrder {
     type Input = PlaceOrderInput;
     type Output = PlaceOrderOutput;
-    
-    fn name() -> &'static str { "PlaceOrder" }
-    
-    async fn execute(&self, _ctx: ActivityContext, input: Self::Input) -> Result<Self::Output, ActivityError> {
+
+    fn name() -> &'static str {
+        "PlaceOrder"
+    }
+
+    async fn execute(
+        &self,
+        _ctx: ActivityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, ActivityError> {
         // Would call broker service
         Ok(PlaceOrderOutput {
             order_id: uuid::Uuid::new_v4().to_string(),
@@ -341,10 +370,16 @@ pub struct WriteJournalOutput {
 impl Activity for WriteJournal {
     type Input = WriteJournalInput;
     type Output = WriteJournalOutput;
-    
-    fn name() -> &'static str { "WriteJournal" }
-    
-    async fn execute(&self, _ctx: ActivityContext, _input: Self::Input) -> Result<Self::Output, ActivityError> {
+
+    fn name() -> &'static str {
+        "WriteJournal"
+    }
+
+    async fn execute(
+        &self,
+        _ctx: ActivityContext,
+        _input: Self::Input,
+    ) -> Result<Self::Output, ActivityError> {
         Ok(WriteJournalOutput {
             entry_id: uuid::Uuid::new_v4().to_string(),
             written_at: chrono::Utc::now(),
@@ -378,10 +413,16 @@ pub struct CalculateCQOutput {
 impl Activity for CalculateCQ {
     type Input = CalculateCQInput;
     type Output = CalculateCQOutput;
-    
-    fn name() -> &'static str { "CalculateCQ" }
-    
-    async fn execute(&self, _ctx: ActivityContext, input: Self::Input) -> Result<Self::Output, ActivityError> {
+
+    fn name() -> &'static str {
+        "CalculateCQ"
+    }
+
+    async fn execute(
+        &self,
+        _ctx: ActivityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, ActivityError> {
         // CQ v2.0 formula
         let cq = input.quality_score * 0.20
             + input.insider_score * 0.20
@@ -389,7 +430,7 @@ impl Activity for CalculateCQ {
             + input.regime_fit * 0.20
             + input.breakout_score * 0.15
             + input.atr_trend * 0.10;
-        
+
         Ok(CalculateCQOutput {
             ticker: input.ticker.clone(),
             cq,

@@ -20,7 +20,7 @@ impl ToolResult {
             metadata: None,
         }
     }
-    
+
     pub fn error(message: impl Into<String>) -> Self {
         Self {
             output: message.into(),
@@ -57,36 +57,40 @@ impl ToolRegistry {
             tools: HashMap::new(),
         }
     }
-    
+
     pub fn register(&mut self, tool: Box<dyn Tool>) {
         self.tools.insert(tool.name().to_string(), tool);
     }
-    
+
     pub fn get(&self, name: &str) -> Option<&dyn Tool> {
         self.tools.get(name).map(|t| t.as_ref())
     }
-    
+
     pub async fn execute(&self, name: &str, input: &str) -> Result<ToolResult, super::ChainError> {
-        let tool = self.tools.get(name)
-            .ok_or_else(|| super::ChainError::ToolError(
-                format!("Tool '{}' not found", name)
-            ))?;
-        
+        let tool = self
+            .tools
+            .get(name)
+            .ok_or_else(|| super::ChainError::ToolError(format!("Tool '{}' not found", name)))?;
+
         Ok(tool.execute(input).await)
     }
-    
+
     /// Описание на всички tools за prompt
     pub fn describe(&self) -> String {
-        self.tools.values()
-            .map(|t| format!("- {}: {}\n  Parameters: {}", 
-                t.name(), 
-                t.description(),
-                t.parameters()
-            ))
+        self.tools
+            .values()
+            .map(|t| {
+                format!(
+                    "- {}: {}\n  Parameters: {}",
+                    t.name(),
+                    t.description(),
+                    t.parameters()
+                )
+            })
             .collect::<Vec<_>>()
             .join("\n")
     }
-    
+
     pub fn list(&self) -> Vec<&str> {
         self.tools.keys().map(|s| s.as_str()).collect()
     }
@@ -124,11 +128,11 @@ impl Tool for PortfolioTool {
     fn name(&self) -> &str {
         "get_portfolio"
     }
-    
+
     fn description(&self) -> &str {
         "Get current portfolio positions and cash balance"
     }
-    
+
     fn parameters(&self) -> serde_json::Value {
         serde_json::json!({
             "type": "object",
@@ -136,11 +140,11 @@ impl Tool for PortfolioTool {
             "required": []
         })
     }
-    
+
     async fn execute(&self, _input: &str) -> ToolResult {
         let positions = self.portfolio_service.get_positions().await;
         let balance = self.portfolio_service.get_balance().await;
-        
+
         let output = serde_json::json!({
             "cash_balance": balance.to_string(),
             "positions": positions.iter().map(|p| serde_json::json!({
@@ -151,7 +155,7 @@ impl Tool for PortfolioTool {
                 "unrealized_pnl": ((p.current_price - p.avg_price) * p.quantity).to_string()
             })).collect::<Vec<_>>()
         });
-        
+
         ToolResult::success(output.to_string())
     }
 }
@@ -182,11 +186,11 @@ impl Tool for MarketDataTool {
     fn name(&self) -> &str {
         "get_market_data"
     }
-    
+
     fn description(&self) -> &str {
         "Get current price and OHLCV data for a ticker. Input: JSON with 'ticker' and optional 'timeframe'"
     }
-    
+
     fn parameters(&self) -> serde_json::Value {
         serde_json::json!({
             "type": "object",
@@ -197,21 +201,19 @@ impl Tool for MarketDataTool {
             "required": ["ticker"]
         })
     }
-    
+
     async fn execute(&self, input: &str) -> ToolResult {
         let params: serde_json::Value = match serde_json::from_str(input) {
             Ok(v) => v,
             Err(e) => return ToolResult::error(format!("Invalid JSON: {}", e)),
         };
-        
-        let ticker = params["ticker"].as_str()
-            .unwrap_or("UNKNOWN");
-        let timeframe = params["timeframe"].as_str()
-            .unwrap_or("1d");
-        
+
+        let ticker = params["ticker"].as_str().unwrap_or("UNKNOWN");
+        let timeframe = params["timeframe"].as_str().unwrap_or("1d");
+
         let price = self.data_service.get_price(ticker).await;
         let ohlcv = self.data_service.get_ohlcv(ticker, timeframe).await;
-        
+
         let output = serde_json::json!({
             "ticker": ticker,
             "current_price": price.map(|p| p.to_string()),
@@ -225,7 +227,7 @@ impl Tool for MarketDataTool {
                 "volume": o.volume
             }))
         });
-        
+
         ToolResult::success(output.to_string())
     }
 }
@@ -250,7 +252,10 @@ pub struct OrderRequest {
 }
 
 #[derive(Debug, Clone)]
-pub enum Action { Buy, Sell }
+pub enum Action {
+    Buy,
+    Sell,
+}
 
 #[derive(Debug, Clone)]
 pub enum OrderType {
@@ -272,7 +277,7 @@ impl Tool for PlaceOrderTool {
     fn name(&self) -> &str {
         "place_order"
     }
-    
+
     fn description(&self) -> &str {
         if self.simulate {
             "Simulate placing an order (paper trading)"
@@ -280,7 +285,7 @@ impl Tool for PlaceOrderTool {
             "Place a real order (LIVE TRADING - use with caution!)"
         }
     }
-    
+
     fn parameters(&self) -> serde_json::Value {
         serde_json::json!({
             "type": "object",
@@ -293,17 +298,17 @@ impl Tool for PlaceOrderTool {
             "required": ["ticker", "action", "quantity"]
         })
     }
-    
+
     async fn execute(&self, input: &str) -> ToolResult {
         // Парсване и валидация
         let _params: serde_json::Value = match serde_json::from_str(input) {
             Ok(v) => v,
             Err(e) => return ToolResult::error(format!("Invalid JSON: {}", e)),
         };
-        
+
         // Създаваме OrderRequest...
         // (simplified)
-        
+
         ToolResult::success(format!("Order simulated: {}", input))
     }
 }
@@ -330,11 +335,11 @@ impl Tool for SecSearchTool {
     fn name(&self) -> &str {
         "search_sec_filings"
     }
-    
+
     fn description(&self) -> &str {
         "Search SEC filings for a ticker. Input: JSON with 'ticker' and 'query'"
     }
-    
+
     fn parameters(&self) -> serde_json::Value {
         serde_json::json!({
             "type": "object",
@@ -345,18 +350,18 @@ impl Tool for SecSearchTool {
             "required": ["ticker", "query"]
         })
     }
-    
+
     async fn execute(&self, input: &str) -> ToolResult {
         let params: serde_json::Value = match serde_json::from_str(input) {
             Ok(v) => v,
             Err(e) => return ToolResult::error(format!("Invalid JSON: {}", e)),
         };
-        
+
         let ticker = params["ticker"].as_str().unwrap_or("");
         let query = params["query"].as_str().unwrap_or("");
-        
+
         let results = self.rag_service.search_sec(ticker, query).await;
-        
+
         let output = serde_json::json!({
             "results": results.iter().map(|r| serde_json::json!({
                 "content": r.content,
@@ -364,7 +369,7 @@ impl Tool for SecSearchTool {
                 "relevance": r.relevance
             })).collect::<Vec<_>>()
         });
-        
+
         ToolResult::success(output.to_string())
     }
 }
@@ -391,11 +396,11 @@ impl Tool for SentimentTool {
     fn name(&self) -> &str {
         "get_sentiment"
     }
-    
+
     fn description(&self) -> &str {
         "Get sentiment analysis for a ticker"
     }
-    
+
     fn parameters(&self) -> serde_json::Value {
         serde_json::json!({
             "type": "object",
@@ -405,23 +410,23 @@ impl Tool for SentimentTool {
             "required": ["ticker"]
         })
     }
-    
+
     async fn execute(&self, input: &str) -> ToolResult {
         let params: serde_json::Value = match serde_json::from_str(input) {
             Ok(v) => v,
             Err(e) => return ToolResult::error(format!("Invalid JSON: {}", e)),
         };
-        
+
         let ticker = params["ticker"].as_str().unwrap_or("");
         let result = self.sentiment_service.analyze(ticker).await;
-        
+
         let output = serde_json::json!({
             "ticker": ticker,
             "news_sentiment": result.news_sentiment,
             "social_sentiment": result.social_sentiment,
             "overall": result.overall
         });
-        
+
         ToolResult::success(output.to_string())
     }
 }
@@ -437,12 +442,12 @@ impl TradingToolsBuilder {
             registry: ToolRegistry::new(),
         }
     }
-    
+
     pub fn with_portfolio_service(self, _service: std::sync::Arc<dyn PortfolioService>) -> Self {
         // self.registry.register(Box::new(PortfolioTool { portfolio_service: service }));
         self
     }
-    
+
     pub fn build(self) -> ToolRegistry {
         self.registry
     }

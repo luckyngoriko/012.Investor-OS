@@ -11,10 +11,12 @@ use super::{TemporalError, WorkflowStatus};
 pub trait Workflow: Send + Sync + 'static {
     type Input: Serialize + DeserializeOwned + Send + Sync;
     type Output: Serialize + DeserializeOwned + Send + Sync;
-    
+
     /// Уникално име на workflow типа
-    fn name() -> &'static str where Self: Sized;
-    
+    fn name() -> &'static str
+    where
+        Self: Sized;
+
     /// Главна логика
     async fn run(
         &self,
@@ -36,8 +38,17 @@ use std::sync::Arc;
 /// Workflow client for handles - uses erased types for object safety
 #[async_trait]
 pub trait WorkflowClient: Send + Sync {
-    async fn query_raw(&self, workflow_id: &str, query_type: &str) -> Result<serde_json::Value, TemporalError>;
-    async fn signal_raw(&self, workflow_id: &str, signal_name: &str, payload: serde_json::Value) -> Result<(), TemporalError>;
+    async fn query_raw(
+        &self,
+        workflow_id: &str,
+        query_type: &str,
+    ) -> Result<serde_json::Value, TemporalError>;
+    async fn signal_raw(
+        &self,
+        workflow_id: &str,
+        signal_name: &str,
+        payload: serde_json::Value,
+    ) -> Result<(), TemporalError>;
     async fn cancel(&self, workflow_id: &str) -> Result<(), TemporalError>;
     async fn get_result_raw(&self, workflow_id: &str) -> Result<serde_json::Value, TemporalError>;
     async fn get_status(&self, workflow_id: &str) -> Result<WorkflowStatus, TemporalError>;
@@ -56,30 +67,37 @@ impl<W: Workflow> WorkflowHandle<W> {
             _phantom: PhantomData,
         }
     }
-    
+
     /// Query за текущо състояние
     pub async fn query<T: DeserializeOwned>(&self, query_type: &str) -> Result<T, TemporalError> {
         let raw = self.client.query_raw(&self.workflow_id, query_type).await?;
         serde_json::from_value(raw).map_err(|e| TemporalError::QueryFailed(e.to_string()))
     }
-    
+
     /// Изпращане на signal
-    pub async fn signal<T: Serialize>(&self, signal_name: &str, payload: T) -> Result<(), TemporalError> {
-        let raw = serde_json::to_value(payload).map_err(|e| TemporalError::ActivityFailed(e.to_string()))?;
-        self.client.signal_raw(&self.workflow_id, signal_name, raw).await
+    pub async fn signal<T: Serialize>(
+        &self,
+        signal_name: &str,
+        payload: T,
+    ) -> Result<(), TemporalError> {
+        let raw = serde_json::to_value(payload)
+            .map_err(|e| TemporalError::ActivityFailed(e.to_string()))?;
+        self.client
+            .signal_raw(&self.workflow_id, signal_name, raw)
+            .await
     }
-    
+
     /// Cancel workflow
     pub async fn cancel(&self) -> Result<(), TemporalError> {
         self.client.cancel(&self.workflow_id).await
     }
-    
+
     /// Чакане за резултат
     pub async fn result(&self) -> Result<W::Output, TemporalError> {
         let raw = self.client.get_result_raw(&self.workflow_id).await?;
         serde_json::from_value(raw).map_err(|e| TemporalError::QueryFailed(e.to_string()))
     }
-    
+
     /// Текущ статус
     pub async fn status(&self) -> Result<WorkflowStatus, TemporalError> {
         self.client.get_status(&self.workflow_id).await
@@ -89,7 +107,7 @@ impl<W: Workflow> WorkflowHandle<W> {
 /// Signal types за trading workflows
 pub mod signals {
     use super::*;
-    
+
     /// User confirmation signal
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct UserConfirmation {
@@ -97,7 +115,7 @@ pub mod signals {
         pub user_id: String,
         pub timestamp: chrono::DateTime<chrono::Utc>,
     }
-    
+
     /// Kill switch signal
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct KillSwitch {
@@ -105,14 +123,14 @@ pub mod signals {
         pub reason: String,
         pub triggered_by: String,
     }
-    
+
     /// Manual override signal
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct ManualOverride {
         pub action: String,
         pub new_params: serde_json::Value,
     }
-    
+
     /// Market data update signal
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct MarketDataUpdate {
@@ -125,7 +143,7 @@ pub mod signals {
 /// Query types за trading workflows
 pub mod queries {
     use super::*;
-    
+
     /// Текущ прогрес на workflow
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Progress {
@@ -134,7 +152,7 @@ pub mod queries {
         pub steps_total: u32,
         pub percentage: f32,
     }
-    
+
     /// Текущо състояние
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct CurrentState {
@@ -165,7 +183,7 @@ impl WorkflowComposer {
         let input2 = transform(output1);
         w2.run(ctx.clone(), input2).await
     }
-    
+
     /// Parallel: [workflow1, workflow2] → merge
     pub async fn parallel<W1, W2, R>(
         ctx: &super::context::WorkflowContext,
@@ -179,14 +197,12 @@ impl WorkflowComposer {
         W1: Workflow,
         W2: Workflow,
     {
-        let (result1, result2) = tokio::join!(
-            w1.run(ctx.clone(), input1),
-            w2.run(ctx.clone(), input2)
-        );
-        
+        let (result1, result2) =
+            tokio::join!(w1.run(ctx.clone(), input1), w2.run(ctx.clone(), input2));
+
         let output1 = result1?;
         let output2 = result2?;
-        
+
         Ok(merge(output1, output2))
     }
 }
