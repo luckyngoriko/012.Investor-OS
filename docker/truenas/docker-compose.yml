@@ -1,121 +1,44 @@
-# Investor OS HRM - TrueNAS 25.10.1 Deployment
-# 
-# Deploys Investor OS with GPU acceleration on RTX 3090
-# Usage: docker-compose up -d
-
-version: '3.8'
+# Investor OS — TrueNAS 25.10 Deployment (CPU)
+#
+# ZFS datasets: MainPool/appsdata/investor-os.net/*
+# Usage: docker compose up -d
 
 services:
-  investor-os:
-    build:
-      context: ../..
-      dockerfile: docker/truenas/Dockerfile
-      target: runtime
-    image: investor-os:hrm-cuda
-    container_name: investor-os-hrm
-    
-    # NVIDIA Container Toolkit configuration
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    
-    # GPU environment variables
-    environment:
-      # CUDA configuration
-      - NVIDIA_VISIBLE_DEVICES=0
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-      - CUDA_VISIBLE_DEVICES=0
-      
-      # HRM configuration
-      - HRM_DEVICE=cuda
-      - HRM_CUDA_MEM_FRACTION=0.8
-      - HRM_WEIGHTS_PATH=/app/models/hrm_v1.safetensors
-      
-      # Application
-      - RUST_LOG=info
-      - INVESTOR_OS_ENV=production
-      - DATABASE_URL=postgresql://investor:password@postgres:5432/investor_os
-      - REDIS_URL=redis://redis:6379
-    
-    # Port mapping
-    ports:
-      - "3000:3000"
-    
-    # Volumes
-    volumes:
-      # HRM model weights
-      - /mnt/nas-data/models:/app/models:ro
-      
-      # Logs
-      - /mnt/nas-data/logs/investor-os:/app/logs
-      
-      # Configuration
-      - /mnt/nas-data/config:/app/config:ro
-    
-    # Network
-    networks:
-      - investor-network
-    
-    # Dependencies
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    
-    # Restart policy
-    restart: unless-stopped
-    
-    # Resource limits for RTX 3090 (24GB)
-    # Reserve 4GB for system, use up to 16GB for HRM
-    deploy:
-      resources:
-        limits:
-          cpus: '8'
-          memory: 32G
-        reservations:
-          cpus: '4'
-          memory: 16G
-          devices:
-            - driver: nvidia
-              device_ids: ['0']
-              capabilities: [gpu]
-
-  # PostgreSQL with TimescaleDB
+  # PostgreSQL + TimescaleDB + pgvector
   postgres:
     image: timescale/timescaledb:latest-pg15
-    container_name: investor-postgres
+    container_name: ios-postgres
     environment:
-      - POSTGRES_USER=investor
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=investor_os
+      POSTGRES_USER: ${DB_USER:-investor}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-investor_os}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
     volumes:
-      - /mnt/nas-data/postgres:/var/lib/postgresql/data
+      - /mnt/MainPool/appsdata/investor-os.net/postgres:/var/lib/postgresql/data
+      - ../../migrations:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
     networks:
-      - investor-network
+      - ios-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U investor -d investor_os"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-investor} -d ${DB_NAME:-investor_os}"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    shm_size: 256m
 
-  # Redis for caching
+  # Redis
   redis:
     image: redis:7-alpine
-    container_name: investor-redis
+    container_name: ios-redis
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
     volumes:
-      - /mnt/nas-data/redis:/data
+      - /mnt/MainPool/appsdata/investor-os.net/redis:/data
     ports:
       - "6379:6379"
     networks:
-      - investor-network
+      - ios-net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -123,28 +46,66 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # GPU Monitoring
-  dcgm-exporter:
-    image: nvidia/dcgm-exporter:latest
-    container_name: investor-dcgm
+  # Rust API backend
+  api:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: ios-api
     environment:
-      - DCGM_EXPORTER_INTERVAL=1000
+      DATABASE_URL: postgres://${DB_USER:-investor}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-investor_os}
+      REDIS_URL: redis://redis:6379
+      RUST_LOG: ${RUST_LOG:-info}
+      INVESTOR_ENV: ${INVESTOR_ENV:-production}
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "8080"
+      PAPER_TRADING: "${PAPER_TRADING:-true}"
+      KILL_SWITCH_ENABLED: "true"
+      WS_ENABLED: "${WS_ENABLED:-true}"
+      WS_DEFAULT_EXCHANGE: binance
+      WS_DEFAULT_SYMBOLS: "${WS_DEFAULT_SYMBOLS:-BTCUSDT}"
+      JWT_SECRET: ${JWT_SECRET}
+    volumes:
+      - /mnt/MainPool/appsdata/investor-os.net/config:/app/config:ro
+      - /mnt/MainPool/appsdata/investor-os.net/logs:/app/logs
+      - /mnt/MainPool/appsdata/investor-os.net/models:/app/models:ro
+      - /mnt/MainPool/appsdata/investor-os.net/market-data:/app/market-data
     ports:
-      - "9400:9400"
+      - "8080:8080"
     networks:
-      - investor-network
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+      - ios-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Next.js frontend
+  frontend:
+    build:
+      context: ../../frontend/investor-dashboard
+      dockerfile: Dockerfile
+    container_name: ios-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://api:8080
+      NODE_ENV: production
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    networks:
+      - ios-net
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
 
 networks:
-  investor-network:
+  ios-net:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
