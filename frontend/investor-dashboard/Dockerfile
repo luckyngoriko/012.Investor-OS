@@ -22,6 +22,8 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/dist/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/dist/static ./dist/static
+# Next.js standalone bundles only CJS helpers; copy full @swc/helpers for ESM
+COPY --from=deps /app/node_modules/@swc/helpers ./node_modules/@swc/helpers
 
 USER nextjs
 EXPOSE 3000
