@@ -10,9 +10,9 @@ use super::MarketTick;
 /// Trade classification
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TradeClassification {
-    Retail,      // Small size
+    Retail,        // Small size
     Institutional, // Large size
-    Block,       // Very large
+    Block,         // Very large
     Unknown,
 }
 
@@ -22,7 +22,7 @@ impl TradeClassification {
         // Simplified thresholds using Decimal comparison
         let block_threshold = Decimal::from(100);
         let institutional_threshold = Decimal::from(10);
-        
+
         if quantity >= block_threshold {
             TradeClassification::Block
         } else if quantity >= institutional_threshold {
@@ -96,9 +96,14 @@ impl TradeAnalyzer {
     }
 
     /// Analyze a trade tick
-    pub fn analyze(&mut self, tick: MarketTick, best_bid: Decimal, best_ask: Decimal) -> AnalyzedTrade {
+    pub fn analyze(
+        &mut self,
+        tick: MarketTick,
+        best_bid: Decimal,
+        best_ask: Decimal,
+    ) -> AnalyzedTrade {
         let classification = TradeClassification::from_size(tick.quantity, &tick.symbol);
-        
+
         // Determine aggressor side
         let aggressor = if tick.price >= best_ask {
             AggressorSide::Buyer
@@ -121,7 +126,7 @@ impl TradeAnalyzer {
 
         // Add to window
         self.trades.push_back((Utc::now(), analyzed.clone()));
-        
+
         // Update VWAP accumulators
         self.vwap_num += notional;
         self.vwap_denom += tick.quantity;
@@ -205,9 +210,9 @@ impl TradeAnalyzer {
         // Calculate mean inter-trade time
         let mut total_interval: i64 = 0;
         let trades: Vec<_> = self.trades.iter().collect();
-        
+
         for i in 1..trades.len() {
-            let diff = trades[i].0 - trades[i-1].0;
+            let diff = trades[i].0 - trades[i - 1].0;
             total_interval += diff.num_milliseconds();
         }
 
@@ -220,9 +225,9 @@ impl TradeAnalyzer {
 
         // Check if last trade was faster than average
         if let Some(last_diff) = trades.last().and_then(|(t, _)| {
-            trades.get(trades.len().saturating_sub(2)).map(|(t2, _)| {
-                (*t - *t2).num_milliseconds()
-            })
+            trades
+                .get(trades.len().saturating_sub(2))
+                .map(|(t2, _)| (*t - *t2).num_milliseconds())
         }) {
             // If last interval is less than 50% of mean, consider it clustering
             last_diff < (mean_interval / 2)
@@ -258,8 +263,12 @@ impl TradeAnalyzer {
     }
 
     /// Get trades by classification
-    pub fn get_by_classification(&self, classification: TradeClassification) -> Vec<&AnalyzedTrade> {
-        self.trades.iter()
+    pub fn get_by_classification(
+        &self,
+        classification: TradeClassification,
+    ) -> Vec<&AnalyzedTrade> {
+        self.trades
+            .iter()
             .filter(|(_, t)| t.classification == classification)
             .map(|(_, t)| t)
             .collect()
@@ -284,7 +293,12 @@ impl TradeAnalyzer {
 
     /// Get recent trades
     pub fn get_recent(&self, count: usize) -> Vec<&AnalyzedTrade> {
-        self.trades.iter().rev().take(count).map(|(_, t)| t).collect()
+        self.trades
+            .iter()
+            .rev()
+            .take(count)
+            .map(|(_, t)| t)
+            .collect()
     }
 
     /// Clear all data
@@ -298,8 +312,8 @@ impl TradeAnalyzer {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::orderbook::Side as BookSide;
+    use super::*;
 
     fn create_test_tick(price: f64, qty: f64, side: BookSide) -> MarketTick {
         MarketTick {
@@ -307,7 +321,7 @@ mod tests {
             exchange: "binance".to_string(),
             price: Decimal::try_from(price).unwrap(),
             quantity: Decimal::try_from(qty).unwrap(),
-            side,
+            side: Some(side),
             timestamp: Utc::now(),
             tick_type: super::super::TickType::Trade,
         }
@@ -332,7 +346,7 @@ mod tests {
     #[test]
     fn test_analyze_trade() {
         let mut analyzer = TradeAnalyzer::new(60, Decimal::from(10));
-        
+
         // Buyer-aggressive trade: price >= best_ask (hitting the ask)
         let tick = create_test_tick(50001.0, 1.0, BookSide::Bid);
         let analyzed = analyzer.analyze(tick, Decimal::from(49999), Decimal::from(50001));
@@ -359,7 +373,7 @@ mod tests {
         }
 
         let flow = analyzer.get_flow();
-        
+
         assert_eq!(flow.trade_count, 8);
         assert!(flow.buy_pressure > Decimal::try_from(0.5).unwrap()); // More buys
     }
@@ -381,7 +395,7 @@ mod tests {
         }
 
         let (buys, sells, imbalance) = analyzer.get_aggressive_imbalance();
-        
+
         assert_eq!(buys, 3);
         assert_eq!(sells, 1);
         assert!(imbalance > Decimal::ZERO); // More aggressive buying
@@ -398,7 +412,7 @@ mod tests {
 
         // Wait for window to expire (simulated by manual cleanup)
         std::thread::sleep(std::time::Duration::from_millis(1100));
-        
+
         let tick2 = create_test_tick(50001.0, 1.0, BookSide::Bid);
         analyzer.analyze(tick2, Decimal::from(50000), Decimal::from(50002));
 

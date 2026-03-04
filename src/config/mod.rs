@@ -3,8 +3,9 @@
 //! Environment-based configuration with validation
 
 mod trading_mode;
+pub mod validation;
 
-pub use trading_mode::{TradingMode, TradingModeConfig, ModeNotifications};
+pub use trading_mode::{ModeNotifications, TradingMode, TradingModeConfig};
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -16,10 +17,10 @@ use thiserror::Error;
 pub enum ConfigError {
     #[error("Missing required environment variable: {0}")]
     MissingEnvVar(String),
-    
+
     #[error("Invalid configuration value: {0}")]
     InvalidValue(String),
-    
+
     #[error("Parse error: {0}")]
     ParseError(String),
 }
@@ -50,6 +51,8 @@ pub struct AppConfig {
     pub circuit_breaker: CircuitBreakerConfig,
     /// Logging configuration
     pub logging: LoggingConfig,
+    /// WebSocket streaming configuration
+    pub ws_streaming: WsStreamingConfig,
 }
 
 /// Environment type
@@ -68,13 +71,12 @@ impl Environment {
     pub fn is_production(&self) -> bool {
         matches!(self, Environment::Production)
     }
-    
+
     /// Check if development
     pub fn is_development(&self) -> bool {
         matches!(self, Environment::Development)
     }
 }
-
 
 /// Server configuration
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -263,6 +265,42 @@ impl Default for LoggingConfig {
     }
 }
 
+/// WebSocket streaming configuration
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct WsStreamingConfig {
+    /// Enable WebSocket streaming
+    pub enabled: bool,
+    /// Default exchange to connect to
+    pub default_exchange: String,
+    /// Default symbols to subscribe
+    pub default_symbols: Vec<String>,
+    /// Base reconnect interval (ms)
+    pub reconnect_interval_ms: u64,
+    /// Maximum reconnect attempts before giving up
+    pub max_reconnect_attempts: u32,
+    /// Heartbeat / ping interval (seconds)
+    pub heartbeat_interval_sec: u64,
+    /// Connection timeout (ms)
+    pub connection_timeout_ms: u64,
+    /// Maximum acceptable tick latency (ms)
+    pub max_latency_ms: u64,
+}
+
+impl Default for WsStreamingConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            default_exchange: "binance".to_string(),
+            default_symbols: vec!["BTCUSDT".to_string()],
+            reconnect_interval_ms: 5000,
+            max_reconnect_attempts: 10,
+            heartbeat_interval_sec: 30,
+            connection_timeout_ms: 5000,
+            max_latency_ms: 100,
+        }
+    }
+}
+
 impl AppConfig {
     /// Load configuration from environment variables
     pub fn from_env() -> Result<Self> {
@@ -313,7 +351,8 @@ impl AppConfig {
         };
 
         let redis = RedisConfig {
-            url: std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string()),
+            url: std::env::var("REDIS_URL")
+                .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
             connect_timeout_secs: std::env::var("REDIS_CONNECT_TIMEOUT_SECS")
                 .ok()
                 .and_then(|s| s.parse().ok())
@@ -350,7 +389,9 @@ impl AppConfig {
                 .and_then(|s| match s.to_lowercase().as_str() {
                     "manual" => Some(TradingMode::Manual),
                     "semi_auto" | "semi-auto" | "semiauto" => Some(TradingMode::SemiAuto),
-                    "fully_auto" | "fully-auto" | "fullyauto" | "auto" => Some(TradingMode::FullyAuto),
+                    "fully_auto" | "fully-auto" | "fullyauto" | "auto" => {
+                        Some(TradingMode::FullyAuto)
+                    }
                     _ => None,
                 })
                 .unwrap_or_default(),
@@ -411,6 +452,37 @@ impl AppConfig {
                 .unwrap_or(false),
         };
 
+        let ws_streaming = WsStreamingConfig {
+            enabled: std::env::var("WS_ENABLED")
+                .map(|s| s == "true" || s == "1")
+                .unwrap_or(false),
+            default_exchange: std::env::var("WS_DEFAULT_EXCHANGE")
+                .unwrap_or_else(|_| "binance".to_string()),
+            default_symbols: std::env::var("WS_DEFAULT_SYMBOLS")
+                .map(|s| s.split(',').map(|v| v.trim().to_string()).collect())
+                .unwrap_or_else(|_| vec!["BTCUSDT".to_string()]),
+            reconnect_interval_ms: std::env::var("WS_RECONNECT_INTERVAL_MS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(5000),
+            max_reconnect_attempts: std::env::var("WS_MAX_RECONNECT_ATTEMPTS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(10),
+            heartbeat_interval_sec: std::env::var("WS_HEARTBEAT_INTERVAL_SEC")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(30),
+            connection_timeout_ms: std::env::var("WS_CONNECTION_TIMEOUT_MS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(5000),
+            max_latency_ms: std::env::var("WS_MAX_LATENCY_MS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(100),
+        };
+
         Ok(Self {
             environment,
             server,
@@ -422,6 +494,7 @@ impl AppConfig {
             brokers: HashMap::new(),
             circuit_breaker,
             logging,
+            ws_streaming,
         })
     }
 
@@ -430,28 +503,28 @@ impl AppConfig {
         // Validate database URL format
         if !self.database.url.starts_with("postgres://") {
             return Err(ConfigError::InvalidValue(
-                "DATABASE_URL must start with postgres://".to_string()
+                "DATABASE_URL must start with postgres://".to_string(),
             ));
         }
 
         // Validate Redis URL format
         if !self.redis.url.starts_with("redis://") {
             return Err(ConfigError::InvalidValue(
-                "REDIS_URL must start with redis://".to_string()
+                "REDIS_URL must start with redis://".to_string(),
             ));
         }
 
         // Validate port range (u16 max is 65535)
         if self.server.port == 0 {
             return Err(ConfigError::InvalidValue(
-                "SERVER_PORT must be between 1 and 65535".to_string()
+                "SERVER_PORT must be between 1 and 65535".to_string(),
             ));
         }
 
         // Validate CQ threshold
         if self.trading.min_cq_threshold < 0.0 || self.trading.min_cq_threshold > 1.0 {
             return Err(ConfigError::InvalidValue(
-                "MIN_CQ_THRESHOLD must be between 0 and 1".to_string()
+                "MIN_CQ_THRESHOLD must be between 0 and 1".to_string(),
             ));
         }
 
@@ -479,6 +552,7 @@ impl Default for AppConfig {
             brokers: HashMap::new(),
             circuit_breaker: CircuitBreakerConfig::default(),
             logging: LoggingConfig::default(),
+            ws_streaming: WsStreamingConfig::default(),
         }
     }
 }
@@ -497,14 +571,14 @@ mod tests {
     #[test]
     fn test_config_validation() {
         let mut config = AppConfig::default();
-        
+
         // Valid config
         assert!(config.validate().is_ok());
-        
+
         // Invalid database URL
         config.database.url = "invalid".to_string();
         assert!(config.validate().is_err());
-        
+
         // Reset and test invalid CQ threshold
         config.database.url = "postgres://localhost".to_string();
         config.trading.min_cq_threshold = 1.5;
