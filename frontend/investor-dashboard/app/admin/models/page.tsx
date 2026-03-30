@@ -11,7 +11,6 @@ import {
   Settings,
   Zap,
 } from "lucide-react";
-import Sidebar from "@/components/sidebar";
 
 interface ModelEntry {
   id: string;
@@ -70,9 +69,8 @@ export default function ModelRegistryPage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-gray-950 text-white">
-      <Sidebar />
-      <main className="flex-1 p-6 ml-64">
+    <div className="min-h-screen text-white">
+      <div className="p-6">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-3">
@@ -166,7 +164,7 @@ export default function ModelRegistryPage() {
             ))}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

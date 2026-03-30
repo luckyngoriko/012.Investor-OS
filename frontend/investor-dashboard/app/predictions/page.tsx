@@ -21,8 +21,6 @@ import {
   ArrowDownRight,
   Minus,
 } from "lucide-react";
-import Sidebar from "@/components/sidebar";
-
 // ── Types ──────────────────────────────────────────────────────────
 
 interface Prediction {
@@ -219,9 +217,8 @@ export default function PredictionsPage() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#0a0e1a] text-slate-100">
-      <Sidebar />
-      <main className="flex-1 p-8 ml-64">
+    <div className="min-h-screen text-slate-100">
+      <div className="p-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -429,7 +426,7 @@ export default function PredictionsPage() {
             </div>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
