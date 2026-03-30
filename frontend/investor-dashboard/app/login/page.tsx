@@ -53,7 +53,7 @@ export default function LoginPage() {
   return (
     <>
       {/* Hide AppShell sidebar on login page */}
-      <style>{`[role="complementary"] { display: none !important; } [data-scroll-behavior] > body > div > div { margin-left: 0 !important; }`}</style>
+      <style>{`aside { display: none !important; } .flex.min-h-screen > .flex-1 { margin-left: 0 !important; }`}</style>
       <div className="min-h-screen bg-[#0a0f1c] flex">
         {/* Left Side - Form */}
         <div className="flex-1 flex items-center justify-center p-8 lg:p-12">
