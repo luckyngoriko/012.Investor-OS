@@ -218,9 +218,9 @@ export default function PredictionsPage() {
 
   return (
     <div className="min-h-screen text-slate-100">
-      <div className="p-8">
+      <div className="p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
               <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20">
@@ -254,14 +254,14 @@ export default function PredictionsPage() {
         )}
 
         {/* Stats Row */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-4 gap-4">
           {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08, duration: 0.4 }}
-              className="bg-slate-900/60 backdrop-blur-sm rounded-xl p-5 border border-slate-800/60 hover:border-slate-700/60 transition-colors duration-200"
+              className="bg-slate-900/80 rounded-xl p-5 border border-slate-700/50 hover:border-slate-600/60 transition-colors duration-200"
             >
               <div className="flex items-center gap-3 mb-3">
                 <div className={`p-2 rounded-lg ${stat.bg}`}>
@@ -278,13 +278,13 @@ export default function PredictionsPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-3 gap-6">
           {/* Consensus Gauge */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
-            className="bg-slate-900/60 backdrop-blur-sm rounded-xl border border-slate-800/60 p-6 flex flex-col items-center justify-center"
+            className="bg-slate-900/80 rounded-xl border border-slate-700/50 p-6 flex flex-col items-center justify-center"
           >
             <h3 className="text-sm text-slate-500 uppercase tracking-wider mb-4">
               Consensus Confidence
@@ -299,7 +299,7 @@ export default function PredictionsPage() {
           </motion.div>
 
           {/* Model Registry Grid */}
-          <div className="col-span-2 bg-slate-900/60 backdrop-blur-sm rounded-xl border border-slate-800/60 p-6">
+          <div className="col-span-2 bg-slate-900/80 rounded-xl border border-slate-700/50 p-6">
             <h3 className="text-sm text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
               <Layers className="w-4 h-4" />
               Model Registry
@@ -350,7 +350,7 @@ export default function PredictionsPage() {
         </div>
 
         {/* Recent Predictions */}
-        <div className="bg-slate-900/60 backdrop-blur-sm rounded-xl border border-slate-800/60 p-6">
+        <div className="bg-slate-900/80 rounded-xl border border-slate-700/50 p-6">
           <h3 className="text-sm text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
             <Activity className="w-4 h-4" />
             Recent Predictions
