@@ -235,7 +235,7 @@ export default function PredictionsPage() {
           </div>
           <button
             onClick={fetchData}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 rounded-xl hover:bg-slate-700/60 transition-colors duration-200 cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl hover:bg-gray-700 transition-colors duration-200 cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
             <span className="text-sm">Refresh</span>
@@ -246,7 +246,7 @@ export default function PredictionsPage() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-red-500/10 backdrop-blur-sm border border-red-500/20 rounded-xl p-4 mb-6 flex items-center gap-3"
+            className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6 flex items-center gap-3"
           >
             <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
             <span className="text-red-300 text-sm">{error}</span>
@@ -261,7 +261,7 @@ export default function PredictionsPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08, duration: 0.4 }}
-              className="bg-slate-900/80 rounded-xl p-5 border border-slate-700/50 hover:border-slate-600/60 transition-colors duration-200"
+              className="bg-gray-800 rounded-xl p-5 border border-gray-700 hover:border-gray-600 transition-colors duration-200"
             >
               <div className="flex items-center gap-3 mb-3">
                 <div className={`p-2 rounded-lg ${stat.bg}`}>
@@ -284,7 +284,7 @@ export default function PredictionsPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
-            className="bg-slate-900/80 rounded-xl border border-slate-700/50 p-6 flex flex-col items-center justify-center"
+            className="bg-gray-800 rounded-xl border border-gray-700 p-6 flex flex-col items-center justify-center"
           >
             <h3 className="text-sm text-slate-500 uppercase tracking-wider mb-4">
               Consensus Confidence
@@ -299,7 +299,7 @@ export default function PredictionsPage() {
           </motion.div>
 
           {/* Model Registry Grid */}
-          <div className="col-span-2 bg-slate-900/80 rounded-xl border border-slate-700/50 p-6">
+          <div className="col-span-2 bg-gray-800 rounded-xl border border-gray-700 p-6">
             <h3 className="text-sm text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
               <Layers className="w-4 h-4" />
               Model Registry
@@ -314,7 +314,7 @@ export default function PredictionsPage() {
                 {models.map((m) => (
                   <div
                     key={`${m.model_name}-${m.model_version}`}
-                    className="bg-slate-800/40 rounded-lg p-3 border border-slate-700/30 hover:border-slate-600/50 transition-colors duration-200 cursor-pointer"
+                    className="bg-gray-900 rounded-lg p-3 border border-gray-700 hover:border-gray-600 transition-colors duration-200 cursor-pointer"
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
@@ -350,7 +350,7 @@ export default function PredictionsPage() {
         </div>
 
         {/* Recent Predictions */}
-        <div className="bg-slate-900/80 rounded-xl border border-slate-700/50 p-6">
+        <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
           <h3 className="text-sm text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
             <Activity className="w-4 h-4" />
             Recent Predictions
@@ -375,7 +375,7 @@ export default function PredictionsPage() {
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.03, duration: 0.3 }}
-                      className="flex items-center justify-between bg-slate-800/30 rounded-lg px-4 py-3 border border-slate-700/20 hover:border-slate-600/40 transition-colors duration-200"
+                      className="flex items-center justify-between bg-gray-900/80 rounded-lg px-4 py-3 border border-gray-700/60 hover:border-gray-600 transition-colors duration-200"
                     >
                       <div className="flex items-center gap-3">
                         {directionIcon(direction)}
