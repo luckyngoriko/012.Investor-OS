@@ -32,7 +32,7 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    
+
     try {
       await login(email, password);
       router.push("/");
@@ -67,21 +67,27 @@ export default function LoginPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">Investor OS</h1>
-              <p className="text-sm text-gray-500">Professional Trading Platform</p>
+              <p className="text-sm text-gray-500">
+                Professional Trading Platform
+              </p>
             </div>
           </div>
 
           {/* Welcome Text */}
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-white mb-2">Welcome back</h2>
-            <p className="text-gray-400">Sign in to access your AI-powered trading dashboard</p>
+            <p className="text-gray-400">
+              Sign in to access your AI-powered trading dashboard
+            </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Input */}
             <div className="space-y-2.5">
-              <label className="text-sm font-medium text-gray-300 block">Email</label>
+              <label className="text-sm font-medium text-gray-300 block">
+                Email
+              </label>
               <motion.div
                 animate={{
                   scale: focusedInput === "email" ? 1.01 : 1,
@@ -92,10 +98,12 @@ export default function LoginPage() {
                 }}
                 className="relative"
               >
-                <div className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center pointer-events-none z-10">
+                <div className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2">
                   <Mail
                     className={`w-5 h-5 transition-colors ${
-                      focusedInput === "email" ? "text-blue-400" : "text-gray-500"
+                      focusedInput === "email"
+                        ? "text-blue-400"
+                        : "text-gray-500"
                     }`}
                   />
                 </div>
@@ -106,16 +114,20 @@ export default function LoginPage() {
                   onFocus={() => setFocusedInput("email")}
                   onBlur={() => setFocusedInput(null)}
                   placeholder="admin@investor-os.com"
-                  className="w-full pl-12 pr-4 py-4 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-base"
+                  className="w-full rounded-xl border border-gray-700 bg-gray-800/50 py-4 pl-14 pr-4 text-base text-white placeholder-gray-500 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   required
                 />
               </motion.div>
-              <p className="text-xs text-gray-500">Въведете вашия email адрес за достъп</p>
+              <p className="text-xs text-gray-500">
+                Въведете вашия email адрес за достъп
+              </p>
             </div>
 
             {/* Password Input */}
             <div className="space-y-2.5">
-              <label className="text-sm font-medium text-gray-300 block">Password</label>
+              <label className="text-sm font-medium text-gray-300 block">
+                Password
+              </label>
               <motion.div
                 animate={{
                   scale: focusedInput === "password" ? 1.01 : 1,
@@ -126,10 +138,12 @@ export default function LoginPage() {
                 }}
                 className="relative"
               >
-                <div className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center pointer-events-none z-10">
+                <div className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2">
                   <Lock
                     className={`w-5 h-5 transition-colors ${
-                      focusedInput === "password" ? "text-blue-400" : "text-gray-500"
+                      focusedInput === "password"
+                        ? "text-blue-400"
+                        : "text-gray-500"
                     }`}
                   />
                 </div>
@@ -140,27 +154,41 @@ export default function LoginPage() {
                   onFocus={() => setFocusedInput("password")}
                   onBlur={() => setFocusedInput(null)}
                   placeholder="Въведете паролата"
-                  className="w-full pl-12 pr-12 py-4 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-base"
+                  className="w-full rounded-xl border border-gray-700 bg-gray-800/50 py-4 pl-14 pr-14 text-base text-white placeholder-gray-500 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-0 top-0 bottom-0 w-12 flex items-center justify-center text-gray-500 hover:text-gray-300 transition-colors z-10"
+                  className="absolute right-4 top-1/2 z-10 -translate-y-1/2 text-gray-500 transition-colors hover:text-gray-300"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </motion.div>
-              <p className="text-xs text-gray-500">Използвайте паролата, конфигурирана за вашия акаунт.</p>
+              <p className="text-xs text-gray-500">
+                Използвайте паролата, конфигурирана за вашия акаунт.
+              </p>
             </div>
 
             {/* Remember & Forgot */}
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer group">
-                <input type="checkbox" className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500/20" />
-                <span className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Remember me</span>
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500/20"
+                />
+                <span className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">
+                  Remember me
+                </span>
               </label>
-              <a href="#" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+              <a
+                href="#"
+                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              >
                 Forgot password?
               </a>
             </div>
@@ -228,7 +256,8 @@ export default function LoginPage() {
               <span className="text-gradient">Trading Intelligence</span>
             </h2>
             <p className="text-lg text-gray-400 mb-12 max-w-md">
-              Harness the power of machine learning and real-time market analysis to make smarter investment decisions.
+              Harness the power of machine learning and real-time market
+              analysis to make smarter investment decisions.
             </p>
 
             {/* Feature Grid */}
