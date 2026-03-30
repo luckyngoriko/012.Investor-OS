@@ -119,7 +119,8 @@ export default function LoginPage() {
                     onFocus={() => setFocusedInput("email")}
                     onBlur={() => setFocusedInput(null)}
                     placeholder="admin@investor-os.com"
-                    className="w-full rounded-xl border border-gray-700 bg-gray-800/50 py-4 pl-14 pr-4 text-base text-white placeholder-gray-500 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full rounded-xl border border-gray-700 bg-gray-800/50 py-4 pr-4 text-base text-white placeholder-gray-500 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    style={{ paddingLeft: "3.5rem" }}
                     required
                   />
                 </motion.div>
@@ -159,7 +160,8 @@ export default function LoginPage() {
                     onFocus={() => setFocusedInput("password")}
                     onBlur={() => setFocusedInput(null)}
                     placeholder="Въведете паролата"
-                    className="w-full rounded-xl border border-gray-700 bg-gray-800/50 py-4 pl-14 pr-14 text-base text-white placeholder-gray-500 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full rounded-xl border border-gray-700 bg-gray-800/50 py-4 text-base text-white placeholder-gray-500 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    style={{ paddingLeft: "3.5rem", paddingRight: "3.5rem" }}
                     required
                   />
                   <button
