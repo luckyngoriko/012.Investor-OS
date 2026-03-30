@@ -1,0 +1,34 @@
+# Investor OS ML Sidecar — Python dependencies
+# Phase 1: Skeleton + health check
+fastapi==0.115.*
+uvicorn[standard]==0.34.*
+pydantic==2.*
+pydantic-settings==2.*
+numpy>=1.26,<3
+pandas>=2.2,<3
+
+# Database (read features, write predictions)
+asyncpg==0.30.*
+sqlalchemy[asyncio]==2.*
+
+# Redis (caching, feature store)
+redis[hiredis]==5.*
+
+# ML Models (Sprint 119+)
+catboost>=1.2
+scikit-learn>=1.4
+
+# Volatility / Risk (Sprint 120)
+arch>=7.0
+scipy>=1.12
+
+# Sentiment Analysis (Sprint 121)
+transformers>=4.40
+torch>=2.2
+optimum[onnxruntime]; python_version >= "3.10"
+
+# Portfolio Optimization (Sprint 122)
+skfolio>=0.4
+
+# Observability
+prometheus-fastapi-instrumentator==7.*

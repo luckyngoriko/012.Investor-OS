@@ -26,6 +26,8 @@ import {
   Activity,
   Server,
   BarChart3,
+  Cpu,
+  Layers,
 } from "lucide-react";
 import { useAuth, RequireRole } from "@/lib/auth-context";
 
@@ -111,6 +113,13 @@ const getNavItems = (isAdmin: boolean) => [
     requiredRole: ["admin", "trader"] as const,
   },
   {
+    href: "/predictions",
+    label: "ML Predictions",
+    icon: Cpu,
+    description: "AI model forecasts & consensus",
+    requiredRole: ["admin", "trader", "viewer"] as const,
+  },
+  {
     href: "/ai-train",
     label: "AI Train",
     icon: Brain,
@@ -147,6 +156,14 @@ const getNavItems = (isAdmin: boolean) => [
           label: "Administration",
           icon: Settings,
           description: "System config",
+          requiredRole: ["admin"] as const,
+          isAdmin: true,
+        },
+        {
+          href: "/admin/models",
+          label: "Model Registry",
+          icon: Layers,
+          description: "Manage ML models",
           requiredRole: ["admin"] as const,
           isAdmin: true,
         },

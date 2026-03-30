@@ -67,6 +67,8 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       AUTH_ADMIN_EMAIL: ${AUTH_ADMIN_EMAIL:-admin@investor-os.com}
       AUTH_ADMIN_PASSWORD: ${AUTH_ADMIN_PASSWORD}
+      ML_SIDECAR_URL: ${ML_SIDECAR_URL:-http://ml-sidecar:9000}
+      ML_GPU_URL: ${ML_GPU_URL:-}
     volumes:
       - /mnt/MainPool/appsdata/investor-os.net/config:/app/config:ro
       - /mnt/MainPool/appsdata/investor-os.net/logs:/app/logs
@@ -89,6 +91,35 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # ML Sidecar (CPU) — Python FastAPI for model inference
+  ml-sidecar:
+    build:
+      context: ../../services/ml-sidecar
+      dockerfile: Dockerfile
+    container_name: ios-ml-sidecar
+    environment:
+      ML_DATABASE_URL: postgresql+asyncpg://${DB_USER:-investor}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-investor_os}
+      ML_REDIS_URL: redis://redis:6379
+      ML_MODEL_DIR: /app/models
+      ML_LOG_LEVEL: ${ML_LOG_LEVEL:-info}
+    volumes:
+      - /mnt/MainPool/appsdata/investor-os.net/models:/app/models:ro
+      - /mnt/MainPool/appsdata/investor-os.net/logs:/app/logs
+    networks:
+      - ios-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
+
   # Next.js frontend
   frontend:
     build:
@@ -96,7 +127,8 @@ services:
       dockerfile: Dockerfile
     container_name: ios-frontend
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:8080}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+      BACKEND_BASE_URL: ${BACKEND_BASE_URL:-http://api:8080}
       NODE_ENV: production
       PORT: "3000"
     ports:

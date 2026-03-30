@@ -23,6 +23,10 @@ pub struct TickerSignals {
     pub regime_fit: QualityScore,
     pub composite_quality: QualityScore,
 
+    // ML prediction score (Sprint 125)
+    // Derived from prediction consensus engine — 0-100
+    pub ml_prediction_score: QualityScore,
+
     // Insider features
     pub insider_flow_ratio: f64,
     pub insider_cluster_signal: bool,
@@ -52,6 +56,7 @@ impl Default for TickerSignals {
             sentiment_score: QualityScore(50),
             regime_fit: QualityScore(50),
             composite_quality: QualityScore(50),
+            ml_prediction_score: QualityScore(50),
             insider_flow_ratio: 0.0,
             insider_cluster_signal: false,
             news_sentiment: 0.0,

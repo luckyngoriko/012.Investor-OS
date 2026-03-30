@@ -1,0 +1,25 @@
+# Investor OS — ML Research Service (Tier 3)
+# Isolated experimental models — no impact on production
+#
+# Build:  docker build -t ios-ml-research .
+# Run:    docker run -p 9002:9002 ios-ml-research
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:9002/health || exit 1
+
+EXPOSE 9002
+
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9002", "--workers", "1"]

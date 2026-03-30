@@ -60,6 +60,9 @@ rand = "0.8"
 hmac = "0.12"
 sha2 = "0.10"
 
+# Time Series Forecasting (Sprint 123)
+augurs = { version = "0.10", default-features = false, features = ["ets", "mstl"] }
+
 # ML Framework - HRM (Sprint 36)
 # Core burn (minimal features)
 burn = { version = "0.16", default-features = false, features = ["std"] }

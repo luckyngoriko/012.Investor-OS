@@ -3,7 +3,7 @@
 //! Демо версия за разглеждане на функционалностите
 
 use axum::{
-    extract::{Extension, Path, Request, State},
+    extract::{Extension, Path, Query, Request, State},
     http::{header::CONTENT_TYPE, HeaderMap, HeaderName, Method, StatusCode},
     middleware::{from_fn, from_fn_with_state, Next},
     response::Response,
@@ -27,6 +27,7 @@ use investor_os::broker::paper::PaperBroker;
 use investor_os::broker::{
     Broker, BrokerConfig, BrokerType, Order, OrderSide, OrderType, TimeInForce,
 };
+use investor_os::prediction;
 use investor_os::projects::ProjectService;
 
 /// Състояние на приложението
@@ -42,6 +43,7 @@ struct AppState {
     login_rate_limiter: Option<Arc<Mutex<investor_os::middleware::RateLimiter>>>,
     db_pool: sqlx::PgPool,
     projects: Arc<ProjectService>,
+    ml_sidecar: Option<Arc<prediction::MlSidecarClient>>,
 }
 
 #[derive(Clone)]
@@ -205,6 +207,7 @@ async fn main() {
         login_rate_limiter,
         db_pool: pool,
         projects: Arc::new(project_service),
+        ml_sidecar: prediction::client::from_env().map(Arc::new),
     };
 
     // Създаване на router
@@ -233,6 +236,32 @@ async fn main() {
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+// ── ML Prediction Handlers (Sprint 116) ─────────────────────────────
+async fn ml_predict_handler(
+    State(state): State<AppState>,
+    Json(body): Json<prediction::PredictBody>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    prediction::predict_handler(&state.db_pool, &state.ml_sidecar, body).await
+}
+
+async fn ml_get_prediction_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    prediction::get_prediction_handler(&state.db_pool, id).await
+}
+
+async fn ml_history_handler(
+    State(state): State<AppState>,
+    Query(query): Query<prediction::HistoryQuery>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    prediction::get_history_handler(&state.db_pool, query).await
+}
+
+async fn ml_models_handler(State(state): State<AppState>) -> (StatusCode, Json<serde_json::Value>) {
+    prediction::list_models_handler(&state.db_pool).await
 }
 
 fn create_router(state: AppState) -> Router {
@@ -339,6 +368,11 @@ fn create_router(state: AppState) -> Router {
             put(projects_update_task_handler),
         )
         .route("/api/projects/roadmap", get(projects_roadmap_handler))
+        // ML Prediction endpoints (Sprint 116)
+        .route("/api/predictions/predict", post(ml_predict_handler))
+        .route("/api/predictions/history", get(ml_history_handler))
+        .route("/api/predictions/:id", get(ml_get_prediction_handler))
+        .route("/api/models/registry", get(ml_models_handler))
         .route_layer(auth_layer);
 
     Router::new()

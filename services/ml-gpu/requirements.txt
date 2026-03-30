@@ -1,0 +1,36 @@
+# Investor OS ML GPU Service — Python dependencies
+# Tier 2: GPU-accelerated models
+
+# Web framework
+fastapi==0.115.*
+uvicorn[standard]==0.34.*
+pydantic==2.*
+pydantic-settings==2.*
+
+# PyTorch (CUDA 12.x)
+torch>=2.2
+torchvision>=0.17
+
+# HuggingFace Transformers + Accelerate
+transformers>=4.40
+accelerate>=0.28
+safetensors>=0.4
+
+# Kronos (Sprint 128)
+# Loaded via transformers from HuggingFace Hub
+
+# Chronos-2 (Sprint 129)
+chronos-forecasting>=2.0; python_version >= "3.10"
+
+# TFT (Sprint 130)
+pytorch-forecasting>=1.0; python_version >= "3.10"
+pytorch-lightning>=2.2
+
+# FinGPT (Sprint 131)
+peft>=0.10
+bitsandbytes>=0.43
+
+# Utilities
+numpy>=1.26,<3
+pandas>=2.2,<3
+scipy>=1.12

@@ -262,3 +262,9 @@ pub mod strategy_selector;
 /// PostgreSQL-backed program/sprint/task tracking with dependency management,
 /// dashboard aggregates, and roadmap visualization.
 pub mod projects;
+
+/// ML Prediction Pipeline (Sprint 114).
+///
+/// Client for the Python ML sidecar service (CatBoost, GARCH, FinBERT, etc.)
+/// with graceful fallback to HRM deterministic policy.
+pub mod prediction;

@@ -1,0 +1,46 @@
+# Investor OS — GPU Service Override (RTX 3090)
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+#
+# Requires: NVIDIA Container Toolkit installed on TrueNAS host
+# Install: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/
+
+services:
+  ml-gpu:
+    build:
+      context: ../../services/ml-gpu
+      dockerfile: Dockerfile
+    container_name: ios-ml-gpu
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      CUDA_VISIBLE_DEVICES: "0"
+      ML_DATABASE_URL: postgresql+asyncpg://${DB_USER:-investor}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-investor_os}
+      ML_REDIS_URL: redis://redis:6379
+      ML_MODEL_DIR: /app/models
+      ML_LOG_LEVEL: ${ML_LOG_LEVEL:-info}
+    volumes:
+      - /mnt/MainPool/appsdata/investor-os.net/models:/app/models
+      - /mnt/MainPool/appsdata/investor-os.net/logs:/app/logs
+    ports:
+      - "${ML_GPU_HOST_PORT:-19001}:9001"
+    networks:
+      - ios-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    restart: unless-stopped
