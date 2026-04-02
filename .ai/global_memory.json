@@ -13,6 +13,12 @@
       "solution": "Manual impl std::fmt::Debug for Vault with redacted cipher field",
       "file": "src/broker/vault.rs",
       "discovered_at": "2026-04-02"
+    },
+    {
+      "problem": "null::<Type> syntax causes 'no rules expected ::' error inside serde_json::json! macro",
+      "solution": "Use serde_json::Value::Null instead of null::<Type> inside json! macro",
+      "file": "src/main.rs",
+      "discovered_at": "2026-04-02"
     }
   ],
   "architecture_rules": [
@@ -32,6 +38,10 @@
     "BrokerGateway stores encrypted keys with per-field nonces in broker_connections table",
     "gateway.rs uses ON CONFLICT DO UPDATE to allow key rotation without deleting connections",
     "subscriptions table uses user_id UNIQUE constraint for upsert pattern (ON CONFLICT (user_id))",
-    "Tier enum uses serde(rename_all = lowercase) so JSON serialization matches DB tier strings"
+    "Tier enum uses serde(rename_all = lowercase) so JSON serialization matches DB tier strings",
+    "Stripe API uses form-encoded POST bodies (not JSON) for payment_intents and payouts",
+    "StripeConnectClient::from_env() returns Option for graceful degradation when STRIPE_SECRET_KEY unset",
+    "fiat_transactions table uses CHECK constraints for tx_type and status enums",
+    "ssh stdin pipe to docker exec requires 'docker exec -i' flag (not just 'docker exec')"
   ]
 }

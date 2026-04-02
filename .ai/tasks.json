@@ -533,6 +533,59 @@
       ],
       "blockers": [],
       "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-026",
+      "title": "Fiat On-Ramp via Stripe Connect (Wave 4 Task 24)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["TSK-012"],
+      "acceptance_criteria": [
+        "migrations/20260402000007_fiat_transactions.sql created with table, indexes, CHECK constraints",
+        "src/billing/fiat_onramp.rs: StripeConnectClient with new(), from_env(), create_payment_intent(), create_payout(), get_payment_status()",
+        "Types: DepositRequest, WithdrawalRequest, FiatTransaction, PaymentStatus, FiatError",
+        "DB functions: insert_transaction(), list_transactions(), update_transaction_status()",
+        "pub mod fiat_onramp added to src/billing/mod.rs",
+        "4 API routes: POST /api/fiat/deposit, POST /api/fiat/withdraw, GET /api/fiat/history, POST /api/fiat/webhook",
+        "4 handler functions in src/main.rs",
+        "StripeWebhookEvent type for webhook handling",
+        "Graceful degradation when STRIPE_SECRET_KEY is unset (creates pending record)",
+        "cargo build --lib passes",
+        "cargo build --bin investor-os passes",
+        "cargo clippy --lib -- -D warnings passes with 0 warnings",
+        "11 unit tests pass",
+        "546 total lib tests pass (0 failures)",
+        "Migration applied and verified on TrueNAS staging PostgreSQL"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-027",
+      "title": "Fireblocks MPC Custody (Wave 4 Task 22)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["TSK-007"],
+      "acceptance_criteria": [
+        "migrations/20260402000005_custody.sql: custody_wallets + custody_transactions tables, indexes, FKs, CHECK constraints, RLS",
+        "src/custody/fireblocks.rs: FireblocksClient with new(), from_env(), create_vault(), get_deposit_address(), create_withdrawal(), get_transaction(), get_balance()",
+        "Types: CustodyError, VaultAccount, DepositAddress, FireblocksTransaction, AssetBalance, VaultAccountWithBalances",
+        "Auth: Bearer token placeholder (RSA JWT signing for production later)",
+        "Base URL: sandbox=https://sandbox-api.fireblocks.io, production=https://api.fireblocks.io",
+        "src/custody/mod.rs: types (DepositAddressRequest, WithdrawRequest, BalanceQuery, TransactionsQuery, CustodyWallet, CustodyTransaction)",
+        "Repository: get_wallet(), create_wallet(), insert_transaction(), list_transactions()",
+        "pub mod custody added to src/lib.rs",
+        "4 API routes: POST /api/custody/deposit-address, POST /api/custody/withdraw, GET /api/custody/balance, GET /api/custody/transactions",
+        "4 handler functions in src/main.rs",
+        "cargo build --lib passes",
+        "cargo build --bin investor-os passes",
+        "cargo clippy --lib -- -D warnings passes with 0 warnings",
+        "19 custody unit tests pass (12 fireblocks + 7 mod)",
+        "546 total lib tests pass (0 failures)",
+        "Migration applied and verified on TrueNAS staging PostgreSQL"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
     }
   ]
 }

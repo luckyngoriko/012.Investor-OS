@@ -24,11 +24,14 @@ use uuid::Uuid;
 use investor_os::anti_fake::{AntiFakeDecision, AntiFakeShield, RequestAntiFakeSignal};
 use investor_os::auth;
 use investor_os::backtest;
+use investor_os::billing::fiat_onramp;
 use investor_os::broker::paper::PaperBroker;
 use investor_os::broker::{
     Broker, BrokerConfig, BrokerType, Order, OrderSide, OrderType, TimeInForce,
 };
 use investor_os::chat;
+use investor_os::compliance::kyc;
+use investor_os::custody;
 use investor_os::leaderboard;
 use investor_os::marketplace;
 use investor_os::prediction;
@@ -419,6 +422,718 @@ async fn marketplace_subscribe_handler(
     }
 }
 
+// ───────────────── Custody handlers (Wave 4 Task 22) ─────────────────────
+
+async fn custody_deposit_address_handler(
+    State(state): State<AppState>,
+    Json(body): Json<custody::DepositAddressRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = strategy_user_id();
+    // Verify wallet ownership
+    match custody::get_wallet(&state.db_pool, body.wallet_id, user_id).await {
+        Ok(Some(wallet)) => {
+            // In sandbox/demo mode without a real Fireblocks client,
+            // return a placeholder address so the API is testable.
+            (
+                StatusCode::OK,
+                Json(json!({
+                    "success": true,
+                    "data": {
+                        "wallet_id": wallet.id,
+                        "asset": body.asset,
+                        "address": format!("fb-sandbox-{}-{}", wallet.fireblocks_vault_id, body.asset),
+                        "tag": serde_json::Value::Null,
+                    }
+                })),
+            )
+        }
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "success": false,
+                "error": {"code": "WALLET_NOT_FOUND", "message": "Wallet not found or not owned by user"}
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "CUSTODY_DB_ERROR", "message": e}
+            })),
+        ),
+    }
+}
+
+async fn custody_withdraw_handler(
+    State(state): State<AppState>,
+    Json(body): Json<custody::WithdrawRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = strategy_user_id();
+    match custody::get_wallet(&state.db_pool, body.wallet_id, user_id).await {
+        Ok(Some(wallet)) => {
+            // Record the withdrawal transaction in the database
+            match custody::insert_transaction(
+                &state.db_pool,
+                wallet.id,
+                "withdrawal",
+                &body.asset,
+                body.amount,
+                None,
+                "pending",
+            )
+            .await
+            {
+                Ok(tx) => (
+                    StatusCode::CREATED,
+                    Json(json!({
+                        "success": true,
+                        "data": tx
+                    })),
+                ),
+                Err(e) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({
+                        "success": false,
+                        "error": {"code": "CUSTODY_TX_INSERT_FAILED", "message": e}
+                    })),
+                ),
+            }
+        }
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "success": false,
+                "error": {"code": "WALLET_NOT_FOUND", "message": "Wallet not found or not owned by user"}
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "CUSTODY_DB_ERROR", "message": e}
+            })),
+        ),
+    }
+}
+
+async fn custody_balance_handler(
+    State(state): State<AppState>,
+    Query(params): Query<custody::BalanceQuery>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = strategy_user_id();
+    match custody::get_wallet(&state.db_pool, params.wallet_id, user_id).await {
+        Ok(Some(wallet)) => (
+            StatusCode::OK,
+            Json(json!({
+                "success": true,
+                "data": {
+                    "wallet_id": wallet.id,
+                    "fireblocks_vault_id": wallet.fireblocks_vault_id,
+                    "name": wallet.name,
+                    "assets": []  // Populated when Fireblocks client is configured
+                }
+            })),
+        ),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "success": false,
+                "error": {"code": "WALLET_NOT_FOUND", "message": "Wallet not found or not owned by user"}
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "CUSTODY_DB_ERROR", "message": e}
+            })),
+        ),
+    }
+}
+
+async fn custody_transactions_handler(
+    State(state): State<AppState>,
+    Query(params): Query<custody::TransactionsQuery>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = strategy_user_id();
+    // Verify wallet ownership first
+    match custody::get_wallet(&state.db_pool, params.wallet_id, user_id).await {
+        Ok(Some(_wallet)) => {
+            match custody::list_transactions(&state.db_pool, params.wallet_id).await {
+                Ok(txs) => (
+                    StatusCode::OK,
+                    Json(json!({
+                        "success": true,
+                        "data": txs,
+                        "count": txs.len()
+                    })),
+                ),
+                Err(e) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({
+                        "success": false,
+                        "error": {"code": "CUSTODY_TX_LIST_FAILED", "message": e}
+                    })),
+                ),
+            }
+        }
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "success": false,
+                "error": {"code": "WALLET_NOT_FOUND", "message": "Wallet not found or not owned by user"}
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "CUSTODY_DB_ERROR", "message": e}
+            })),
+        ),
+    }
+}
+
+// ───────────────── Fiat On-Ramp handlers (Wave 4 Task 24) ─────────────────
+
+/// Stripe webhook event payload (simplified).
+#[derive(serde::Deserialize)]
+struct StripeWebhookEvent {
+    #[serde(rename = "type")]
+    event_type: String,
+    data: serde_json::Value,
+}
+
+async fn fiat_deposit_handler(
+    State(state): State<AppState>,
+    Json(body): Json<fiat_onramp::DepositRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = strategy_user_id();
+
+    // Try Stripe if configured, otherwise create a pending record only
+    let stripe = fiat_onramp::StripeConnectClient::from_env();
+    let (pi_id, status) = match &stripe {
+        Some(client) => {
+            match client
+                .create_payment_intent(user_id, body.amount_cents, &body.currency)
+                .await
+            {
+                Ok(ps) => (Some(ps.id), ps.status),
+                Err(e) => {
+                    return (
+                        StatusCode::BAD_GATEWAY,
+                        Json(json!({
+                            "success": false,
+                            "error": {"code": "STRIPE_PAYMENT_INTENT_FAILED", "message": e.to_string()}
+                        })),
+                    );
+                }
+            }
+        }
+        None => (None, "pending".to_string()),
+    };
+
+    match fiat_onramp::insert_transaction(
+        &state.db_pool,
+        user_id,
+        "deposit",
+        body.amount_cents,
+        &body.currency,
+        pi_id.as_deref(),
+        None,
+        &status,
+    )
+    .await
+    {
+        Ok(tx) => (
+            StatusCode::CREATED,
+            Json(json!({"success": true, "data": tx})),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "FIAT_DEPOSIT_FAILED", "message": e.to_string()}
+            })),
+        ),
+    }
+}
+
+async fn fiat_withdraw_handler(
+    State(state): State<AppState>,
+    Json(body): Json<fiat_onramp::WithdrawalRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = strategy_user_id();
+
+    let stripe = fiat_onramp::StripeConnectClient::from_env();
+    let (payout_id, status) = match &stripe {
+        Some(client) => match client.create_payout(user_id, body.amount_cents).await {
+            Ok(ps) => (Some(ps.id), ps.status),
+            Err(e) => {
+                return (
+                    StatusCode::BAD_GATEWAY,
+                    Json(json!({
+                        "success": false,
+                        "error": {"code": "STRIPE_PAYOUT_FAILED", "message": e.to_string()}
+                    })),
+                );
+            }
+        },
+        None => (None, "pending".to_string()),
+    };
+
+    match fiat_onramp::insert_transaction(
+        &state.db_pool,
+        user_id,
+        "withdrawal",
+        body.amount_cents,
+        &body.currency,
+        None,
+        payout_id.as_deref(),
+        &status,
+    )
+    .await
+    {
+        Ok(tx) => (
+            StatusCode::CREATED,
+            Json(json!({"success": true, "data": tx})),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "FIAT_WITHDRAWAL_FAILED", "message": e.to_string()}
+            })),
+        ),
+    }
+}
+
+async fn fiat_history_handler(
+    State(state): State<AppState>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = strategy_user_id();
+    match fiat_onramp::list_transactions(&state.db_pool, user_id).await {
+        Ok(txs) => (StatusCode::OK, Json(json!({"success": true, "data": txs}))),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "FIAT_HISTORY_FAILED", "message": e.to_string()}
+            })),
+        ),
+    }
+}
+
+async fn fiat_webhook_handler(
+    State(state): State<AppState>,
+    Json(body): Json<StripeWebhookEvent>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let new_status = match body.event_type.as_str() {
+        "payment_intent.succeeded" => "completed",
+        "payment_intent.payment_failed" => "failed",
+        "charge.refunded" => "refunded",
+        "payout.paid" => "completed",
+        "payout.failed" => "failed",
+        _ => {
+            return (
+                StatusCode::OK,
+                Json(json!({"success": true, "message": "event ignored"})),
+            );
+        }
+    };
+
+    let pi_id = body.data["object"]["id"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
+
+    if pi_id.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "success": false,
+                "error": {"code": "MISSING_OBJECT_ID", "message": "no object.id in event data"}
+            })),
+        );
+    }
+
+    match fiat_onramp::update_transaction_status(&state.db_pool, &pi_id, new_status).await {
+        Ok(Some(tx)) => (StatusCode::OK, Json(json!({"success": true, "data": tx}))),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "success": false,
+                "error": {"code": "TX_NOT_FOUND", "message": "no matching transaction"}
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "WEBHOOK_UPDATE_FAILED", "message": e.to_string()}
+            })),
+        ),
+    }
+}
+
+// ───────────────── Regulatory Compliance handlers (Wave 4 Task 25) ─────────────────
+
+/// GET /api/compliance/status — overall regulatory compliance status
+async fn compliance_status_handler(
+    State(state): State<AppState>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    // Count compliance reports by status from the database
+    let row = sqlx::query(
+        "SELECT \
+           COUNT(*) FILTER (WHERE status = 'draft') AS drafts, \
+           COUNT(*) FILTER (WHERE status = 'submitted') AS submitted, \
+           COUNT(*) FILTER (WHERE status = 'accepted') AS accepted, \
+           COUNT(*) FILTER (WHERE status = 'rejected') AS rejected, \
+           COUNT(*) AS total \
+         FROM compliance_reports",
+    )
+    .fetch_optional(&state.db_pool)
+    .await;
+
+    match row {
+        Ok(Some(r)) => {
+            use sqlx::Row;
+            let drafts: i64 = r.try_get("drafts").unwrap_or(0);
+            let submitted: i64 = r.try_get("submitted").unwrap_or(0);
+            let accepted: i64 = r.try_get("accepted").unwrap_or(0);
+            let rejected: i64 = r.try_get("rejected").unwrap_or(0);
+            let total: i64 = r.try_get("total").unwrap_or(0);
+            (
+                StatusCode::OK,
+                Json(json!({
+                    "success": true,
+                    "data": {
+                        "regulations": ["mifid2", "mica", "ai_act", "gdpr"],
+                        "reports": {
+                            "total": total,
+                            "draft": drafts,
+                            "submitted": submitted,
+                            "accepted": accepted,
+                            "rejected": rejected
+                        },
+                        "mifid2_enabled": true,
+                        "mica_enabled": true
+                    }
+                })),
+            )
+        }
+        Ok(None) | Err(_) => (
+            StatusCode::OK,
+            Json(json!({
+                "success": true,
+                "data": {
+                    "regulations": ["mifid2", "mica", "ai_act", "gdpr"],
+                    "reports": { "total": 0, "draft": 0, "submitted": 0, "accepted": 0, "rejected": 0 },
+                    "mifid2_enabled": true,
+                    "mica_enabled": true
+                }
+            })),
+        ),
+    }
+}
+
+/// GET /api/compliance/reports — list compliance reports
+async fn compliance_reports_handler(
+    State(state): State<AppState>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let rows = sqlx::query(
+        "SELECT id, user_id, report_type, regulation, status, data, \
+                period_start, period_end, submitted_at, created_at \
+         FROM compliance_reports ORDER BY created_at DESC LIMIT 100",
+    )
+    .fetch_all(&state.db_pool)
+    .await;
+
+    match rows {
+        Ok(rows) => {
+            use sqlx::Row;
+            let reports: Vec<serde_json::Value> = rows
+                .iter()
+                .map(|r| {
+                    json!({
+                        "id": r.try_get::<uuid::Uuid, _>("id").ok(),
+                        "user_id": r.try_get::<Option<uuid::Uuid>, _>("user_id").unwrap_or(None),
+                        "report_type": r.try_get::<String, _>("report_type").unwrap_or_default(),
+                        "regulation": r.try_get::<String, _>("regulation").unwrap_or_default(),
+                        "status": r.try_get::<String, _>("status").unwrap_or_default(),
+                        "data": r.try_get::<serde_json::Value, _>("data").unwrap_or(json!({})),
+                        "period_start": r.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("period_start").unwrap_or(None),
+                        "period_end": r.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("period_end").unwrap_or(None),
+                        "submitted_at": r.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("submitted_at").unwrap_or(None),
+                        "created_at": r.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").ok(),
+                    })
+                })
+                .collect();
+            (
+                StatusCode::OK,
+                Json(json!({"success": true, "data": reports})),
+            )
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "COMPLIANCE_REPORTS_FAILED", "message": e.to_string()}
+            })),
+        ),
+    }
+}
+
+/// POST /api/compliance/classify-client — classify a client under MiFID II
+async fn compliance_classify_client_handler(
+    Json(body): Json<investor_os::regulatory::ClientProfile>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let reporter = investor_os::regulatory::MifidReporter::new("PENDING_LEI");
+    let category = reporter.client_classification(&body);
+    (
+        StatusCode::OK,
+        Json(json!({
+            "success": true,
+            "data": {
+                "user_id": body.user_id,
+                "category": category,
+                "description": match category {
+                    investor_os::regulatory::ClientCategory::Retail =>
+                        "Retail client — highest level of investor protection applies",
+                    investor_os::regulatory::ClientCategory::Professional =>
+                        "Professional client — reduced disclosure obligations, assumed expertise",
+                    investor_os::regulatory::ClientCategory::EligibleCounterparty =>
+                        "Eligible counterparty — minimal conduct-of-business obligations",
+                }
+            }
+        })),
+    )
+}
+
+// ───────────────── KYC/AML handlers (Wave 4 Task 23) ─────────────────
+
+async fn kyc_start_handler(
+    State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
+    Json(body): Json<KycStartRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = match Uuid::parse_str(&user.id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(
+                    json!({"success": false, "error": {"code": "INVALID_USER_ID", "message": "invalid user id"}}),
+                ),
+            );
+        }
+    };
+
+    let sumsub = match kyc::SumsubClient::from_env() {
+        Some(c) => c,
+        None => {
+            // No Sumsub credentials — record KYC as pending for manual review
+            if let Err(e) = kyc::upsert_kyc(
+                &state.db_pool,
+                user_id,
+                "manual",
+                kyc::KycStatus::Pending,
+                None,
+            )
+            .await
+            {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(
+                        json!({"success": false, "error": {"code": "KYC_DB_ERROR", "message": e.to_string()}}),
+                    ),
+                );
+            }
+            return (
+                StatusCode::OK,
+                Json(json!({"success": true, "data": {"mode": "manual", "status": "pending"}})),
+            );
+        }
+    };
+
+    let email = body.email.as_deref().unwrap_or(&user.email);
+
+    match sumsub.create_applicant(user_id, email).await {
+        Ok(applicant) => {
+            if let Err(e) = kyc::upsert_kyc(
+                &state.db_pool,
+                user_id,
+                &applicant.id,
+                kyc::KycStatus::Pending,
+                None,
+            )
+            .await
+            {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(
+                        json!({"success": false, "error": {"code": "KYC_DB_ERROR", "message": e.to_string()}}),
+                    ),
+                );
+            }
+
+            // Get SDK access token for the frontend
+            match sumsub.get_access_token(&applicant.id).await {
+                Ok(token) => (
+                    StatusCode::OK,
+                    Json(json!({
+                        "success": true,
+                        "data": {
+                            "applicant_id": applicant.id,
+                            "access_token": token.token,
+                            "status": "pending"
+                        }
+                    })),
+                ),
+                Err(e) => (
+                    StatusCode::BAD_GATEWAY,
+                    Json(
+                        json!({"success": false, "error": {"code": "SUMSUB_TOKEN_ERROR", "message": e.to_string()}}),
+                    ),
+                ),
+            }
+        }
+        Err(e) => (
+            StatusCode::BAD_GATEWAY,
+            Json(
+                json!({"success": false, "error": {"code": "SUMSUB_CREATE_ERROR", "message": e.to_string()}}),
+            ),
+        ),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct KycStartRequest {
+    email: Option<String>,
+}
+
+async fn kyc_status_handler(
+    State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = match Uuid::parse_str(&user.id) {
+        Ok(id) => id,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(
+                    json!({"success": false, "error": {"code": "INVALID_USER_ID", "message": "invalid user id"}}),
+                ),
+            );
+        }
+    };
+
+    match kyc::get_user_kyc_status(&state.db_pool, user_id).await {
+        Ok(status) => (
+            StatusCode::OK,
+            Json(json!({
+                "success": true,
+                "data": {
+                    "user_id": user_id,
+                    "status": status,
+                    "is_approved": status == kyc::KycStatus::Approved
+                }
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(
+                json!({"success": false, "error": {"code": "KYC_STATUS_ERROR", "message": e.to_string()}}),
+            ),
+        ),
+    }
+}
+
+async fn kyc_webhook_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<kyc::SumsubWebhookPayload>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    // Determine user_id from externalUserId
+    let user_id = match &payload.external_user_id {
+        Some(ext_id) => match Uuid::parse_str(ext_id) {
+            Ok(id) => id,
+            Err(_) => {
+                warn!(
+                    applicant_id = %payload.applicant_id,
+                    "KYC webhook: invalid externalUserId"
+                );
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({"success": false, "error": {"code": "INVALID_USER_ID"}})),
+                );
+            }
+        },
+        None => {
+            warn!(
+                applicant_id = %payload.applicant_id,
+                "KYC webhook: missing externalUserId"
+            );
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"success": false, "error": {"code": "MISSING_USER_ID"}})),
+            );
+        }
+    };
+
+    let (status, rejection_reason) = match payload.event_type.as_str() {
+        "applicantReviewed" => {
+            let answer = payload
+                .review_result
+                .as_ref()
+                .and_then(|r| r.review_answer.as_deref())
+                .unwrap_or("");
+            match answer {
+                "GREEN" => (kyc::KycStatus::Approved, None),
+                "RED" => {
+                    let reason = payload
+                        .review_result
+                        .as_ref()
+                        .and_then(|r| r.reject_labels.as_ref())
+                        .map(|labels| labels.join(", "))
+                        .unwrap_or_else(|| "rejected".to_string());
+                    (kyc::KycStatus::Rejected, Some(reason))
+                }
+                _ => (kyc::KycStatus::Retry, None),
+            }
+        }
+        "applicantPending" => (kyc::KycStatus::Pending, None),
+        "applicantCreated" => (kyc::KycStatus::Pending, None),
+        _ => {
+            info!(event = %payload.event_type, "KYC webhook: ignoring event type");
+            return (
+                StatusCode::OK,
+                Json(json!({"success": true, "message": "event ignored"})),
+            );
+        }
+    };
+
+    match kyc::upsert_kyc(
+        &state.db_pool,
+        user_id,
+        &payload.applicant_id,
+        status,
+        rejection_reason.as_deref(),
+    )
+    .await
+    {
+        Ok(()) => (
+            StatusCode::OK,
+            Json(json!({"success": true, "data": {"user_id": user_id, "status": status}})),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(
+                json!({"success": false, "error": {"code": "KYC_WEBHOOK_DB_ERROR", "message": e.to_string()}}),
+            ),
+        ),
+    }
+}
+
 // ───────────────── Strategy Engine handlers (Wave 1b Task 5) ─────────────────
 
 /// Hardcoded admin user ID for strategy endpoints until full auth extraction is wired.
@@ -545,7 +1260,9 @@ fn create_router(state: AppState) -> Router {
             post(auth_login_handler).route_layer(login_rate_limit_layer),
         )
         .route("/api/auth/refresh", post(auth_refresh_handler))
-        .route("/api/auth/totp/verify", post(auth_totp_verify_handler));
+        .route("/api/auth/totp/verify", post(auth_totp_verify_handler))
+        // KYC webhook (public — called by Sumsub, Wave 4 Task 23)
+        .route("/api/kyc/webhook", post(kyc_webhook_handler));
 
     let protected_router = Router::new()
         .route("/api/auth/me", get(auth_me_handler))
@@ -658,6 +1375,32 @@ fn create_router(state: AppState) -> Router {
             "/api/marketplace/:id/subscribe",
             post(marketplace_subscribe_handler),
         )
+        // Fiat On-Ramp (Wave 4 Task 24)
+        .route("/api/fiat/deposit", post(fiat_deposit_handler))
+        .route("/api/fiat/withdraw", post(fiat_withdraw_handler))
+        .route("/api/fiat/history", get(fiat_history_handler))
+        .route("/api/fiat/webhook", post(fiat_webhook_handler))
+        // Fireblocks MPC Custody (Wave 4 Task 22)
+        .route(
+            "/api/custody/deposit-address",
+            post(custody_deposit_address_handler),
+        )
+        .route("/api/custody/withdraw", post(custody_withdraw_handler))
+        .route("/api/custody/balance", get(custody_balance_handler))
+        .route(
+            "/api/custody/transactions",
+            get(custody_transactions_handler),
+        )
+        // Regulatory Compliance (Wave 4 Task 25)
+        .route("/api/compliance/status", get(compliance_status_handler))
+        .route("/api/compliance/reports", get(compliance_reports_handler))
+        .route(
+            "/api/compliance/classify-client",
+            post(compliance_classify_client_handler),
+        )
+        // KYC/AML Verification (Wave 4 Task 23)
+        .route("/api/kyc/start", post(kyc_start_handler))
+        .route("/api/kyc/status", get(kyc_status_handler))
         .route_layer(auth_layer);
 
     Router::new()

@@ -5,5 +5,6 @@
 //! Stripe webhook handling is future work — this module covers
 //! the data model and gating functions only.
 
+pub mod fiat_onramp;
 pub mod repository;
 pub mod tiers;
