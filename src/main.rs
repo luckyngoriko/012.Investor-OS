@@ -23,6 +23,7 @@ use uuid::Uuid;
 
 use investor_os::anti_fake::{AntiFakeDecision, AntiFakeShield, RequestAntiFakeSignal};
 use investor_os::auth;
+use investor_os::backtest;
 use investor_os::broker::paper::PaperBroker;
 use investor_os::broker::{
     Broker, BrokerConfig, BrokerType, Order, OrderSide, OrderType, TimeInForce,
@@ -307,6 +308,30 @@ async fn chat_handler(
     }
 }
 
+// ───────────────── Backtest handler (Wave 2 Task 14) ─────────────────
+
+async fn backtest_handler(
+    State(state): State<AppState>,
+    Json(body): Json<backtest::BacktestRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    match backtest::run_backtest(&state.db_pool, &body).await {
+        Ok(result) => (
+            StatusCode::OK,
+            Json(json!({
+                "success": true,
+                "data": result
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "BACKTEST_FAILED", "message": e}
+            })),
+        ),
+    }
+}
+
 // ───────────────── Strategy Engine handlers (Wave 1b Task 5) ─────────────────
 
 /// Hardcoded admin user ID for strategy endpoints until full auth extraction is wired.
@@ -532,6 +557,8 @@ fn create_router(state: AppState) -> Router {
         .route("/api/strategies/:id", delete(strategy_delete_handler))
         // AI Chat (RAG) endpoint (Wave 2 Task 12)
         .route("/api/chat", post(chat_handler))
+        // Backtesting endpoint (Wave 2 Task 14)
+        .route("/api/backtest", post(backtest_handler))
         .route_layer(auth_layer);
 
     Router::new()

@@ -299,3 +299,11 @@ pub mod billing;
 /// Retrieval-Augmented Generation. Template-based responses
 /// backed by ml_predictions, ai_decision_logs, ml_feature_store.
 pub mod chat;
+
+/// Backtesting Module (Wave 2 Task 14).
+///
+/// Historical strategy backtesting engine that loads price data from
+/// the `prices` table and simulates a simple momentum strategy
+/// (price vs. 20-period SMA). Returns metrics: total return, Sharpe
+/// ratio, max drawdown, win rate, and equity curve.
+pub mod backtest;

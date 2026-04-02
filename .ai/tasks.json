@@ -350,6 +350,55 @@
       ],
       "blockers": [],
       "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-018",
+      "title": "OANDA Forex Connector (Wave 2 Task 9)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["TSK-009"],
+      "acceptance_criteria": [
+        "src/broker/oanda/mod.rs rewritten with OandaClient struct",
+        "OandaClient::new(api_key, account_id, is_practice) with practice/live base URLs",
+        "OandaClient::from_env() reads OANDA_API_KEY, OANDA_ACCOUNT_ID, OANDA_PRACTICE",
+        "get_account() -> OandaAccountInfo via GET /v3/accounts/{account_id}",
+        "get_positions() -> Vec<OandaPosition> via GET /v3/accounts/{account_id}/openPositions",
+        "get_pricing(instruments) -> Vec<OandaPrice> via GET /v3/accounts/{account_id}/pricing?instruments=...",
+        "place_market_order(instrument, units, side) -> OandaOrderResponse via POST /v3/accounts/{account_id}/orders",
+        "close_position(instrument) -> OandaCloseResponse via PUT /v3/accounts/{account_id}/positions/{instrument}/close",
+        "All requests use Authorization: Bearer {api_key} header",
+        "Types: OandaAccountInfo, OandaPosition, PositionSide, OandaPrice, OandaOrderRequest, MarketOrderBody, OandaOrderResponse, OrderTransaction, FillTransaction, OandaCloseResponse",
+        "multi_asset.rs updated to use OandaAccountInfo instead of AccountSummary",
+        "13 unit tests pass (serialization, deserialization, roundtrip, client construction)",
+        "cargo build --lib passes",
+        "cargo clippy --lib -- -D warnings passes with 0 warnings",
+        "Committed as 271efab"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-019",
+      "title": "Backtesting UI (Wave 2 Task 14)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "src/backtest/mod.rs created with pub mod engine and re-exports",
+        "src/backtest/engine.rs: BacktestRequest, BacktestResult, run_backtest(), load_candles(), sma()",
+        "Momentum strategy: close > 20-SMA buy, else sell/flat",
+        "SQL CAST ::double precision for NUMERIC column compatibility",
+        "pub mod backtest added to src/lib.rs",
+        "POST /api/backtest endpoint in main.rs protected_router",
+        "frontend/investor-dashboard/app/backtest/page.tsx: form + results display",
+        "No Sidebar import, uses use client, framer-motion",
+        "cargo build --lib passes",
+        "cargo build --bin investor-os passes",
+        "cargo clippy --lib -- -D warnings passes with 0 warnings",
+        "3 unit tests pass (sma_basic, sma_single, sma_empty)"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
     }
   ]
 }
