@@ -142,6 +142,23 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # Telegram Bot — trading signals + semi-auto trade confirmation
+  telegram-bot:
+    build:
+      context: ../../services/telegram-bot
+    container_name: ios-telegram-bot
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      NATS_URL: nats://nats:4222
+      DB_URL: postgresql://${DB_USER:-investor}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-investor_os}
+    networks:
+      - ios-net
+    depends_on:
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+
   # Next.js frontend
   frontend:
     build:

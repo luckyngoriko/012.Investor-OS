@@ -239,6 +239,29 @@
       ],
       "blockers": [],
       "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-013",
+      "title": "Telegram Bot for Trading Signals + Semi-Auto Trade Confirmation (Wave 2 Task 13)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "services/telegram-bot/Dockerfile created (Python 3.11-slim)",
+        "services/telegram-bot/requirements.txt with python-telegram-bot>=21.0, nats-py>=2.9, psycopg2-binary>=2.9",
+        "services/telegram-bot/bot.py: async bot with NATS subscriptions (ios.consensus.*, ios.trade.proposal.*)",
+        "Consensus messages with confidence > 50% sent as formatted signals",
+        "/start, /status, /signals on|off commands implemented",
+        "Inline keyboard for approve/reject trade proposals",
+        "Graceful handling of missing TELEGRAM_BOT_TOKEN (log warning, exit cleanly)",
+        "NATS exponential backoff reconnection",
+        "services/telegram-bot/.gitignore created",
+        "telegram-bot service added to docker/truenas/docker-compose.yml",
+        "Python syntax check passes",
+        "Docker-compose YAML validation passes"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
     }
   ]
 }

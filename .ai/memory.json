@@ -1,37 +1,37 @@
 {
   "project_goal": "Build Investor-OS: an investment platform with prediction, risk management, and portfolio optimization capabilities",
-  "current_milestone": "Wave 1b – Trading execution and strategy management",
-  "current_task_id": "TSK-012",
-  "current_task_title": "Stripe Billing + Feature Gating (Wave 1b Task 7)",
-  "current_step": "Completed – all files created, build passes, tests pass, migration applied, ready for commit",
+  "current_milestone": "Wave 2 – Notification and Integration Services",
+  "current_task_id": "TSK-013",
+  "current_task_title": "Telegram Bot for Trading Signals + Semi-Auto Trade Confirmation (Wave 2 Task 13)",
+  "current_step": "Completed – all files created, syntax valid, docker-compose updated, ready for commit",
   "completed_steps": [
-    "Created migrations/20260402000003_subscriptions.sql with table, indexes, CHECK constraints, FK",
-    "Created src/billing/mod.rs with pub mod tiers and pub mod repository",
-    "Created src/billing/tiers.rs with Tier enum (Free/Pro/Enterprise), feature gating methods, 14 unit tests",
-    "Created src/billing/repository.rs with get_user_tier, set_user_tier, get_subscription_status using runtime sqlx",
-    "Added pub mod billing to src/lib.rs",
-    "cargo build --lib succeeded",
-    "cargo clippy --lib -- -D warnings passed with 0 warnings",
-    "14 billing::tiers unit tests passed",
-    "Migration applied on TrueNAS staging PostgreSQL — table verified with all columns, constraints, indexes, FK"
+    "Created services/telegram-bot/Dockerfile (Python 3.11-slim, pip install, runs bot.py)",
+    "Created services/telegram-bot/requirements.txt (python-telegram-bot>=21.0, nats-py>=2.9, psycopg2-binary>=2.9)",
+    "Created services/telegram-bot/bot.py (async Telegram bot with NATS subscription, /start /status /signals commands, inline trade confirmation)",
+    "Created services/telegram-bot/.gitignore (__pycache__/, .env, .venv/)",
+    "Added telegram-bot service to docker/truenas/docker-compose.yml",
+    "Python syntax check passed",
+    "Docker-compose YAML validation passed"
   ],
   "remaining_steps": ["Commit"],
   "files_touched": [
-    "migrations/20260402000003_subscriptions.sql",
-    "src/billing/mod.rs",
-    "src/billing/tiers.rs",
-    "src/billing/repository.rs",
-    "src/lib.rs"
+    "services/telegram-bot/Dockerfile",
+    "services/telegram-bot/requirements.txt",
+    "services/telegram-bot/bot.py",
+    "services/telegram-bot/.gitignore",
+    "docker/truenas/docker-compose.yml"
   ],
   "discovered_constraints": [
-    "Tier::from_str shadows std trait — acceptable since it's a static method with custom default-to-Free behavior",
-    "Tier needs Eq in addition to PartialEq for exhaustive comparisons in tests",
-    "serde(rename_all = lowercase) ensures JSON serialization matches DB tier strings"
+    "Bot gracefully exits (sys.exit(0)) when TELEGRAM_BOT_TOKEN is not set — no crash",
+    "NATS reconnection uses exponential backoff up to 60s",
+    "Consensus messages with confidence <= 50% are filtered out",
+    "python-telegram-bot v21+ uses async Application pattern"
   ],
   "discovered_dependencies": [
-    "subscriptions table FK references auth_users(id) — auth_users must exist first",
-    "chrono dependency already available via sqlx + other modules"
+    "Depends on NATS service (ios-nats) being healthy",
+    "Optionally connects to PostgreSQL for /status command (user_strategies, ml_predictions tables)",
+    "Requires TELEGRAM_BOT_TOKEN env var to actually run"
   ],
   "last_errors": [],
-  "last_verification_result": "SUCCESS – lib build clean, 0 clippy warnings, 14/14 tests pass, migration verified on TrueNAS"
+  "last_verification_result": "SUCCESS – syntax OK, YAML valid, all files present"
 }
