@@ -274,3 +274,15 @@ pub mod nats;
 /// Client for the Python ML sidecar service (CatBoost, GARCH, FinBERT, etc.)
 /// with graceful fallback to HRM deterministic policy.
 pub mod prediction;
+
+/// Strategy Engine (Wave 1b Task 5).
+///
+/// CRUD for user-defined trading strategies: symbols, ML models,
+/// execution mode (signal/semi_auto/full_auto), and risk limits.
+pub mod strategy;
+
+/// Trading Execution Module (Wave 1b Task 6).
+///
+/// Consumes trade proposals from the consensus pipeline and routes them
+/// through mode-specific handlers: Signal, SemiAuto, FullAuto.
+pub mod trading;
