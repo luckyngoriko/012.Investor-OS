@@ -1,0 +1,13 @@
+{
+  "name": "Investor OS",
+  "short_name": "InvestorOS",
+  "description": "AI-Powered Trading Platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0f1c",
+  "theme_color": "#8b5cf6",
+  "icons": [
+    { "src": "/favicon-32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
