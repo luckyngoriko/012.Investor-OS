@@ -82,7 +82,7 @@ impl MultiAssetPortfolio {
     }
 
     /// Add forex positions from OANDA
-    pub fn add_forex_balance(&mut self, account: &oanda::AccountSummary) {
+    pub fn add_forex_balance(&mut self, account: &oanda::OandaAccountInfo) {
         self.cash_balances
             .insert(account.currency.clone(), account.balance);
     }
