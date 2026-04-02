@@ -1,0 +1,122 @@
+{
+  "tasks": [
+    {
+      "id": "TSK-RESEARCH-001",
+      "title": "Research financial prediction/forecasting models for Investor-OS",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Survey time series forecasting models (traditional + ML + DL + foundation)",
+        "Survey sentiment analysis models",
+        "Survey portfolio optimization models",
+        "Survey risk models",
+        "Survey signal generation / alpha models",
+        "Survey foundation models for finance",
+        "Document open source availability, CPU/GPU requirements, Rust/Python support",
+        "Provide practical recommendations for Investor-OS"
+      ],
+      "blockers": [],
+      "completed_at": "2026-03-30"
+    },
+    {
+      "id": "TSK-002",
+      "title": "Replace Trends collector placeholder data with real Yahoo Finance + Google Autocomplete API calls",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "get_trends() fetches real data from Yahoo Finance and Google Autocomplete",
+        "get_trending_tickers() fetches real trending tickers from Yahoo Finance",
+        "Graceful degradation on API failure (warn log, return neutral data)",
+        "All existing types unchanged",
+        "All existing tests pass",
+        "Code compiles cleanly"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-01"
+    },
+    {
+      "id": "TSK-003",
+      "title": "Replace SEC Scraper and Options Flow placeholder data with real API calls",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "get_sec_filings() calls SEC EDGAR EFTS API",
+        "get_insider_trades() calls SEC EDGAR Form 4 search",
+        "get_earnings_highlights() uses Alpha Vantage when key available, neutral fallback otherwise",
+        "get_institutional_changes() calls SEC EDGAR 13F search",
+        "get_flow() calls Yahoo Finance options chain endpoint",
+        "SEC rate limit compliance (100ms delay between requests)",
+        "Graceful degradation on API failure (warn log, return empty/neutral data)",
+        "All existing types unchanged",
+        "All existing tests pass",
+        "Code compiles cleanly"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-01"
+    },
+    {
+      "id": "TSK-004",
+      "title": "Fix all frontend mock data and outdated documentation",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "security-settings.tsx: mock arrays removed, replaced with API fetch calls",
+        "features.tsx: Trading Journal status changed to beta with badge rendering",
+        "admin/page.tsx: MOCK DATA comment changed to DEFAULT SETTINGS",
+        "ARCHITECTURE.md: placeholder references updated to production",
+        "COVERAGE_ANALYSIS.md: mock references updated",
+        "ROADMAP_10_10.md: placeholder reference updated",
+        "TEST_STRATEGY.md: TBD values updated with real metrics"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-01"
+    },
+    {
+      "id": "TSK-005",
+      "title": "Fix all backend placeholder/stub/mock issues for production readiness",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "FetchMarketData uses real Yahoo Finance API instead of hardcoded price=150",
+        "GenericExchange connect() does real HTTP health check with fallback",
+        "ExchangeRegistry get() uses HashMap lookup with tracing instead of None placeholder",
+        "IBKR connector has from_env(), fetch_account(), fetch_market_data()",
+        "Polygon connector has from_env(), fetch_market_data()",
+        "ConnectorFactory falls back to env vars for API keys",
+        "EtcdDiscovery has from_env() with ETCD_ENDPOINTS health probe",
+        "Rate limiter uses real in-memory per-IP counter instead of always-allow",
+        "Order message says paper broker instead of simulated",
+        "All existing types and tests unchanged",
+        "Code compiles cleanly (default + eu_compliance)"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-01"
+    },
+    {
+      "id": "TSK-006",
+      "title": "Create NATS Fallback Monitor (src/nats/fallback.rs)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "NatsFallback struct with new(), is_fallback(), monitor() methods",
+        "Uses AtomicBool for thread-safe fallback state",
+        "Checks connection every 10s via tokio::time::interval",
+        "Activates fallback after timeout_secs of continuous disconnection",
+        "Deactivates fallback on reconnection",
+        "Uses tracing for logging (info, warn)",
+        "Module declared in src/nats/mod.rs",
+        "cargo build --lib passes",
+        "cargo clippy --lib -- -D warnings passes (0 warnings)",
+        "Tests pass"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
+    }
+  ]
+}

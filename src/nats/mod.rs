@@ -16,6 +16,7 @@
 
 pub mod client;
 pub mod consensus_worker;
+pub mod fallback;
 pub mod feature_service;
 pub mod hrm_worker;
 pub mod messages;

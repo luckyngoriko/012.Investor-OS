@@ -1,0 +1,33 @@
+{
+  "project_goal": "Build Investor-OS: an investment platform with prediction, risk management, and portfolio optimization capabilities",
+  "current_milestone": "Wave 1a – NATS resilience and ML pipeline hardening",
+  "current_task_id": "TSK-006",
+  "current_task_title": "Create NATS Fallback Monitor (src/nats/fallback.rs)",
+  "current_step": "Completed – fallback.rs created, mod.rs updated, build + clippy + tests pass",
+  "completed_steps": [
+    "Created src/nats/fallback.rs with NatsFallback struct",
+    "Added pub mod fallback to src/nats/mod.rs",
+    "cargo build --lib passed",
+    "cargo clippy --lib -- -D warnings passed (0 warnings)",
+    "cargo test -- nats::fallback passed (1 test)"
+  ],
+  "remaining_steps": [],
+  "files_touched": [
+    "src/nats/fallback.rs",
+    "src/nats/mod.rs",
+    ".ai/memory.json",
+    ".ai/tasks.json"
+  ],
+  "discovered_constraints": [
+    "Cannot construct NatsClient in unit tests without a real NATS server",
+    "async_nats::connection::State::Connected used for is_connected() check",
+    "redis v0.24.0 has pre-existing future-incompat warning (not our code)"
+  ],
+  "discovered_dependencies": [
+    "std::sync::atomic::AtomicBool for thread-safe fallback flag",
+    "tokio::time::interval for periodic checking",
+    "tracing::{info, warn} for logging"
+  ],
+  "last_errors": [],
+  "last_verification_result": "SUCCESS – cargo build, clippy, test all pass"
+}
