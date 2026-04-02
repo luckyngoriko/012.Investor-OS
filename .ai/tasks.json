@@ -262,6 +262,94 @@
       ],
       "blockers": [],
       "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-014",
+      "title": "Cross-Asset Correlation Model with DCC-GARCH (Wave 2 Task 10)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "services/ml-sidecar/app/models/correlation_model.py: CorrelationPredictor class with DCC-GARCH",
+        "Accepts returns for multiple assets, fits individual GARCH(1,1), computes EWMA dynamic correlation",
+        "Returns correlation matrix + top correlated/uncorrelated pairs",
+        "services/ml-sidecar/app/routers/correlation.py: POST /v1/predict/correlation endpoint",
+        "services/ml-sidecar/app/workers/correlation_worker.py: NATS worker subscribing to ios.prices.>",
+        "Router wired into main.py, worker wired into worker_runner.py",
+        "dcc-garch added to _loaded_models in main.py lifespan",
+        "Python syntax validates for all 5 files"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-015",
+      "title": "Interactive Brokers Client Portal REST Connector (Wave 2 Task 8)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["TSK-009"],
+      "acceptance_criteria": [
+        "src/broker/ibkr.rs created with IbkrClient struct",
+        "Methods: connect(), get_account(), get_positions(), place_order(), cancel_order()",
+        "Paper trading mode by default (IBKR_PAPER env var)",
+        "Base URL from IBKR_GATEWAY_URL env var (default https://localhost:5000/v1/api)",
+        "HTTP REST client using reqwest against IBKR Client Portal API",
+        "GET /portfolio/accounts, GET /portfolio/{accountId}/positions/0",
+        "POST /iserver/account/{accountId}/orders, DELETE /iserver/account/{accountId}/order/{orderId}",
+        "pub mod ibkr added to src/broker/mod.rs",
+        "All methods return Result with descriptive BrokerError",
+        "13 unit tests for serialization, deserialization, and client construction",
+        "cargo build --lib passes",
+        "cargo clippy --lib -- -D warnings passes with 0 warnings"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-016",
+      "title": "On-Chain Analytics – Whale Tracking + Exchange Flow (Wave 2 Task 11)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "services/ml-sidecar/app/models/onchain_model.py: OnChainAnalyzer class",
+        "get_whale_transactions(min_btc=100) scans Blockchain.com latest block",
+        "get_exchange_netflow() uses Binance OI + 24h ticker as flow proxy",
+        "get_funding_rates() fetches Binance perpetual funding rates",
+        "analyze() combines all signals into -100 to +100 score with verdict",
+        "services/ml-sidecar/app/routers/onchain.py: 3 GET endpoints under /v1/onchain/",
+        "services/ml-sidecar/app/workers/onchain_worker.py: 5-minute timer NATS worker",
+        "Router wired into main.py, worker wired into worker_runner.py",
+        "onchain-analyzer added to _loaded_models in main.py lifespan",
+        "Python syntax validates for all 5 files"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-017",
+      "title": "AI Chat (RAG) Module (Wave 2 Task 12)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "src/chat/mod.rs created with pub mod context and pub mod responder",
+        "src/chat/context.rs: ChatContext struct, retrieve_context(pool, symbol, question)",
+        "Context queries ml_predictions (24h), ai_decision_logs (24h), ml_feature_store (latest)",
+        "src/chat/responder.rs: generate_response(context, question) -> (String, Vec<String>)",
+        "Templates: why_buy, risk, performance, general_fallback",
+        "POST /api/chat endpoint in main.rs protected_router",
+        "Request: {question, symbol}, Response: {answer, sources, symbol}",
+        "pub mod chat added to src/lib.rs",
+        "No external LLM API calls – pure template-based",
+        "Runtime sqlx queries (no compile-time macros)",
+        "cargo build --lib passes",
+        "cargo build --bin investor-os passes",
+        "cargo clippy --lib -- -D warnings passes with 0 warnings",
+        "12 unit tests pass (3 context + 9 responder)"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
     }
   ]
 }

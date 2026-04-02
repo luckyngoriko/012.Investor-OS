@@ -292,3 +292,10 @@ pub mod trading;
 /// Subscription tier definitions (Free / Pro / Enterprise),
 /// feature gating logic, and PostgreSQL persistence.
 pub mod billing;
+
+/// AI Chat (RAG) Module (Wave 2 Task 12).
+///
+/// AI-powered chat that explains trading decisions using
+/// Retrieval-Augmented Generation. Template-based responses
+/// backed by ml_predictions, ai_decision_logs, ml_feature_store.
+pub mod chat;

@@ -27,6 +27,7 @@ use investor_os::broker::paper::PaperBroker;
 use investor_os::broker::{
     Broker, BrokerConfig, BrokerType, Order, OrderSide, OrderType, TimeInForce,
 };
+use investor_os::chat;
 use investor_os::prediction;
 use investor_os::projects::ProjectService;
 use investor_os::strategy;
@@ -269,6 +270,45 @@ async fn ml_models_handler(State(state): State<AppState>) -> (StatusCode, Json<s
 
 // ── Strategy Engine handlers (Wave 1b Task 5) ──────────────────────────
 
+// ───────────────── AI Chat (RAG) handler (Wave 2 Task 12) ─────────────────
+
+#[derive(serde::Deserialize)]
+struct ChatRequest {
+    question: String,
+    symbol: String,
+}
+
+async fn chat_handler(
+    State(state): State<AppState>,
+    Json(body): Json<ChatRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    match chat::context::retrieve_context(&state.db_pool, &body.symbol, &body.question).await {
+        Ok(ctx) => {
+            let (answer, sources) = chat::responder::generate_response(&ctx, &body.question);
+            (
+                StatusCode::OK,
+                Json(json!({
+                    "success": true,
+                    "data": {
+                        "answer": answer,
+                        "sources": sources,
+                        "symbol": body.symbol,
+                    }
+                })),
+            )
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "CHAT_CONTEXT_FAILED", "message": e}
+            })),
+        ),
+    }
+}
+
+// ───────────────── Strategy Engine handlers (Wave 1b Task 5) ─────────────────
+
 /// Hardcoded admin user ID for strategy endpoints until full auth extraction is wired.
 const STRATEGY_ADMIN_USER_ID: &str = "00000000-0000-0000-0000-000000000001";
 
@@ -490,6 +530,8 @@ fn create_router(state: AppState) -> Router {
         .route("/api/strategies/:id", get(strategy_get_handler))
         .route("/api/strategies/:id", put(strategy_update_handler))
         .route("/api/strategies/:id", delete(strategy_delete_handler))
+        // AI Chat (RAG) endpoint (Wave 2 Task 12)
+        .route("/api/chat", post(chat_handler))
         .route_layer(auth_layer);
 
     Router::new()

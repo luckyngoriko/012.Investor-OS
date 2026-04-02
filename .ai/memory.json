@@ -1,37 +1,29 @@
 {
   "project_goal": "Build Investor-OS: an investment platform with prediction, risk management, and portfolio optimization capabilities",
-  "current_milestone": "Wave 2 – Notification and Integration Services",
-  "current_task_id": "TSK-013",
-  "current_task_title": "Telegram Bot for Trading Signals + Semi-Auto Trade Confirmation (Wave 2 Task 13)",
-  "current_step": "Completed – all files created, syntax valid, docker-compose updated, ready for commit",
+  "current_milestone": "Wave 2 – Multi-Broker + Intelligence",
+  "current_task_id": "TSK-015",
+  "current_task_title": "OANDA Forex Connector (Wave 2 Task 9)",
+  "current_step": "Completed – oanda/mod.rs rewritten, multi_asset.rs fixed, 13 tests pass, committed as 271efab",
   "completed_steps": [
-    "Created services/telegram-bot/Dockerfile (Python 3.11-slim, pip install, runs bot.py)",
-    "Created services/telegram-bot/requirements.txt (python-telegram-bot>=21.0, nats-py>=2.9, psycopg2-binary>=2.9)",
-    "Created services/telegram-bot/bot.py (async Telegram bot with NATS subscription, /start /status /signals commands, inline trade confirmation)",
-    "Created services/telegram-bot/.gitignore (__pycache__/, .env, .venv/)",
-    "Added telegram-bot service to docker/truenas/docker-compose.yml",
-    "Python syntax check passed",
-    "Docker-compose YAML validation passed"
+    "Rewrote src/broker/oanda/mod.rs with full v20 REST API connector",
+    "Implemented OandaClient with new(), from_env(), get_account(), get_positions(), get_pricing(), place_market_order(), close_position()",
+    "Created types: OandaAccountInfo, OandaPosition, PositionSide, OandaPrice, OandaOrderRequest, MarketOrderBody, OandaOrderResponse, OrderTransaction, FillTransaction, OandaCloseResponse",
+    "Fixed multi_asset.rs reference from AccountSummary to OandaAccountInfo",
+    "cargo build --lib passes, cargo clippy 0 warnings, 13 unit tests pass",
+    "Committed as 271efab"
   ],
-  "remaining_steps": ["Commit"],
-  "files_touched": [
-    "services/telegram-bot/Dockerfile",
-    "services/telegram-bot/requirements.txt",
-    "services/telegram-bot/bot.py",
-    "services/telegram-bot/.gitignore",
-    "docker/truenas/docker-compose.yml"
-  ],
+  "remaining_steps": [],
+  "files_touched": ["src/broker/oanda/mod.rs", "src/broker/multi_asset.rs"],
   "discovered_constraints": [
-    "Bot gracefully exits (sys.exit(0)) when TELEGRAM_BOT_TOKEN is not set — no crash",
-    "NATS reconnection uses exponential backoff up to 60s",
-    "Consensus messages with confidence <= 50% are filtered out",
-    "python-telegram-bot v21+ uses async Application pattern"
+    "OANDA v20 API uses signed units string (positive=buy, negative=sell)",
+    "OandaOrderRequest wraps MarketOrderBody in an 'order' field",
+    "OANDA position has long_side and short_side sub-objects",
+    "multi_asset.rs referenced old AccountSummary type name"
   ],
   "discovered_dependencies": [
-    "Depends on NATS service (ios-nats) being healthy",
-    "Optionally connects to PostgreSQL for /status command (user_strategies, ml_predictions tables)",
-    "Requires TELEGRAM_BOT_TOKEN env var to actually run"
+    "reqwest 0.12 with json feature already in Cargo.toml",
+    "pub mod oanda already declared in src/broker/mod.rs"
   ],
   "last_errors": [],
-  "last_verification_result": "SUCCESS – syntax OK, YAML valid, all files present"
+  "last_verification_result": "SUCCESS – 13 tests pass, 0 clippy warnings, build OK, committed as 271efab"
 }
