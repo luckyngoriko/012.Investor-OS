@@ -18,8 +18,11 @@ services:
       ML_REDIS_URL: redis://redis:6379
       ML_MODEL_DIR: /app/models
       ML_LOG_LEVEL: ${ML_LOG_LEVEL:-info}
+      HF_HOME: /root/.cache/huggingface
+      TRANSFORMERS_CACHE: /root/.cache/huggingface/hub
     volumes:
-      - /mnt/MainPool/appsdata/investor-os.net/models:/app/models
+      - /mnt/NVME/MODELS/investor-os:/app/models
+      - /mnt/NVME/HF_CACHE:/root/.cache/huggingface
       - /mnt/MainPool/appsdata/investor-os.net/logs:/app/logs
     ports:
       - "${ML_GPU_HOST_PORT:-19001}:9001"
@@ -41,6 +44,6 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:9001/health"]
       interval: 30s
       timeout: 10s
-      start_period: 60s
+      start_period: 300s
       retries: 3
     restart: unless-stopped
