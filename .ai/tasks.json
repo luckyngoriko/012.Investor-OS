@@ -399,6 +399,31 @@
       ],
       "blockers": [],
       "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-020",
+      "title": "Smart Order Router (Wave 2 Task 15)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["TSK-015", "TSK-018"],
+      "acceptance_criteria": [
+        "src/broker/router.rs created with SmartRouter struct",
+        "BrokerQuote struct with broker, price, spread, available fields",
+        "RoutingDecision struct with chosen_broker, price, reason, alternatives, savings_pct",
+        "AssetClass enum (Crypto, Forex, Stock) with classify_symbol()",
+        "route_order(symbol, side, quantity) -> RoutingDecision",
+        "Crypto symbols (USDT/BTC suffix) -> Binance",
+        "Forex symbols (underscore) -> OANDA",
+        "Stock symbols -> IBKR",
+        "Cross-listed comparison by effective cost (price +/- spread/2)",
+        "tracing::info logging for audit trail",
+        "pub mod router added to src/broker/mod.rs",
+        "9 unit tests pass",
+        "cargo build --lib passes",
+        "cargo clippy --lib -- -D warnings passes with 0 warnings"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
     }
   ]
 }

@@ -36,6 +36,9 @@ pub mod gateway;
 /// Wave 2: IBKR Client Portal REST connector (stocks + options)
 pub mod ibkr;
 
+/// Wave 2: Smart Order Router – cross-broker price comparison & best execution
+pub mod router;
+
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};

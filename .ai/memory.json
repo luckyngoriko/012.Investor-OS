@@ -2,43 +2,37 @@
   "project_goal": "Build Investor-OS: an investment platform with prediction, risk management, and portfolio optimization capabilities",
   "current_milestone": "Wave 2 – Multi-Broker + Intelligence",
   "current_task_id": "TSK-017",
-  "current_task_title": "Backtesting UI (Wave 2 Task 14)",
-  "current_step": "Completed – backtest module + frontend page + API endpoint created, build passes, 3 unit tests pass",
+  "current_task_title": "Smart Order Router (Wave 2 Task 15)",
+  "current_step": "Completed – src/broker/router.rs created, wired into mod.rs, 9 tests pass, 0 clippy warnings",
   "completed_steps": [
-    "Created src/backtest/mod.rs with pub mod engine and re-exports",
-    "Created src/backtest/engine.rs with BacktestRequest, BacktestResult, run_backtest(), load_candles(), sma()",
-    "Momentum strategy: close > 20-SMA → buy, else sell/flat, all-in position sizing",
-    "SQL cast ::double precision to avoid rust_decimal sqlx type issue",
-    "Added pub mod backtest to src/lib.rs",
-    "Added backtest import and backtest_handler to src/main.rs",
-    "Added POST /api/backtest route to protected_router",
-    "Created frontend/investor-dashboard/app/backtest/page.tsx",
-    "Frontend: form with symbol, date range, initial capital + results display",
-    "Frontend: stat cards for return, Sharpe, drawdown, win rate, trades",
-    "Frontend: summary section with P&L, risk/reward, data points",
+    "Created src/broker/router.rs with SmartRouter, RoutingDecision, BrokerQuote, AssetClass",
+    "Implemented classify_symbol() for crypto/forex/stock detection",
+    "Implemented generate_quotes() with deterministic simulated prices",
+    "Implemented route_order() with effective_cost comparison and tracing audit logging",
+    "Added pub mod router to src/broker/mod.rs",
+    "Fixed pre-existing sqlx rust_decimal feature missing in Cargo.toml",
+    "All 9 unit tests pass",
     "cargo build --lib passes",
-    "cargo build --bin investor-os passes",
-    "cargo clippy --lib -- -D warnings passes (0 warnings)",
-    "3 backtest unit tests pass (sma_basic, sma_single, sma_empty)"
+    "cargo clippy --lib -- -D warnings passes with 0 warnings"
   ],
-  "remaining_steps": ["Commit changes"],
+  "remaining_steps": [],
   "files_touched": [
-    "src/backtest/mod.rs",
-    "src/backtest/engine.rs",
-    "src/lib.rs",
-    "src/main.rs",
-    "frontend/investor-dashboard/app/backtest/page.tsx"
+    "src/broker/router.rs",
+    "src/broker/mod.rs",
+    "Cargo.toml",
+    "Cargo.lock"
   ],
   "discovered_constraints": [
-    "sqlx with default-features=false cannot decode rust_decimal::Decimal - must cast NUMERIC to double precision in SQL",
-    "prices table columns: ticker, timestamp, open, high, low, close, volume, adjusted_close"
+    "sqlx needs explicit rust_decimal feature for Decode<Postgres> impl",
+    "Floating point roundtrip through JSON may cause tiny precision differences"
   ],
   "discovered_dependencies": [
-    "chrono, serde, sqlx, tracing already in Cargo.toml",
-    "framer-motion, lucide-react already in frontend dependencies"
+    "serde + serde_json for serialization",
+    "uuid for routing decision IDs",
+    "chrono for timestamps",
+    "tracing for audit logging",
+    "OrderSide from super (broker mod.rs)"
   ],
-  "last_errors": [
-    "Initial build failed: rust_decimal::Decimal not impl sqlx::Type<Postgres> - fixed with SQL CAST"
-  ],
-  "last_verification_result": "SUCCESS – lib + bin build, 0 clippy warnings, 3 backtest tests pass"
+  "last_errors": [],
+  "last_verification_result": "SUCCESS – 9 tests pass, build + clippy clean"
 }
