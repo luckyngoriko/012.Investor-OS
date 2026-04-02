@@ -87,6 +87,7 @@ jsonwebtoken = "9.3"
 # Broker vault — AES-256-GCM encryption for API keys
 aes-gcm = "0.10"
 base64 = "0.22"
+hex = "0.4"
 
 # Monitoring & Metrics (Sprint 46)
 prometheus = { version = "0.14", features = ["process"] }

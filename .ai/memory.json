@@ -1,40 +1,42 @@
 {
   "project_goal": "Build Investor-OS: an investment platform with prediction, risk management, and portfolio optimization capabilities",
   "current_milestone": "Wave 4 – Enterprise & Compliance",
-  "current_task_id": "TSK-028",
-  "current_task_title": "MiFID II / MiCA Regulatory Compliance (Wave 4 Task 25)",
-  "current_step": "Completed – migration, mifid.rs, mica.rs, regulatory mod, API routes, 25 tests pass, migration applied on TrueNAS",
+  "current_task_id": "TSK-029",
+  "current_task_title": "KYC/AML Verification via Sumsub (Wave 4 Task 23)",
+  "current_step": "Completed – migration, kyc.rs, mod.rs restructured, routes, 11 KYC tests pass, migration applied on TrueNAS",
   "completed_steps": [
-    "Created migrations/20260402000008_compliance_reports.sql",
-    "Created src/regulatory/mod.rs with pub mod mifid, pub mod mica, re-exports",
-    "Created src/regulatory/mifid.rs: MifidReporter, transaction_report(), best_execution_check(), client_classification()",
-    "Created src/regulatory/mica.rs: MicaClassifier, classify_asset(), whitepaper_required(), reserve_requirements(), full_classification()",
-    "Added pub mod regulatory to src/lib.rs",
-    "Added 3 API routes: GET /api/compliance/status, GET /api/compliance/reports, POST /api/compliance/classify-client",
-    "Added 3 handler functions to src/main.rs",
+    "Created migrations/20260402000006_kyc.sql with kyc_verifications table, valid_status CHECK, idx_kyc_user index",
+    "Created src/compliance/kyc.rs: SumsubClient, KycStatus enum, HMAC-SHA256 signing, create_applicant, get_access_token, get_verification_status, get_user_kyc_status, is_kyc_approved, upsert_kyc, SumsubWebhookPayload",
+    "Restructured src/compliance/mod.rs: kyc always available, EU modules behind #[cfg(feature = eu_compliance)]",
+    "Removed feature gate from pub mod compliance in src/lib.rs",
+    "Added hex = 0.4 to Cargo.toml",
+    "main.rs already had KYC handlers + routes from previous session (verified matching)",
     "cargo build --lib passes",
     "cargo build --bin investor-os passes",
     "cargo clippy --lib -- -D warnings passes (0 warnings)",
-    "25 regulatory unit tests pass (9 MiFID II + 16 MiCA)",
+    "11 KYC unit tests pass",
     "546 total lib tests pass (0 failures)",
     "Migration applied and verified on TrueNAS staging PostgreSQL"
   ],
   "remaining_steps": [],
   "files_touched": [
-    "migrations/20260402000008_compliance_reports.sql",
-    "src/regulatory/mod.rs",
-    "src/regulatory/mifid.rs",
-    "src/regulatory/mica.rs",
+    "migrations/20260402000006_kyc.sql",
+    "src/compliance/kyc.rs",
+    "src/compliance/mod.rs",
     "src/lib.rs",
-    "src/main.rs"
+    "Cargo.toml"
   ],
   "discovered_constraints": [
-    "compliance module was changed by linter to remove top-level feature gate, now compiles always with EU submodules feature-gated internally",
-    "KYC module (src/compliance/kyc.rs) was added by linter as part of Wave 4 Task 23"
+    "compliance module was feature-gated behind eu_compliance – restructured to make kyc always available while keeping EU submodules gated",
+    "main.rs already contained KYC handlers from a previous session but kyc.rs was never actually created",
+    "hex crate available as transitive dep but added as explicit dep for clarity"
   ],
   "discovered_dependencies": [
-    "uuid, chrono, serde for regulatory types",
-    "sqlx for compliance_reports queries in handlers"
+    "hmac 0.12, sha2 0.10 for HMAC-SHA256 Sumsub signing",
+    "hex 0.4 for hex encoding HMAC output",
+    "reqwest for Sumsub HTTP calls",
+    "sqlx for kyc_verifications queries",
+    "thiserror for KycError"
   ],
   "last_errors": [],
   "last_verification_result": "SUCCESS – 546 tests pass, both builds clean, clippy 0 warnings, migration verified on TrueNAS"
