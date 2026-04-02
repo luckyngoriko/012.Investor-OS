@@ -7,9 +7,10 @@ uvicorn[standard]==0.34.*
 pydantic==2.*
 pydantic-settings==2.*
 
-# PyTorch (CUDA 12.x)
-torch>=2.2
-torchvision>=0.17
+# PyTorch (CUDA 12.4 — compatible with driver 12.8)
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch>=2.5,<2.8
+torchvision>=0.17,<0.23
 
 # HuggingFace Transformers + Accelerate
 transformers>=4.40
@@ -34,3 +35,4 @@ bitsandbytes>=0.43
 numpy>=1.26,<3
 pandas>=2.2,<3
 scipy>=1.12
+protobuf>=4.0
