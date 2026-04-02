@@ -117,6 +117,29 @@
       ],
       "blockers": [],
       "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-007",
+      "title": "Create Multi-Tenant Database Migrations (Wave 1a Task 3)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "migrations/20260402000001_multi_tenant.sql created",
+        "auth_users and auth_sessions created with IF NOT EXISTS",
+        "user_id UUID nullable column added to ml_predictions (no FK)",
+        "user_id UUID nullable column added to ml_feature_store (no FK)",
+        "user_strategies table created with all columns, FK to auth_users, CHECK constraints",
+        "user_trades table created with all columns, FKs to auth_users and user_strategies",
+        "RLS enabled on user_strategies and user_trades",
+        "RLS policies use app.current_user_id session variable",
+        "All indexes created",
+        "Migration runs idempotently (IF NOT EXISTS everywhere)",
+        "Existing data intact after migration",
+        "All tables verified on live TrueNAS PostgreSQL"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
     }
   ]
 }

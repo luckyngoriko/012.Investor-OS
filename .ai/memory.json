@@ -1,33 +1,39 @@
 {
   "project_goal": "Build Investor-OS: an investment platform with prediction, risk management, and portfolio optimization capabilities",
-  "current_milestone": "Wave 1a – NATS resilience and ML pipeline hardening",
-  "current_task_id": "TSK-006",
-  "current_task_title": "Create NATS Fallback Monitor (src/nats/fallback.rs)",
-  "current_step": "Completed – fallback.rs created, mod.rs updated, build + clippy + tests pass",
+  "current_milestone": "Wave 1a – Multi-tenant SaaS platform foundation",
+  "current_task_id": "TSK-007",
+  "current_task_title": "Create Multi-Tenant Database Migrations",
+  "current_step": "Completed – migration created, applied to TrueNAS, all tables verified",
   "completed_steps": [
-    "Created src/nats/fallback.rs with NatsFallback struct",
-    "Added pub mod fallback to src/nats/mod.rs",
-    "cargo build --lib passed",
-    "cargo clippy --lib -- -D warnings passed (0 warnings)",
-    "cargo test -- nats::fallback passed (1 test)"
+    "Read existing migration style (20260330000001_ml_model_registry.sql)",
+    "Checked live DB state: 4 tables, auth_users NOT deployed yet",
+    "Confirmed ml_predictions (6 rows) and ml_feature_store (10 rows) are TimescaleDB hypertables",
+    "Created migrations/20260402000001_multi_tenant.sql",
+    "Included auth_users/auth_sessions IF NOT EXISTS as prerequisite",
+    "Added user_id UUID nullable column to ml_predictions and ml_feature_store",
+    "Created user_strategies table with all specified columns, CHECK, defaults",
+    "Created user_trades table with all specified columns, FKs, CHECK",
+    "Enabled RLS on user_strategies and user_trades with app.current_user_id policies",
+    "Created indexes on all user_id columns and composite indexes",
+    "Ran migration on TrueNAS via SSH/docker exec – all statements succeeded",
+    "Verified: 8 tables total, user_* tables created, user_id columns added, RLS enabled, data intact"
   ],
   "remaining_steps": [],
   "files_touched": [
-    "src/nats/fallback.rs",
-    "src/nats/mod.rs",
+    "migrations/20260402000001_multi_tenant.sql",
     ".ai/memory.json",
-    ".ai/tasks.json"
+    ".ai/tasks.json",
+    ".ai/progress.log"
   ],
   "discovered_constraints": [
-    "Cannot construct NatsClient in unit tests without a real NATS server",
-    "async_nats::connection::State::Connected used for is_connected() check",
-    "redis v0.24.0 has pre-existing future-incompat warning (not our code)"
+    "auth_users table was not deployed to TrueNAS – needed IF NOT EXISTS prerequisite in migration",
+    "ml_predictions and ml_feature_store are TimescaleDB hypertables (ALTER TABLE ADD COLUMN works fine)",
+    "Cannot add FK on user_id for ml_predictions/ml_feature_store – existing rows would violate it"
   ],
   "discovered_dependencies": [
-    "std::sync::atomic::AtomicBool for thread-safe fallback flag",
-    "tokio::time::interval for periodic checking",
-    "tracing::{info, warn} for logging"
+    "auth_users must exist before user_strategies and user_trades FKs",
+    "user_strategies must exist before user_trades FK (strategy_id)"
   ],
   "last_errors": [],
-  "last_verification_result": "SUCCESS – cargo build, clippy, test all pass"
+  "last_verification_result": "SUCCESS – all 8 tables exist, user_id columns added, RLS enabled, policies active, existing data intact"
 }
