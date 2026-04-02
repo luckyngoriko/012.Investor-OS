@@ -644,6 +644,31 @@
       ],
       "blockers": [],
       "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-030",
+      "title": "Wire ALL remaining components through NATS (trade execution, user signals, portfolio, event logging)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["TSK-010", "TSK-011"],
+      "acceptance_criteria": [
+        "src/nats/trade_executor.rs: subscribes to ios.trade.proposal.*, routes per strategy mode (signal/semi_auto/full_auto)",
+        "src/nats/signal_router.rs: subscribes to ios.consensus.*, publishes personalized signals to ios.user.signal.{user_id}",
+        "src/nats/portfolio_tracker.rs: subscribes to ios.trade.fill.*, inserts into user_trades, publishes ios.portfolio.update.{user_id}",
+        "src/nats/event_logger.rs: subscribes to ios.> (everything), logs to nats_events table",
+        "6 new message types in src/nats/messages.rs",
+        "5 new publish methods in src/nats/publisher.rs",
+        "2 new JetStream streams (USER_SIGNALS, PORTFOLIO) in src/nats/streams.rs",
+        "All 4 workers registered in src/nats/mod.rs",
+        "migrations/20260402000009_nats_events.sql created",
+        "Migration applied as TimescaleDB hypertable on TrueNAS",
+        "cargo build --lib passes",
+        "cargo build --bin investor-os passes",
+        "cargo clippy --lib -- -D warnings passes (0 warnings)",
+        "564 lib tests pass (0 failures), 18 new tests (4+4+4+6)"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
     }
   ]
 }

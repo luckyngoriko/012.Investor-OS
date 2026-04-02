@@ -11,6 +11,8 @@ const STREAMS: &[(&str, &str, i64, i64)] = &[
     ("PREDICTIONS", "ios.predict.>", 30 * 86400, 1_073_741_824), // 30 days, 1GB
     ("CONSENSUS", "ios.consensus.>", 30 * 86400, 536_870_912), // 30 days, 512MB
     ("TRADES", "ios.trade.>", 90 * 86400, 536_870_912),    // 90 days, 512MB
+    ("USER_SIGNALS", "ios.user.>", 30 * 86400, 536_870_912), // 30 days, 512MB — signals, proposals, fills
+    ("PORTFOLIO", "ios.portfolio.>", 90 * 86400, 536_870_912), // 90 days, 512MB — updates, rebalances
 ];
 
 /// Create all JetStream streams idempotently.

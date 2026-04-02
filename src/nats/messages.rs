@@ -91,6 +91,67 @@ pub struct TradeProposalMsg {
     pub reason: String,
 }
 
+/// User-facing signal derived from consensus + user strategy preferences.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserSignalMsg {
+    pub strategy_id: String,
+    pub strategy_name: String,
+    pub direction: String,
+    pub confidence: f64,
+    pub predicted_return: f64,
+    pub models_used: Vec<String>,
+    pub suggested_action: String,
+}
+
+/// User-facing trade proposal awaiting confirmation (semi-auto mode).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserProposalMsg {
+    pub proposal_id: String,
+    pub strategy_id: String,
+    pub direction: String,
+    pub confidence: f64,
+    pub suggested_size_pct: f64,
+    pub stop_loss_pct: f64,
+    pub take_profit_pct: f64,
+    pub reason: String,
+    pub expires_in_secs: u64,
+}
+
+/// Trade execution command (full-auto mode, after risk checks pass).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TradeExecuteMsg {
+    pub strategy_id: String,
+    pub direction: String,
+    pub size_pct: f64,
+    pub stop_loss_pct: f64,
+    pub take_profit_pct: f64,
+    pub confidence: f64,
+    pub reason: String,
+}
+
+/// Trade fill result after execution.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TradeFillMsg {
+    pub trade_id: String,
+    pub strategy_id: String,
+    pub direction: String,
+    pub size_pct: f64,
+    pub entry_price: f64,
+    pub fill_status: String,
+    pub reason: String,
+}
+
+/// Portfolio update after a trade fill.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PortfolioUpdateMsg {
+    pub trade_id: String,
+    pub strategy_id: String,
+    pub direction: String,
+    pub size_pct: f64,
+    pub entry_price: f64,
+    pub portfolio_value: f64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

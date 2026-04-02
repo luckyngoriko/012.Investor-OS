@@ -59,6 +59,61 @@ impl NatsPublisher {
         self.publish_envelope(&subject, &env).await
     }
 
+    pub async fn publish_user_signal(
+        &self,
+        symbol: &str,
+        user_id: &str,
+        signal: UserSignalMsg,
+    ) -> Result<(), String> {
+        let env = NatsEnvelope::new(symbol, "signal_router", signal);
+        let subject = format!("ios.user.signal.{user_id}");
+        self.publish_envelope(&subject, &env).await
+    }
+
+    pub async fn publish_user_proposal(
+        &self,
+        symbol: &str,
+        user_id: &str,
+        proposal: UserProposalMsg,
+    ) -> Result<(), String> {
+        let env = NatsEnvelope::new(symbol, "trade_executor", proposal);
+        let subject = format!("ios.user.proposal.{user_id}");
+        self.publish_envelope(&subject, &env).await
+    }
+
+    pub async fn publish_trade_execute(
+        &self,
+        symbol: &str,
+        user_id: &str,
+        execute: TradeExecuteMsg,
+    ) -> Result<(), String> {
+        let env = NatsEnvelope::new(symbol, "trade_executor", execute);
+        let subject = format!("ios.trade.execute.{user_id}");
+        self.publish_envelope(&subject, &env).await
+    }
+
+    pub async fn publish_trade_fill(
+        &self,
+        symbol: &str,
+        user_id: &str,
+        fill: TradeFillMsg,
+    ) -> Result<(), String> {
+        let env = NatsEnvelope::new(symbol, "trade_executor", fill);
+        let subject = format!("ios.trade.fill.{user_id}");
+        self.publish_envelope(&subject, &env).await
+    }
+
+    pub async fn publish_portfolio_update(
+        &self,
+        symbol: &str,
+        user_id: &str,
+        update: PortfolioUpdateMsg,
+    ) -> Result<(), String> {
+        let env = NatsEnvelope::new(symbol, "portfolio_tracker", update);
+        let subject = format!("ios.portfolio.update.{user_id}");
+        self.publish_envelope(&subject, &env).await
+    }
+
     async fn publish_envelope<T: serde::Serialize>(
         &self,
         subject: &str,

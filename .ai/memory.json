@@ -1,43 +1,49 @@
 {
   "project_goal": "Build Investor-OS: an investment platform with prediction, risk management, and portfolio optimization capabilities",
-  "current_milestone": "Wave 4 – Enterprise & Compliance",
-  "current_task_id": "TSK-029",
-  "current_task_title": "KYC/AML Verification via Sumsub (Wave 4 Task 23)",
-  "current_step": "Completed – migration, kyc.rs, mod.rs restructured, routes, 11 KYC tests pass, migration applied on TrueNAS",
+  "current_milestone": "Wire ALL remaining components through NATS",
+  "current_task_id": "TSK-030",
+  "current_task_title": "Wire trade execution, user signals, portfolio, and event logging through NATS",
+  "current_step": "Completed — all 4 workers created, messages extended, publisher extended, streams updated, migration applied on TrueNAS",
   "completed_steps": [
-    "Created migrations/20260402000006_kyc.sql with kyc_verifications table, valid_status CHECK, idx_kyc_user index",
-    "Created src/compliance/kyc.rs: SumsubClient, KycStatus enum, HMAC-SHA256 signing, create_applicant, get_access_token, get_verification_status, get_user_kyc_status, is_kyc_approved, upsert_kyc, SumsubWebhookPayload",
-    "Restructured src/compliance/mod.rs: kyc always available, EU modules behind #[cfg(feature = eu_compliance)]",
-    "Removed feature gate from pub mod compliance in src/lib.rs",
-    "Added hex = 0.4 to Cargo.toml",
-    "main.rs already had KYC handlers + routes from previous session (verified matching)",
+    "Added 6 new message types to src/nats/messages.rs (UserSignalMsg, UserProposalMsg, TradeExecuteMsg, TradeFillMsg, PortfolioUpdateMsg)",
+    "Added 5 new publish methods to src/nats/publisher.rs",
+    "Added 2 new JetStream streams to src/nats/streams.rs (USER_SIGNALS, PORTFOLIO)",
+    "Created src/nats/trade_executor.rs — subscribes to ios.trade.proposal.*, routes to signal/semi_auto/full_auto per user strategy",
+    "Created src/nats/signal_router.rs — subscribes to ios.consensus.*, routes personalized signals to users",
+    "Created src/nats/portfolio_tracker.rs — subscribes to ios.trade.fill.*, inserts trades, publishes portfolio updates",
+    "Created src/nats/event_logger.rs — subscribes to ios.>, logs every event to nats_events table",
+    "Updated src/nats/mod.rs — registered all 4 new modules, updated subject documentation",
+    "Created migrations/20260402000009_nats_events.sql",
+    "Migration applied and verified on TrueNAS (TimescaleDB hypertable)",
     "cargo build --lib passes",
     "cargo build --bin investor-os passes",
     "cargo clippy --lib -- -D warnings passes (0 warnings)",
-    "11 KYC unit tests pass",
-    "546 total lib tests pass (0 failures)",
-    "Migration applied and verified on TrueNAS staging PostgreSQL"
+    "564 lib tests pass (0 failures)"
   ],
   "remaining_steps": [],
   "files_touched": [
-    "migrations/20260402000006_kyc.sql",
-    "src/compliance/kyc.rs",
-    "src/compliance/mod.rs",
-    "src/lib.rs",
-    "Cargo.toml"
+    "src/nats/messages.rs",
+    "src/nats/publisher.rs",
+    "src/nats/streams.rs",
+    "src/nats/mod.rs",
+    "src/nats/trade_executor.rs",
+    "src/nats/signal_router.rs",
+    "src/nats/portfolio_tracker.rs",
+    "src/nats/event_logger.rs",
+    "migrations/20260402000009_nats_events.sql"
   ],
   "discovered_constraints": [
-    "compliance module was feature-gated behind eu_compliance – restructured to make kyc always available while keeping EU submodules gated",
-    "main.rs already contained KYC handlers from a previous session but kyc.rs was never actually created",
-    "hex crate available as transitive dep but added as explicit dep for clarity"
+    "TrueNAS postgres container user is 'investor' not 'investor_os'",
+    "TimescaleDB warns about VARCHAR vs TEXT column types",
+    "async_nats::Subject::from() requires String not &str for subject construction"
   ],
   "discovered_dependencies": [
-    "hmac 0.12, sha2 0.10 for HMAC-SHA256 Sumsub signing",
-    "hex 0.4 for hex encoding HMAC output",
-    "reqwest for Sumsub HTTP calls",
-    "sqlx for kyc_verifications queries",
-    "thiserror for KycError"
+    "futures::StreamExt for .next() on NATS subscribers",
+    "sqlx::Row for try_get on runtime queries",
+    "uuid::Uuid for strategy/user ID parsing",
+    "serde_json::Value for risk_limits and envelope extraction",
+    "std::collections::hash_map::DefaultHasher for payload hashing"
   ],
   "last_errors": [],
-  "last_verification_result": "SUCCESS – 546 tests pass, both builds clean, clippy 0 warnings, migration verified on TrueNAS"
+  "last_verification_result": "SUCCESS — 564 tests pass, both builds clean, clippy 0 warnings, migration verified on TrueNAS as hypertable"
 }
