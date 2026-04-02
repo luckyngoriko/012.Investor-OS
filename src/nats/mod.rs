@@ -15,10 +15,13 @@
 //! ```
 
 pub mod client;
+pub mod consensus_worker;
 pub mod feature_service;
+pub mod hrm_worker;
 pub mod messages;
 pub mod publisher;
 pub mod streams;
+pub mod trade_proposer;
 
 pub use client::NatsClient;
 pub use messages::*;
