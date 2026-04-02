@@ -140,6 +140,85 @@
       ],
       "blockers": [],
       "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-008",
+      "title": "Train sapientinc/HRM on real BTCUSDT data (Wave 1a Task 2)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "scripts/ml/train_hrm_real.py created with full training pipeline",
+        "Connects to postgres, loads BTCUSDT candles",
+        "Computes RSI, MACD histogram, BB position, volume z-score, trend",
+        "Tokenizes using hrm.trading_adapter.tokenize_candle()",
+        "Creates sliding window sequences of length 48",
+        "Targets: action tokens (50-54) based on next-candle return thresholds",
+        "80/20 time-based train/val split",
+        "Trains 50 epochs with AdamW lr=5e-4 + CosineAnnealingLR",
+        "Saves best model to /app/models/hrm_trading.pth",
+        "Script runs successfully on TrueNAS RTX 3090"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-009",
+      "title": "Broker Gateway with AES-256-GCM Encrypted API Keys (Wave 1a Task 4)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["TSK-007"],
+      "acceptance_criteria": [
+        "migrations/20260402000002_broker_connections.sql created with RLS, CHECK, UNIQUE, INDEX",
+        "aes-gcm 0.10 and base64 0.22 added to Cargo.toml",
+        "src/broker/vault.rs: Vault::from_env(), from_hex(), encrypt(), decrypt()",
+        "src/broker/gateway.rs: BrokerGateway::new(), store_connection(), get_decrypted_keys()",
+        "pub mod vault and pub mod gateway in src/broker/mod.rs",
+        "cargo build --lib passes",
+        "cargo clippy --lib -- -D warnings passes with 0 warnings",
+        "6 vault unit tests pass",
+        "Migration applied and verified on TrueNAS staging PostgreSQL"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-010",
+      "title": "Trading Modes Module (Wave 1b Task 6)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["TSK-009"],
+      "acceptance_criteria": [
+        "src/trading/mod.rs created with pub mod modes and pub mod executor",
+        "src/trading/modes.rs: TradingMode enum (Signal, SemiAuto, FullAuto), ProposalStatus, TradeProposal struct",
+        "src/trading/executor.rs: TradeExecutor with per-mode routing, 50% confidence floor for full-auto",
+        "pub mod trading added to src/lib.rs",
+        "cargo build --lib passes",
+        "cargo clippy --lib -- -D warnings passes with 0 warnings",
+        "13 unit tests pass"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-011",
+      "title": "Strategy Engine CRUD API (Wave 1b Task 5)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["TSK-007"],
+      "acceptance_criteria": [
+        "src/strategy/types.rs: Strategy, CreateStrategyRequest, UpdateStrategyRequest structs",
+        "src/strategy/repository.rs: create, list, get, update, delete with runtime sqlx",
+        "src/strategy/mod.rs with re-exports",
+        "pub mod strategy in src/lib.rs",
+        "5 API routes under /api/strategies in protected_router",
+        "5 thin handler wrappers in src/main.rs",
+        "cargo build --lib passes",
+        "cargo build --bin investor-os passes",
+        "cargo clippy --lib -- -D warnings passes with 0 warnings"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
     }
   ]
 }

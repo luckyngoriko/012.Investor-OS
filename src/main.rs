@@ -29,6 +29,7 @@ use investor_os::broker::{
 };
 use investor_os::prediction;
 use investor_os::projects::ProjectService;
+use investor_os::strategy;
 
 /// Състояние на приложението
 #[derive(Clone)]
@@ -266,6 +267,114 @@ async fn ml_models_handler(State(state): State<AppState>) -> (StatusCode, Json<s
     prediction::list_models_handler(&state.db_pool).await
 }
 
+// ── Strategy Engine handlers (Wave 1b Task 5) ──────────────────────────
+
+/// Hardcoded admin user ID for strategy endpoints until full auth extraction is wired.
+const STRATEGY_ADMIN_USER_ID: &str = "00000000-0000-0000-0000-000000000001";
+
+fn strategy_user_id() -> Uuid {
+    Uuid::parse_str(STRATEGY_ADMIN_USER_ID).expect("valid hardcoded UUID")
+}
+
+async fn strategy_create_handler(
+    State(state): State<AppState>,
+    Json(body): Json<strategy::CreateStrategyRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = strategy_user_id();
+    match strategy::repository::create_strategy(&state.db_pool, user_id, &body).await {
+        Ok(s) => (
+            StatusCode::CREATED,
+            Json(json!({"success": true, "data": s})),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(
+                json!({"success": false, "error": {"code": "STRATEGY_CREATE_FAILED", "message": e}}),
+            ),
+        ),
+    }
+}
+
+async fn strategy_list_handler(
+    State(state): State<AppState>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = strategy_user_id();
+    match strategy::repository::get_strategies(&state.db_pool, user_id).await {
+        Ok(strategies) => (
+            StatusCode::OK,
+            Json(json!({"success": true, "data": strategies, "count": strategies.len()})),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"success": false, "error": {"code": "DB_ERROR", "message": e}})),
+        ),
+    }
+}
+
+async fn strategy_get_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = strategy_user_id();
+    match strategy::repository::get_strategy(&state.db_pool, id, user_id).await {
+        Ok(Some(s)) => (StatusCode::OK, Json(json!({"success": true, "data": s}))),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(
+                json!({"success": false, "error": {"code": "NOT_FOUND", "message": "Strategy not found"}}),
+            ),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"success": false, "error": {"code": "DB_ERROR", "message": e}})),
+        ),
+    }
+}
+
+async fn strategy_update_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<strategy::UpdateStrategyRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = strategy_user_id();
+    match strategy::repository::update_strategy(&state.db_pool, id, user_id, &body).await {
+        Ok(Some(s)) => (StatusCode::OK, Json(json!({"success": true, "data": s}))),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(
+                json!({"success": false, "error": {"code": "NOT_FOUND", "message": "Strategy not found"}}),
+            ),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"success": false, "error": {"code": "DB_ERROR", "message": e}})),
+        ),
+    }
+}
+
+async fn strategy_delete_handler(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = strategy_user_id();
+    match strategy::repository::delete_strategy(&state.db_pool, id, user_id).await {
+        Ok(true) => (
+            StatusCode::OK,
+            Json(json!({"success": true, "message": "Strategy deleted"})),
+        ),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(
+                json!({"success": false, "error": {"code": "NOT_FOUND", "message": "Strategy not found"}}),
+            ),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"success": false, "error": {"code": "DB_ERROR", "message": e}})),
+        ),
+    }
+}
+
 fn create_router(state: AppState) -> Router {
     let auth_layer = from_fn_with_state(state.clone(), require_auth_middleware);
     let anti_fake_data_layer = from_fn_with_state(state.clone(), enforce_real_data_middleware);
@@ -375,6 +484,12 @@ fn create_router(state: AppState) -> Router {
         .route("/api/predictions/history", get(ml_history_handler))
         .route("/api/predictions/:id", get(ml_get_prediction_handler))
         .route("/api/models/registry", get(ml_models_handler))
+        // Strategy Engine endpoints (Wave 1b Task 5)
+        .route("/api/strategies", post(strategy_create_handler))
+        .route("/api/strategies", get(strategy_list_handler))
+        .route("/api/strategies/:id", get(strategy_get_handler))
+        .route("/api/strategies/:id", put(strategy_update_handler))
+        .route("/api/strategies/:id", delete(strategy_delete_handler))
         .route_layer(auth_layer);
 
     Router::new()
