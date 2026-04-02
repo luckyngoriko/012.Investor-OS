@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.routers import broker, optimize, predict, sentiment, volatility
+from app.routers import broker, correlation, optimize, predict, sentiment, volatility
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +58,9 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("FinBERT not available: %s", e)
 
-    # GARCH doesn't need preloading (stateless — fits per request)
+    # GARCH and DCC-GARCH don't need preloading (stateless — fit per request)
     _loaded_models.append("garch")
+    _loaded_models.append("dcc-garch")
 
     # Start NATS workers if enabled
     nats_state = None
@@ -96,6 +97,7 @@ app.include_router(volatility.router)
 app.include_router(sentiment.router)
 app.include_router(optimize.router)
 app.include_router(broker.router)
+app.include_router(correlation.router)
 
 
 @app.get("/health")

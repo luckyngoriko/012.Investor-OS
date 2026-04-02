@@ -8,7 +8,7 @@ import asyncio
 import logging
 
 from app.nats_client import NatsManager
-from app.workers import catboost_worker, garch_worker, finbert_worker
+from app.workers import catboost_worker, correlation_worker, garch_worker, finbert_worker
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ async def start_nats_workers():
 
     tasks = [
         asyncio.create_task(catboost_worker.run(nats), name="catboost-worker"),
+        asyncio.create_task(correlation_worker.run(nats), name="correlation-worker"),
         asyncio.create_task(garch_worker.run(nats), name="garch-worker"),
         asyncio.create_task(finbert_worker.run(nats), name="finbert-worker"),
     ]
