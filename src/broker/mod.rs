@@ -33,6 +33,9 @@ pub mod vault;
 /// Wave 1a: Unified broker gateway for encrypted key storage & retrieval
 pub mod gateway;
 
+/// Wave 2: IBKR Client Portal REST connector (stocks + options)
+pub mod ibkr;
+
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
