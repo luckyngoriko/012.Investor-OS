@@ -31,6 +31,9 @@ pytorch-lightning>=2.2
 peft>=0.10
 bitsandbytes>=0.43
 
+# NATS messaging (Sprint N3)
+nats-py>=2.9
+
 # Utilities
 numpy>=1.26,<3
 pandas>=2.2,<3

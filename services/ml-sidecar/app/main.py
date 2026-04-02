@@ -5,6 +5,7 @@ Runs on port 9000, communicates over ios-net Docker bridge.
 """
 
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 
@@ -60,8 +61,25 @@ async def lifespan(app: FastAPI):
     # GARCH doesn't need preloading (stateless — fits per request)
     _loaded_models.append("garch")
 
+    # Start NATS workers if enabled
+    nats_state = None
+    nats_enabled = os.environ.get("NATS_ENABLED", "false").lower() == "true"
+    if nats_enabled:
+        try:
+            from app.workers.worker_runner import start_nats_workers
+            nats_state = await start_nats_workers()
+            if nats_state:
+                logger.info("NATS workers active")
+        except Exception as e:
+            logger.warning("NATS workers failed to start: %s", e)
+
     yield
+
     # Cleanup
+    if nats_state:
+        from app.workers.worker_runner import stop_nats_workers
+        nats_mgr, tasks = nats_state
+        await stop_nats_workers(nats_mgr, tasks)
     _loaded_models.clear()
 
 

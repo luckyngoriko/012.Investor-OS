@@ -30,5 +30,8 @@ optimum[onnxruntime]; python_version >= "3.10"
 # Portfolio Optimization (Sprint 122)
 skfolio>=0.4
 
+# NATS messaging (Sprint N3)
+nats-py>=2.9
+
 # Observability
 prometheus-fastapi-instrumentator==7.*

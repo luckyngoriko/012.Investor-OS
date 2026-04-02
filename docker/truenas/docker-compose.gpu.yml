@@ -20,6 +20,8 @@ services:
       ML_LOG_LEVEL: ${ML_LOG_LEVEL:-info}
       HF_HOME: /root/.cache/huggingface
       TRANSFORMERS_CACHE: /root/.cache/huggingface/hub
+      NATS_URL: nats://nats:4222
+      NATS_ENABLED: "${NATS_ENABLED:-true}"
     volumes:
       - /mnt/NVME/MODELS/investor-os:/app/models
       - /mnt/NVME/HF_CACHE:/root/.cache/huggingface
