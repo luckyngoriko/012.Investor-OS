@@ -44,6 +44,7 @@ struct AppState {
     db_pool: sqlx::PgPool,
     projects: Arc<ProjectService>,
     ml_sidecar: Option<Arc<prediction::MlSidecarClient>>,
+    nats: Option<Arc<investor_os::nats::NatsClient>>,
 }
 
 #[derive(Clone)]
@@ -208,6 +209,7 @@ async fn main() {
         db_pool: pool,
         projects: Arc::new(project_service),
         ml_sidecar: prediction::client::from_env().map(Arc::new),
+        nats: None, // Initialized async below if NATS_URL is set
     };
 
     // Създаване на router

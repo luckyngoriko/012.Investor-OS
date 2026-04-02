@@ -2,12 +2,14 @@
 //! and writes them to the prices TimescaleDB hypertable.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use chrono::{DateTime, Duration, DurationRound, Utc};
 use sqlx::PgPool;
 use tracing::{debug, error, info};
 
 use super::TradingSignal;
+use crate::nats::{NatsPublisher, PriceCandle};
 
 /// In-progress 1-minute candle being assembled from ticks.
 #[derive(Debug, Clone)]
@@ -62,9 +64,10 @@ impl CandleBuilder {
 pub fn spawn_price_writer(
     pool: PgPool,
     mut signal_rx: tokio::sync::broadcast::Receiver<TradingSignal>,
+    nats_publisher: Option<Arc<NatsPublisher>>,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
-        info!("Price writer started — aggregating 1m candles to TimescaleDB");
+        info!("Price writer started — aggregating 1m candles to TimescaleDB + NATS");
 
         let mut candles: HashMap<String, CandleBuilder> = HashMap::new();
         let mut flush_interval = tokio::time::interval(std::time::Duration::from_secs(10));
@@ -87,7 +90,7 @@ pub fn spawn_price_writer(
                                 if candle.is_complete(now) {
                                     // Flush completed candle
                                     let c = candles.remove(symbol).unwrap();
-                                    flush_candle(&pool, &c).await;
+                                    flush_candle(&pool, &c, &nats_publisher).await;
                                 }
                             }
 
@@ -107,7 +110,7 @@ pub fn spawn_price_writer(
                         Err(tokio::sync::broadcast::error::RecvError::Closed) => {
                             info!("Price writer: signal channel closed, flushing remaining candles");
                             for (_, candle) in candles.drain() {
-                                flush_candle(&pool, &candle).await;
+                                flush_candle(&pool, &candle, &nats_publisher).await;
                             }
                             break;
                         }
@@ -124,7 +127,7 @@ pub fn spawn_price_writer(
 
                     for symbol in completed {
                         if let Some(candle) = candles.remove(&symbol) {
-                            flush_candle(&pool, &candle).await;
+                            flush_candle(&pool, &candle, &nats_publisher).await;
                         }
                     }
                 }
@@ -133,7 +136,11 @@ pub fn spawn_price_writer(
     })
 }
 
-async fn flush_candle(pool: &PgPool, candle: &CandleBuilder) {
+async fn flush_candle(
+    pool: &PgPool,
+    candle: &CandleBuilder,
+    nats_publisher: &Option<Arc<NatsPublisher>>,
+) {
     let result = sqlx::query(
         "INSERT INTO prices (time, symbol, open, high, low, close, volume, trades, source)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'binance')
@@ -159,6 +166,21 @@ async fn flush_candle(pool: &PgPool, candle: &CandleBuilder) {
                 trades = candle.trades,
                 "Flushed 1m candle to prices table"
             );
+
+            // Publish to NATS if available
+            if let Some(publisher) = nats_publisher {
+                let price_candle = PriceCandle {
+                    open: candle.open,
+                    high: candle.high,
+                    low: candle.low,
+                    close: candle.close,
+                    volume: candle.volume,
+                    trades: candle.trades,
+                };
+                if let Err(e) = publisher.publish_price(&candle.symbol, price_candle).await {
+                    debug!(symbol = %candle.symbol, error = %e, "NATS price publish failed (non-fatal)");
+                }
+            }
         }
         Err(e) => {
             error!(

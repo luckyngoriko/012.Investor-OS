@@ -263,6 +263,12 @@ pub mod strategy_selector;
 /// dashboard aggregates, and roadmap visualization.
 pub mod projects;
 
+/// NATS Event-Driven ML Pipeline (Sprint N1).
+///
+/// Connects all ML models through NATS JetStream for real-time
+/// event-driven predictions and model orchestration.
+pub mod nats;
+
 /// ML Prediction Pipeline (Sprint 114).
 ///
 /// Client for the Python ML sidecar service (CatBoost, GARCH, FinBERT, etc.)
