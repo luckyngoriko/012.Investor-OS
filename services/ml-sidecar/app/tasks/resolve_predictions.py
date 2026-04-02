@@ -6,6 +6,7 @@ computes error metrics, and updates ml_predictions.
 
 import json
 import logging
+import os
 import time
 
 import numpy as np
@@ -13,7 +14,7 @@ import psycopg2
 
 logger = logging.getLogger(__name__)
 
-DB_URL = "postgresql://investor:trjkNPtO1ykTKxrF1hMosUKvQGBp7c@postgres:5432/investor_os"
+DB_URL = os.environ.get("DATABASE_URL", "postgresql://investor:trjkNPtO1ykTKxrF1hMosUKvQGBp7c@postgres:5432/investor_os")
 
 # Horizon to interval mapping
 HORIZON_INTERVALS = {

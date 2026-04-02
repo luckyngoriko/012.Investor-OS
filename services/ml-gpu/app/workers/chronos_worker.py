@@ -5,6 +5,7 @@ GPU forecasting and publishes to ios.predict.chronos.{symbol}.
 """
 
 import logging
+import os
 
 import psycopg2
 import numpy as np
@@ -14,7 +15,7 @@ from app.nats_client import NatsManager
 
 logger = logging.getLogger(__name__)
 
-DB_URL = "postgresql://investor:trjkNPtO1ykTKxrF1hMosUKvQGBp7c@postgres:5432/investor_os"
+DB_URL = os.environ.get("DATABASE_URL", "postgresql://investor:trjkNPtO1ykTKxrF1hMosUKvQGBp7c@postgres:5432/investor_os")
 
 
 async def run(nats: NatsManager):

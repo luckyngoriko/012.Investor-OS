@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ---------------------------------------------------------------------------
 DB_URL = os.environ.get(
-    "DB_URL",
+    "DATABASE_URL",
     "postgresql://investor:trjkNPtO1ykTKxrF1hMosUKvQGBp7c@postgres:5432/investor_os",
 )
 

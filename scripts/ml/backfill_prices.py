@@ -10,6 +10,7 @@ Usage:
 """
 
 import argparse
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -133,8 +134,8 @@ def main():
     parser.add_argument("--days", type=int, default=30, help="Days of history (default: 30)")
     parser.add_argument(
         "--db-url",
-        default="postgresql://investor:investor@192.168.1.123:15432/investor_os",
-        help="PostgreSQL connection URL",
+        default=os.environ.get("DATABASE_URL", "postgresql://investor:trjkNPtO1ykTKxrF1hMosUKvQGBp7c@postgres:5432/investor_os"),
+        help="PostgreSQL connection URL (default: DATABASE_URL env var)",
     )
     args = parser.parse_args()
 

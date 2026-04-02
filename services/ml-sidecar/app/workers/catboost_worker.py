@@ -6,6 +6,7 @@ and publishes result to ios.predict.catboost.{symbol}.
 
 import json
 import logging
+import os
 
 import psycopg2
 
@@ -14,7 +15,7 @@ from app.nats_client import NatsManager
 
 logger = logging.getLogger(__name__)
 
-DB_URL = "postgresql://investor:trjkNPtO1ykTKxrF1hMosUKvQGBp7c@postgres:5432/investor_os"
+DB_URL = os.environ.get("DATABASE_URL", "postgresql://investor:trjkNPtO1ykTKxrF1hMosUKvQGBp7c@postgres:5432/investor_os")
 
 
 async def run(nats: NatsManager):

@@ -12,6 +12,7 @@ Usage:
 import argparse
 import json
 import logging
+import os
 import sys
 
 import psycopg2
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Free crypto news sources (no API key)
 COINGECKO_NEWS = "https://api.coingecko.com/api/v3/news"
 
-DB_URL = "postgresql://investor:trjkNPtO1ykTKxrF1hMosUKvQGBp7c@postgres:5432/investor_os"
+DB_URL = os.environ.get("DATABASE_URL", "postgresql://investor:trjkNPtO1ykTKxrF1hMosUKvQGBp7c@postgres:5432/investor_os")
 
 # Symbol to search terms mapping
 SYMBOL_KEYWORDS = {

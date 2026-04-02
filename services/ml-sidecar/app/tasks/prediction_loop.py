@@ -1,16 +1,16 @@
-"""Scheduled prediction loop (Phase D1).
+"""DEPRECATED: Use NATS event-driven pipeline instead.
 
-Runs hourly inside the ml-sidecar container:
-1. Fetch latest features for each tracked symbol
-2. Run CatBoost return prediction
-3. Run GARCH volatility forecast
-4. Run consensus (simple weighted average)
-5. Store all predictions in ml_predictions table
+This script is kept for manual one-shot predictions only.
+The canonical prediction pipeline is now NATS-based:
+  ios.prices → ios.features → ios.predict.* → ios.consensus
+
+To run manually: python -m app.tasks.prediction_loop
 """
 
 import asyncio
 import json
 import logging
+import os
 import time
 from datetime import datetime, timezone
 
@@ -19,7 +19,7 @@ import psycopg2
 
 logger = logging.getLogger(__name__)
 
-DB_URL = "postgresql://investor:trjkNPtO1ykTKxrF1hMosUKvQGBp7c@postgres:5432/investor_os"
+DB_URL = os.environ.get("DATABASE_URL", "postgresql://investor:trjkNPtO1ykTKxrF1hMosUKvQGBp7c@postgres:5432/investor_os")
 SYMBOLS = ["BTCUSDT", "ETHUSDT"]
 HORIZON = "1h"
 

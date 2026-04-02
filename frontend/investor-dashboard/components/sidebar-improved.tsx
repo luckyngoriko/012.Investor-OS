@@ -27,6 +27,10 @@ import {
   BarChart3,
   ChevronDown,
   Globe,
+  ShoppingBag,
+  Trophy,
+  MessageSquare,
+  Wrench,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslations } from "@/components/i18n-provider";
@@ -56,120 +60,144 @@ const navGroupsConfig: NavGroup[] = [
   {
     titleKey: "navGroups.main",
     items: [
-      { 
-        href: "/", 
+      {
+        href: "/",
         icon: LayoutDashboard,
         translationKey: "dashboard",
         descTranslationKey: "dashboard",
       },
-      { 
-        href: "/portfolio", 
+      {
+        href: "/portfolio",
         icon: PieChart,
         translationKey: "portfolio",
         descTranslationKey: "portfolio",
       },
-      { 
-        href: "/positions", 
+      {
+        href: "/positions",
         icon: TrendingUp,
         translationKey: "positions",
         descTranslationKey: "positions",
       },
-      { 
-        href: "/chart", 
+      {
+        href: "/chart",
         icon: CandlestickChart,
         translationKey: "chart",
         descTranslationKey: "chart",
       },
-    ]
+    ],
   },
   {
     titleKey: "navGroups.aiTrading",
     items: [
-      { 
-        href: "/proposals", 
+      {
+        href: "/proposals",
         icon: Target,
         badge: 3,
         translationKey: "proposals",
         descTranslationKey: "proposals",
       },
-      { 
-        href: "/strategy", 
+      {
+        href: "/strategy",
         icon: Brain,
         translationKey: "strategy",
         descTranslationKey: "strategy",
       },
-      { 
-        href: "/backtest", 
+      {
+        href: "/backtest",
         icon: RefreshCw,
         translationKey: "backtest",
         descTranslationKey: "backtest",
       },
-      { 
-        href: "/ai-train", 
+      {
+        href: "/strategy-builder",
+        icon: Wrench,
+        translationKey: "strategyBuilder",
+        descTranslationKey: "strategyBuilder",
+      },
+      {
+        href: "/ai-train",
         icon: Sparkles,
         translationKey: "aiTraining",
         descTranslationKey: "aiTraining",
       },
-    ]
+      {
+        href: "/chat",
+        icon: MessageSquare,
+        translationKey: "aiChat",
+        descTranslationKey: "aiChat",
+      },
+    ],
   },
   {
     titleKey: "navGroups.management",
     items: [
-      { 
-        href: "/risk", 
+      {
+        href: "/risk",
         icon: Shield,
         translationKey: "risk",
         descTranslationKey: "risk",
       },
-      { 
-        href: "/portfolio-opt", 
+      {
+        href: "/portfolio-opt",
         icon: BarChart3,
         translationKey: "optimization",
         descTranslationKey: "optimization",
       },
-      { 
-        href: "/tax", 
+      {
+        href: "/tax",
         icon: Calculator,
         translationKey: "tax",
         descTranslationKey: "tax",
       },
-      { 
-        href: "/journal", 
+      {
+        href: "/journal",
         icon: FileText,
         translationKey: "journal",
         descTranslationKey: "journal",
         disabled: true,
       },
-    ]
+      {
+        href: "/marketplace",
+        icon: ShoppingBag,
+        translationKey: "marketplace",
+        descTranslationKey: "marketplace",
+      },
+      {
+        href: "/leaderboard",
+        icon: Trophy,
+        translationKey: "leaderboard",
+        descTranslationKey: "leaderboard",
+      },
+    ],
   },
   {
     titleKey: "navGroups.system",
     items: [
-      { 
-        href: "/monitoring", 
+      {
+        href: "/monitoring",
         icon: Activity,
         translationKey: "monitoring",
         descTranslationKey: "monitoring",
       },
-      { 
-        href: "/security", 
+      {
+        href: "/security",
         icon: Lock,
         translationKey: "security",
         descTranslationKey: "security",
       },
-      { 
-        href: "/deployment", 
+      {
+        href: "/deployment",
         icon: Server,
         translationKey: "deployment",
         descTranslationKey: "deployment",
       },
-      { 
-        href: "/settings", 
+      {
+        href: "/settings",
         icon: Settings,
         translationKey: "settings",
         descTranslationKey: "settings",
       },
-    ]
+    ],
   },
 ];
 
@@ -177,8 +205,10 @@ export default function ImprovedSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(["navGroups.main"]);
-  
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([
+    "navGroups.main",
+  ]);
+
   const { t: tNav } = useTranslations("navigation");
   const { t: tNavDesc } = useTranslations("navDescriptions");
   const { t: tGroups } = useTranslations();
@@ -186,10 +216,10 @@ export default function ImprovedSidebar() {
   const [locale] = useUserLocale();
 
   const toggleGroup = (titleKey: string) => {
-    setExpandedGroups(prev => 
-      prev.includes(titleKey) 
-        ? prev.filter(t => t !== titleKey)
-        : [...prev, titleKey]
+    setExpandedGroups((prev) =>
+      prev.includes(titleKey)
+        ? prev.filter((t) => t !== titleKey)
+        : [...prev, titleKey],
     );
   };
 
@@ -209,9 +239,13 @@ export default function ImprovedSidebar() {
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-2 rounded-xl bg-gray-800/50 border border-gray-700 text-white"
           >
-            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {isMobileMenuOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
           </button>
-          
+
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-white" />
@@ -242,8 +276,8 @@ export default function ImprovedSidebar() {
       {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{ 
-          x: isMobileMenuOpen ? 0 : undefined 
+        animate={{
+          x: isMobileMenuOpen ? 0 : undefined,
         }}
         className={`
           fixed lg:sticky left-0 top-0 h-screen z-40
@@ -283,9 +317,9 @@ export default function ImprovedSidebar() {
                     hover:text-gray-400 transition-colors"
                 >
                   <span>{tGroups(group.titleKey)}</span>
-                  <ChevronDown 
+                  <ChevronDown
                     className={`w-3 h-3 transition-transform duration-200
-                      ${expandedGroups.includes(group.titleKey) ? "rotate-180" : ""}`} 
+                      ${expandedGroups.includes(group.titleKey) ? "rotate-180" : ""}`}
                   />
                 </button>
 
@@ -304,7 +338,7 @@ export default function ImprovedSidebar() {
                           const active = isActive(item.href);
                           const label = tNav(item.translationKey);
                           const description = tNavDesc(item.descTranslationKey);
-                          
+
                           return (
                             <Link
                               key={item.href}
@@ -312,9 +346,10 @@ export default function ImprovedSidebar() {
                               className={`
                                 group flex items-center gap-3 px-3 py-2.5 rounded-xl
                                 transition-all duration-200 relative
-                                ${active 
-                                  ? "bg-gradient-to-r from-blue-600/20 to-cyan-600/10 text-white shadow-lg shadow-blue-500/10" 
-                                  : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+                                ${
+                                  active
+                                    ? "bg-gradient-to-r from-blue-600/20 to-cyan-600/10 text-white shadow-lg shadow-blue-500/10"
+                                    : "text-gray-400 hover:text-white hover:bg-gray-800/50"
                                 }
                                 ${item.disabled ? "opacity-50 cursor-not-allowed" : ""}
                               `}
@@ -328,23 +363,31 @@ export default function ImprovedSidebar() {
                                 />
                               )}
 
-                              <item.icon className={`
+                              <item.icon
+                                className={`
                                 w-5 h-5 transition-colors
                                 ${active ? "text-blue-400" : "text-gray-500 group-hover:text-gray-300"}
-                              `} />
-                              
+                              `}
+                              />
+
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm truncate">{label}</span>
+                                  <span className="font-medium text-sm truncate">
+                                    {label}
+                                  </span>
                                   {item.badge && (
-                                    <span className="px-1.5 py-0.5 text-[10px] font-bold 
-                                      bg-blue-500 text-white rounded-full">
+                                    <span
+                                      className="px-1.5 py-0.5 text-[10px] font-bold 
+                                      bg-blue-500 text-white rounded-full"
+                                    >
                                       {item.badge}
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-[10px] text-gray-600 group-hover:text-gray-500 
-                                  truncate transition-colors">
+                                <p
+                                  className="text-[10px] text-gray-600 group-hover:text-gray-500 
+                                  truncate transition-colors"
+                                >
                                   {description}
                                 </p>
                               </div>
@@ -388,8 +431,10 @@ export default function ImprovedSidebar() {
           {user && (
             <div className="p-4 border-t border-gray-800/50">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-700 to-gray-600 
-                  flex items-center justify-center flex-shrink-0">
+                <div
+                  className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-700 to-gray-600 
+                  flex items-center justify-center flex-shrink-0"
+                >
                   <span className="text-sm font-bold text-white">
                     {user.name?.charAt(0) || user.email?.charAt(0) || "U"}
                   </span>
@@ -398,10 +443,12 @@ export default function ImprovedSidebar() {
                   <p className="text-sm font-medium text-white truncate">
                     {user.name || user.email}
                   </p>
-                  <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                  <p className="text-xs text-gray-500 capitalize">
+                    {user.role}
+                  </p>
                 </div>
               </div>
-              
+
               <button
                 onClick={logout}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-xl
