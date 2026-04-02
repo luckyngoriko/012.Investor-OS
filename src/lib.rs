@@ -239,14 +239,14 @@ pub mod maintenance;
 /// - fingerprint binding and velocity checks
 pub mod anti_fake;
 
-/// EU AI Act & GDPR Compliance Module
+/// Compliance Module
 ///
-/// Sprint 52: EU Compliance Integration
-/// - EU AI Act compliance tracking via AI-OS.NET
-/// - GDPR "Right to be forgotten" and "Data portability"
-/// - Audit logging for AI decisions (Article 12 requirement)
-/// - DLP (Data Loss Prevention) via AI-OS-PG
-#[cfg(feature = "eu_compliance")]
+/// Sprint 52: EU Compliance Integration (behind `eu_compliance` feature)
+/// Wave 4 Task 23: KYC/AML Verification via Sumsub (always enabled)
+///
+/// EU-specific submodules (AI-OS.NET, GDPR, DLP, audit) are gated
+/// behind the `eu_compliance` feature flag. The KYC/AML submodule
+/// is always compiled.
 pub mod compliance;
 
 /// Tax & Compliance Engine — tax loss harvesting, wash sale monitoring,
@@ -321,3 +321,18 @@ pub mod marketplace;
 /// metrics: total return, Sharpe ratio, max drawdown, win rate.
 /// Sorted by Sharpe ratio descending with anonymous creator labels.
 pub mod leaderboard;
+
+/// Fireblocks MPC Custody Module (Wave 4 Task 22).
+///
+/// Institutional-grade custody via Fireblocks vault accounts.
+/// Deposit address generation, withdrawals, balance queries,
+/// and transaction tracking with PostgreSQL persistence.
+pub mod custody;
+
+/// Regulatory Compliance Module (Wave 4 Task 25).
+///
+/// MiFID II and MiCA regulatory compliance for EU markets.
+/// Transaction reporting (Article 26), best execution checks,
+/// client classification, crypto-asset categorization (ART/EMT/Other),
+/// whitepaper requirements, and reserve rules.
+pub mod regulatory;

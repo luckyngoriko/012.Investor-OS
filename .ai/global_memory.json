@@ -42,6 +42,11 @@
     "Stripe API uses form-encoded POST bodies (not JSON) for payment_intents and payouts",
     "StripeConnectClient::from_env() returns Option for graceful degradation when STRIPE_SECRET_KEY unset",
     "fiat_transactions table uses CHECK constraints for tx_type and status enums",
-    "ssh stdin pipe to docker exec requires 'docker exec -i' flag (not just 'docker exec')"
+    "ssh stdin pipe to docker exec requires 'docker exec -i' flag (not just 'docker exec')",
+    "FireblocksClient uses Bearer token placeholder; RSA JWT signing needed for production Fireblocks API",
+    "custody_wallets + custody_transactions tables use RLS with app.current_user_id session variable",
+    "Fireblocks sandbox base URL: https://sandbox-api.fireblocks.io, production: https://api.fireblocks.io",
+    "compliance module changed: top-level #[cfg(feature = eu_compliance)] removed, EU submodules gated internally, KYC always compiled",
+    "Created src/regulatory/ as separate module to avoid compliance feature-gate issues — mifid.rs + mica.rs always compiled"
   ]
 }
