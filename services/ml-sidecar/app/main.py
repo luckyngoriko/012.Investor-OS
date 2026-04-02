@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.routers import broker, correlation, optimize, predict, sentiment, volatility
+from app.routers import broker, correlation, onchain, optimize, predict, sentiment, volatility
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +62,9 @@ async def lifespan(app: FastAPI):
     _loaded_models.append("garch")
     _loaded_models.append("dcc-garch")
 
+    # On-chain analyzer is stateless (fetches live data per request)
+    _loaded_models.append("onchain-analyzer")
+
     # Start NATS workers if enabled
     nats_state = None
     nats_enabled = os.environ.get("NATS_ENABLED", "false").lower() == "true"
@@ -98,6 +101,7 @@ app.include_router(sentiment.router)
 app.include_router(optimize.router)
 app.include_router(broker.router)
 app.include_router(correlation.router)
+app.include_router(onchain.router)
 
 
 @app.get("/health")
