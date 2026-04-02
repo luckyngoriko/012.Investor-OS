@@ -29,7 +29,7 @@ def _detect_gpu() -> dict:
     return {
         "available": True,
         "device": torch.cuda.get_device_name(0),
-        "vram_total_gb": round(torch.cuda.get_device_properties(0).total_mem / 1e9, 1),
+        "vram_total_gb": round(getattr(torch.cuda.get_device_properties(0), 'total_memory', 0) / 1e9, 1),
         "vram_free_gb": round(torch.cuda.mem_get_info()[0] / 1e9, 1),
         "cuda_version": torch.version.cuda or "unknown",
         "torch_version": torch.__version__,
