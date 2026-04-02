@@ -4,7 +4,7 @@ import asyncio
 import logging
 
 from app.nats_client import NatsManager
-from app.workers import chronos_worker, hrm_worker
+from app.workers import chronos_worker, hrm_worker, rl_worker
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,7 @@ async def start_nats_workers():
     tasks = [
         asyncio.create_task(chronos_worker.run(nats), name="chronos-worker"),
         asyncio.create_task(hrm_worker.run(nats), name="hrm-worker"),
+        asyncio.create_task(rl_worker.run(nats), name="rl-worker"),
     ]
 
     logger.info("Started %d GPU NATS workers", len(tasks))

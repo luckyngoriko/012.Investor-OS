@@ -493,6 +493,46 @@
       ],
       "blockers": [],
       "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-024",
+      "title": "Performance Leaderboard (Wave 3 Task 18)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["TSK-007"],
+      "acceptance_criteria": [
+        "src/leaderboard/mod.rs: get_leaderboard(pool, timeframe), LeaderboardEntry, compute_sharpe(), compute_max_drawdown()",
+        "pub mod leaderboard in src/lib.rs",
+        "GET /api/leaderboard?timeframe= route in main.rs",
+        "leaderboard_handler in main.rs",
+        "frontend/investor-dashboard/app/leaderboard/page.tsx: table with rank, strategy, return, Sharpe, drawdown, win rate, trades",
+        "Timeframe filter buttons (7d/30d/all)",
+        "Dark theme, no Sidebar import, use client",
+        "8 unit tests pass",
+        "cargo build --lib passes",
+        "cargo build --bin investor-os passes"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-025",
+      "title": "Reinforcement Learning Agent (Wave 3 Task 19)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "services/ml-gpu/app/models/rl_agent.py: RLTradingAgent with PolicyNetwork (9->64->5)",
+        "REINFORCE algorithm with train_step(), train_episode(), predict(), predict_with_probs()",
+        "5-action discrete space: [-1, -0.5, 0, 0.5, 1] position sizes",
+        "save(path) / load(path) for model persistence",
+        "services/ml-gpu/app/workers/rl_worker.py: NATS worker subscribing to ios.consensus.>",
+        "Extracts 9 features, predicts action, publishes to ios.predict.rl.{symbol}",
+        "rl_worker wired into worker_runner.py",
+        "Python syntax validates for all 3 files"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
     }
   ]
 }

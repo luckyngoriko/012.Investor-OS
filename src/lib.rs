@@ -314,3 +314,10 @@ pub mod backtest;
 /// browse available strategy listings, and subscribe to strategies
 /// created by other traders.
 pub mod marketplace;
+
+/// Performance Leaderboard Module (Wave 3 Task 18).
+///
+/// Aggregates `user_trades` by strategy to compute ranked performance
+/// metrics: total return, Sharpe ratio, max drawdown, win rate.
+/// Sorted by Sharpe ratio descending with anonymous creator labels.
+pub mod leaderboard;

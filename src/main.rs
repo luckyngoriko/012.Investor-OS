@@ -29,6 +29,7 @@ use investor_os::broker::{
     Broker, BrokerConfig, BrokerType, Order, OrderSide, OrderType, TimeInForce,
 };
 use investor_os::chat;
+use investor_os::leaderboard;
 use investor_os::marketplace;
 use investor_os::prediction;
 use investor_os::projects::ProjectService;
@@ -333,6 +334,31 @@ async fn backtest_handler(
     }
 }
 
+// ───────────────── Leaderboard handler (Wave 3 Task 18) ─────────────────
+
+async fn leaderboard_handler(
+    State(state): State<AppState>,
+    Query(params): Query<leaderboard::LeaderboardQuery>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    match leaderboard::get_leaderboard(&state.db_pool, &params.timeframe).await {
+        Ok(entries) => (
+            StatusCode::OK,
+            Json(json!({
+                "success": true,
+                "data": entries,
+                "timeframe": params.timeframe
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "LEADERBOARD_FAILED", "message": e}
+            })),
+        ),
+    }
+}
+
 // ───────────────── Marketplace handlers (Wave 3 Task 17) ──────────────────
 
 async fn marketplace_list_handler(
@@ -620,6 +646,8 @@ fn create_router(state: AppState) -> Router {
         .route("/api/chat", post(chat_handler))
         // Backtesting endpoint (Wave 2 Task 14)
         .route("/api/backtest", post(backtest_handler))
+        // Performance Leaderboard (Wave 3 Task 18)
+        .route("/api/leaderboard", get(leaderboard_handler))
         // Copy Trading Marketplace (Wave 3 Task 17)
         .route("/api/marketplace", get(marketplace_list_handler))
         .route(

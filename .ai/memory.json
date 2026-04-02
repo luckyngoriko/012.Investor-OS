@@ -1,42 +1,43 @@
 {
   "project_goal": "Build Investor-OS: an investment platform with prediction, risk management, and portfolio optimization capabilities",
   "current_milestone": "Wave 3 – Scale + Polish",
-  "current_task_id": "TSK-023",
-  "current_task_title": "Copy Trading Marketplace (Wave 3 Task 17)",
-  "current_step": "Completed – migration, backend module, API routes, frontend page, 4 tests pass, migration applied on TrueNAS",
+  "current_task_id": "TSK-025",
+  "current_task_title": "Performance Leaderboard + RL Agent (Wave 3 Tasks 18+19)",
+  "current_step": "Completed – leaderboard module, frontend page, RL agent model, RL worker, all builds pass, 480 tests pass",
   "completed_steps": [
-    "Created migrations/20260402000004_marketplace.sql with strategy_listings table, 2 indexes, 2 FKs",
-    "Created src/marketplace/mod.rs with re-exports",
-    "Created src/marketplace/repository.rs with StrategyListing, PublishRequest, list/publish/subscribe functions",
-    "Added pub mod marketplace to src/lib.rs",
-    "Added marketplace import to src/main.rs",
-    "Added 3 marketplace handler functions (list, publish, subscribe)",
-    "Added 3 API routes: GET /api/marketplace, POST /api/marketplace/publish, POST /api/marketplace/:id/subscribe",
-    "Created frontend/investor-dashboard/app/marketplace/page.tsx with strategy grid, dark theme, lucide icons",
+    "Created src/leaderboard/mod.rs with get_leaderboard(), LeaderboardEntry, compute_sharpe(), compute_max_drawdown()",
+    "Added pub mod leaderboard to src/lib.rs",
+    "Added leaderboard import, route GET /api/leaderboard?timeframe=, and handler to src/main.rs",
+    "Created frontend/investor-dashboard/app/leaderboard/page.tsx with table, rank badges, timeframe filter",
+    "Created services/ml-gpu/app/models/rl_agent.py with RLTradingAgent (REINFORCE policy gradient, 9->64->5 net)",
+    "Created services/ml-gpu/app/workers/rl_worker.py (NATS subscriber on ios.consensus.>, publishes to ios.predict.rl.{symbol})",
+    "Wired rl_worker into services/ml-gpu/app/workers/worker_runner.py",
     "cargo build --lib passes",
     "cargo build --bin investor-os passes",
-    "cargo clippy --lib -- -D warnings passes with 0 warnings",
-    "4 unit tests pass (publish_request_deserializes, publish_request_optional_fields, strategy_listing_serializes, strategy_listing_roundtrip)",
-    "Migration applied and verified on TrueNAS staging PostgreSQL"
+    "8 leaderboard unit tests pass",
+    "480 total lib tests pass (0 failures)",
+    "Python syntax validation passes for all 3 new/modified Python files"
   ],
   "remaining_steps": [],
   "files_touched": [
-    "migrations/20260402000004_marketplace.sql",
-    "src/marketplace/mod.rs",
-    "src/marketplace/repository.rs",
+    "src/leaderboard/mod.rs",
     "src/lib.rs",
     "src/main.rs",
-    "frontend/investor-dashboard/app/marketplace/page.tsx"
+    "frontend/investor-dashboard/app/leaderboard/page.tsx",
+    "services/ml-gpu/app/models/rl_agent.py",
+    "services/ml-gpu/app/workers/rl_worker.py",
+    "services/ml-gpu/app/workers/worker_runner.py"
   ],
   "discovered_constraints": [
-    "Linter auto-injects leaderboard module/import/route that must be cleaned up",
-    "sqlx Row::try_get requires use sqlx::Row inside the function body"
+    "Linter auto-reverts lib.rs and main.rs changes if edit is not properly persisted",
+    "cargo test filter requires exact module path after clean rebuild"
   ],
   "discovered_dependencies": [
-    "sqlx PgPool for database queries",
-    "uuid, chrono, serde, serde_json for types",
-    "strategy_listings FK to auth_users(id) and user_strategies(id)"
+    "sqlx PgPool for leaderboard queries",
+    "uuid, chrono for leaderboard types",
+    "torch, numpy for RL agent",
+    "nats-py for RL worker"
   ],
   "last_errors": [],
-  "last_verification_result": "SUCCESS – 4 tests pass, build clean, clippy clean, migration verified on TrueNAS"
+  "last_verification_result": "SUCCESS – 480 tests pass, both builds clean, Python syntax valid"
 }
