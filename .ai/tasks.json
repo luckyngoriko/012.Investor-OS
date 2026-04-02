@@ -424,6 +424,75 @@
       ],
       "blockers": [],
       "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-021",
+      "title": "Strategy Builder UI (Wave 3 Task 16)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["TSK-011"],
+      "acceptance_criteria": [
+        "frontend/investor-dashboard/app/strategy-builder/page.tsx created",
+        "use client directive, framer-motion animations, Lucide icons",
+        "Model selection checkboxes: catboost, garch, finbert, chronos, hrm, ets, skfolio, consensus",
+        "Symbol multi-select: BTCUSDT, ETHUSDT, BNBUSDT, SOLUSDT, XRPUSDT, ADAUSDT, DOGEUSDT, AVAXUSDT",
+        "Trading mode radio buttons: Signal, Semi-Auto, Full-Auto",
+        "Risk limit inputs: Max Position % (default 5), Max Daily Loss % (default 2), Max Drawdown % (default 10)",
+        "Strategy name text input",
+        "Save button POSTs to /api/strategies",
+        "Dark theme: bg-gray-800, border-gray-700, text-slate-100",
+        "No Sidebar import",
+        "TypeScript check passes (0 errors from new file)",
+        "Committed as 8a6742e"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-022",
+      "title": "Mobile PWA + Alternative Data Integration (Wave 3 Tasks 20-21)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "frontend/investor-dashboard/public/manifest.json created with PWA config",
+        "frontend/investor-dashboard/public/sw.js created with offline-first caching",
+        "frontend/investor-dashboard/app/offline/page.tsx created with branded offline message",
+        "frontend/investor-dashboard/app/layout.tsx updated with manifest link + theme-color meta",
+        "services/ml-sidecar/app/models/alt_data_model.py: AltDataCollector with get_google_trends(), get_fear_greed_index(), analyze()",
+        "services/ml-sidecar/app/routers/altdata.py: GET /v1/altdata/analysis and /v1/altdata/fear-greed",
+        "services/ml-sidecar/app/workers/altdata_worker.py: 30-min NATS timer publishing to ios.altdata.{symbol}",
+        "altdata router wired into main.py",
+        "altdata worker wired into worker_runner.py",
+        "altdata-collector added to _loaded_models in main.py lifespan",
+        "Python syntax validates for all 5 files",
+        "TypeScript validates for offline page",
+        "Committed as 0d209e6"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-023",
+      "title": "Copy Trading Marketplace (Wave 3 Task 17)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["TSK-011"],
+      "acceptance_criteria": [
+        "migrations/20260402000004_marketplace.sql with strategy_listings table, indexes, FKs",
+        "src/marketplace/mod.rs + src/marketplace/repository.rs with list/publish/subscribe",
+        "pub mod marketplace in src/lib.rs",
+        "3 API routes: GET /api/marketplace, POST /api/marketplace/publish, POST /api/marketplace/:id/subscribe",
+        "3 handler functions in src/main.rs",
+        "frontend/investor-dashboard/app/marketplace/page.tsx: strategy card grid, dark theme, lucide icons",
+        "4 unit tests pass",
+        "cargo build --lib passes",
+        "cargo build --bin investor-os passes",
+        "cargo clippy --lib -- -D warnings passes with 0 warnings",
+        "Migration applied and verified on TrueNAS staging PostgreSQL"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
     }
   ]
 }

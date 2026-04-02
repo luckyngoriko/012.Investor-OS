@@ -307,3 +307,10 @@ pub mod chat;
 /// (price vs. 20-period SMA). Returns metrics: total return, Sharpe
 /// ratio, max drawdown, win rate, and equity curve.
 pub mod backtest;
+
+/// Copy Trading Marketplace Module (Wave 3 Task 17).
+///
+/// Allows users to publish their strategies to a public marketplace,
+/// browse available strategy listings, and subscribe to strategies
+/// created by other traders.
+pub mod marketplace;

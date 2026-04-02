@@ -1,38 +1,42 @@
 {
   "project_goal": "Build Investor-OS: an investment platform with prediction, risk management, and portfolio optimization capabilities",
-  "current_milestone": "Wave 2 – Multi-Broker + Intelligence",
-  "current_task_id": "TSK-017",
-  "current_task_title": "Smart Order Router (Wave 2 Task 15)",
-  "current_step": "Completed – src/broker/router.rs created, wired into mod.rs, 9 tests pass, 0 clippy warnings",
+  "current_milestone": "Wave 3 – Scale + Polish",
+  "current_task_id": "TSK-023",
+  "current_task_title": "Copy Trading Marketplace (Wave 3 Task 17)",
+  "current_step": "Completed – migration, backend module, API routes, frontend page, 4 tests pass, migration applied on TrueNAS",
   "completed_steps": [
-    "Created src/broker/router.rs with SmartRouter, RoutingDecision, BrokerQuote, AssetClass",
-    "Implemented classify_symbol() for crypto/forex/stock detection",
-    "Implemented generate_quotes() with deterministic simulated prices",
-    "Implemented route_order() with effective_cost comparison and tracing audit logging",
-    "Added pub mod router to src/broker/mod.rs",
-    "Fixed pre-existing sqlx rust_decimal feature missing in Cargo.toml",
-    "All 9 unit tests pass",
+    "Created migrations/20260402000004_marketplace.sql with strategy_listings table, 2 indexes, 2 FKs",
+    "Created src/marketplace/mod.rs with re-exports",
+    "Created src/marketplace/repository.rs with StrategyListing, PublishRequest, list/publish/subscribe functions",
+    "Added pub mod marketplace to src/lib.rs",
+    "Added marketplace import to src/main.rs",
+    "Added 3 marketplace handler functions (list, publish, subscribe)",
+    "Added 3 API routes: GET /api/marketplace, POST /api/marketplace/publish, POST /api/marketplace/:id/subscribe",
+    "Created frontend/investor-dashboard/app/marketplace/page.tsx with strategy grid, dark theme, lucide icons",
     "cargo build --lib passes",
-    "cargo clippy --lib -- -D warnings passes with 0 warnings"
+    "cargo build --bin investor-os passes",
+    "cargo clippy --lib -- -D warnings passes with 0 warnings",
+    "4 unit tests pass (publish_request_deserializes, publish_request_optional_fields, strategy_listing_serializes, strategy_listing_roundtrip)",
+    "Migration applied and verified on TrueNAS staging PostgreSQL"
   ],
   "remaining_steps": [],
   "files_touched": [
-    "src/broker/router.rs",
-    "src/broker/mod.rs",
-    "Cargo.toml",
-    "Cargo.lock"
+    "migrations/20260402000004_marketplace.sql",
+    "src/marketplace/mod.rs",
+    "src/marketplace/repository.rs",
+    "src/lib.rs",
+    "src/main.rs",
+    "frontend/investor-dashboard/app/marketplace/page.tsx"
   ],
   "discovered_constraints": [
-    "sqlx needs explicit rust_decimal feature for Decode<Postgres> impl",
-    "Floating point roundtrip through JSON may cause tiny precision differences"
+    "Linter auto-injects leaderboard module/import/route that must be cleaned up",
+    "sqlx Row::try_get requires use sqlx::Row inside the function body"
   ],
   "discovered_dependencies": [
-    "serde + serde_json for serialization",
-    "uuid for routing decision IDs",
-    "chrono for timestamps",
-    "tracing for audit logging",
-    "OrderSide from super (broker mod.rs)"
+    "sqlx PgPool for database queries",
+    "uuid, chrono, serde, serde_json for types",
+    "strategy_listings FK to auth_users(id) and user_strategies(id)"
   ],
   "last_errors": [],
-  "last_verification_result": "SUCCESS – 9 tests pass, build + clippy clean"
+  "last_verification_result": "SUCCESS – 4 tests pass, build clean, clippy clean, migration verified on TrueNAS"
 }

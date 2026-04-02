@@ -29,6 +29,7 @@ use investor_os::broker::{
     Broker, BrokerConfig, BrokerType, Order, OrderSide, OrderType, TimeInForce,
 };
 use investor_os::chat;
+use investor_os::marketplace;
 use investor_os::prediction;
 use investor_os::projects::ProjectService;
 use investor_os::strategy;
@@ -332,6 +333,66 @@ async fn backtest_handler(
     }
 }
 
+// ───────────────── Marketplace handlers (Wave 3 Task 17) ──────────────────
+
+async fn marketplace_list_handler(
+    State(state): State<AppState>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    match marketplace::list_public_strategies(&state.db_pool).await {
+        Ok(listings) => (
+            StatusCode::OK,
+            Json(json!({"success": true, "data": listings})),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "MARKETPLACE_LIST_FAILED", "message": e}
+            })),
+        ),
+    }
+}
+
+async fn marketplace_publish_handler(
+    State(state): State<AppState>,
+    Json(body): Json<marketplace::PublishRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let creator_id = strategy_user_id();
+    match marketplace::publish_strategy(&state.db_pool, creator_id, &body).await {
+        Ok(id) => (
+            StatusCode::CREATED,
+            Json(json!({"success": true, "data": {"id": id}})),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "error": {"code": "MARKETPLACE_PUBLISH_FAILED", "message": e}
+            })),
+        ),
+    }
+}
+
+async fn marketplace_subscribe_handler(
+    State(state): State<AppState>,
+    Path(listing_id): Path<Uuid>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let user_id = strategy_user_id();
+    match marketplace::subscribe_to_strategy(&state.db_pool, user_id, listing_id).await {
+        Ok(()) => (
+            StatusCode::OK,
+            Json(json!({"success": true, "data": {"subscribed": true}})),
+        ),
+        Err(e) => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "success": false,
+                "error": {"code": "MARKETPLACE_SUBSCRIBE_FAILED", "message": e}
+            })),
+        ),
+    }
+}
+
 // ───────────────── Strategy Engine handlers (Wave 1b Task 5) ─────────────────
 
 /// Hardcoded admin user ID for strategy endpoints until full auth extraction is wired.
@@ -559,6 +620,16 @@ fn create_router(state: AppState) -> Router {
         .route("/api/chat", post(chat_handler))
         // Backtesting endpoint (Wave 2 Task 14)
         .route("/api/backtest", post(backtest_handler))
+        // Copy Trading Marketplace (Wave 3 Task 17)
+        .route("/api/marketplace", get(marketplace_list_handler))
+        .route(
+            "/api/marketplace/publish",
+            post(marketplace_publish_handler),
+        )
+        .route(
+            "/api/marketplace/:id/subscribe",
+            post(marketplace_subscribe_handler),
+        )
         .route_layer(auth_layer);
 
     Router::new()
