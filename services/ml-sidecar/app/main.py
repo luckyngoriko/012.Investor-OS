@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.routers import optimize, predict, sentiment, volatility
+from app.routers import broker, optimize, predict, sentiment, volatility
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +77,7 @@ app.include_router(predict.router)
 app.include_router(volatility.router)
 app.include_router(sentiment.router)
 app.include_router(optimize.router)
+app.include_router(broker.router)
 
 
 @app.get("/health")

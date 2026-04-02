@@ -7,6 +7,7 @@ use tokio::sync::{mpsc, RwLock};
 
 // Re-export submodules
 pub mod orderbook;
+pub mod price_writer;
 pub mod trade_analyzer;
 pub mod websocket;
 
