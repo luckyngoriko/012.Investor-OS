@@ -1,40 +1,37 @@
 {
   "project_goal": "Build Investor-OS: an investment platform with prediction, risk management, and portfolio optimization capabilities",
   "current_milestone": "Wave 1b – Trading execution and strategy management",
-  "current_task_id": "TSK-011",
-  "current_task_title": "Strategy Engine CRUD API (Wave 1b Task 5)",
-  "current_step": "Completed – all files created, build passes, ready for commit",
+  "current_task_id": "TSK-012",
+  "current_task_title": "Stripe Billing + Feature Gating (Wave 1b Task 7)",
+  "current_step": "Completed – all files created, build passes, tests pass, migration applied, ready for commit",
   "completed_steps": [
-    "Created src/strategy/types.rs with Strategy, CreateStrategyRequest, UpdateStrategyRequest",
-    "Created src/strategy/repository.rs with CRUD using runtime sqlx (no compile-time macros)",
-    "Created src/strategy/mod.rs with re-exports",
-    "pub mod strategy already existed in src/lib.rs from prior commit",
-    "Added use investor_os::strategy to src/main.rs",
-    "Added 5 thin handler wrappers in src/main.rs (create, list, get, update, delete)",
-    "Added 5 routes to protected_router: POST/GET /api/strategies, GET/PUT/DELETE /api/strategies/:id",
+    "Created migrations/20260402000003_subscriptions.sql with table, indexes, CHECK constraints, FK",
+    "Created src/billing/mod.rs with pub mod tiers and pub mod repository",
+    "Created src/billing/tiers.rs with Tier enum (Free/Pro/Enterprise), feature gating methods, 14 unit tests",
+    "Created src/billing/repository.rs with get_user_tier, set_user_tier, get_subscription_status using runtime sqlx",
+    "Added pub mod billing to src/lib.rs",
     "cargo build --lib succeeded",
-    "cargo build --bin investor-os succeeded",
-    "cargo clippy --lib -- -D warnings passed with 0 warnings"
+    "cargo clippy --lib -- -D warnings passed with 0 warnings",
+    "14 billing::tiers unit tests passed",
+    "Migration applied on TrueNAS staging PostgreSQL — table verified with all columns, constraints, indexes, FK"
   ],
   "remaining_steps": ["Commit"],
   "files_touched": [
-    "src/strategy/mod.rs",
-    "src/strategy/types.rs",
-    "src/strategy/repository.rs",
-    "src/lib.rs",
-    "src/main.rs"
+    "migrations/20260402000003_subscriptions.sql",
+    "src/billing/mod.rs",
+    "src/billing/tiers.rs",
+    "src/billing/repository.rs",
+    "src/lib.rs"
   ],
   "discovered_constraints": [
-    "pub mod strategy was already declared in lib.rs from the trading module commit (bb905a2)",
-    "Hardcoded admin UUID 00000000-0000-0000-0000-000000000001 for user_id until auth extraction is wired",
-    "TEXT[] PostgreSQL columns bind directly to Vec<String> in sqlx",
-    "COALESCE pattern works for partial UPDATE with Option binds"
+    "Tier::from_str shadows std trait — acceptable since it's a static method with custom default-to-Free behavior",
+    "Tier needs Eq in addition to PartialEq for exhaustive comparisons in tests",
+    "serde(rename_all = lowercase) ensures JSON serialization matches DB tier strings"
   ],
   "discovered_dependencies": [
-    "user_strategies table must exist (migration 20260402000001_multi_tenant.sql)",
-    "auth_users table must have admin user for FK",
-    "Future: wire real user_id from auth middleware instead of hardcoded UUID"
+    "subscriptions table FK references auth_users(id) — auth_users must exist first",
+    "chrono dependency already available via sqlx + other modules"
   ],
   "last_errors": [],
-  "last_verification_result": "SUCCESS – lib build clean, binary build clean, 0 clippy warnings"
+  "last_verification_result": "SUCCESS – lib build clean, 0 clippy warnings, 14/14 tests pass, migration verified on TrueNAS"
 }

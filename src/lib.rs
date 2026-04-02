@@ -286,3 +286,9 @@ pub mod strategy;
 /// Consumes trade proposals from the consensus pipeline and routes them
 /// through mode-specific handlers: Signal, SemiAuto, FullAuto.
 pub mod trading;
+
+/// Billing & Feature Gating Module (Wave 1b Task 7).
+///
+/// Subscription tier definitions (Free / Pro / Enterprise),
+/// feature gating logic, and PostgreSQL persistence.
+pub mod billing;

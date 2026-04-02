@@ -219,6 +219,26 @@
       ],
       "blockers": [],
       "completed_at": "2026-04-02"
+    },
+    {
+      "id": "TSK-012",
+      "title": "Stripe Billing + Feature Gating (Wave 1b Task 7)",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["TSK-007"],
+      "acceptance_criteria": [
+        "migrations/20260402000003_subscriptions.sql created with table, indexes, constraints, FK",
+        "src/billing/mod.rs created with pub mod tiers and pub mod repository",
+        "src/billing/tiers.rs: Tier enum (Free/Pro/Enterprise) with gating methods",
+        "src/billing/repository.rs: get_user_tier, set_user_tier, get_subscription_status with runtime sqlx",
+        "pub mod billing added to src/lib.rs",
+        "cargo build --lib passes",
+        "cargo clippy --lib -- -D warnings passes with 0 warnings",
+        "14 unit tests pass",
+        "Migration applied and verified on TrueNAS staging PostgreSQL"
+      ],
+      "blockers": [],
+      "completed_at": "2026-04-02"
     }
   ]
 }

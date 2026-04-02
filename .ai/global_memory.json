@@ -1,0 +1,37 @@
+{
+  "repo_conventions": {
+    "sqlx_pattern": "Runtime sqlx::query() + Row::try_get() — NO compile-time macros, NO FromRow derive",
+    "error_handling": "thiserror for domain errors, separate Error enum per module",
+    "clippy_enforcement": "cargo clippy --lib -- -D warnings must pass with 0 warnings",
+    "commit_style": "feat/fix/docs prefix, Wave/Sprint reference in parentheses",
+    "migrations_dir": "migrations/ with timestamp prefix YYYYMMDDHHMMSS_name.sql",
+    "test_pattern": "#[cfg(test)] mod tests in same file, cargo test --lib module::submodule"
+  },
+  "known_fixes": [
+    {
+      "problem": "Aes256Gcm does not implement Debug, so Vault struct cannot derive Debug",
+      "solution": "Manual impl std::fmt::Debug for Vault with redacted cipher field",
+      "file": "src/broker/vault.rs",
+      "discovered_at": "2026-04-02"
+    }
+  ],
+  "architecture_rules": [
+    "rand 0.8 is already a dependency — do not add duplicate",
+    "base64 0.22 uses Engine trait: use base64::{Engine as _, engine::general_purpose::STANDARD as B64}",
+    "aes-gcm 0.10 uses aes_gcm::{aead::{Aead, KeyInit}, Aes256Gcm, Nonce}",
+    "Vault master key comes from BROKER_VAULT_KEY env var (64 hex chars = 32 bytes)",
+    "broker_connections table uses ON CONFLICT upsert for store_connection()"
+  ],
+  "environment_quirks": [
+    "TrueNAS ports remapped: postgres=15432, redis=16379, api=18080, frontend=13000",
+    "redis v0.24.0 crate shows future-incompat warning — not our code, ignore",
+    "SSH to TrueNAS: ssh root@192.168.1.123, docker exec ios-postgres psql -U investor -d investor_os"
+  ],
+  "important_decisions": [
+    "Vault uses random 12-byte nonce per encryption (not deterministic) for IND-CPA security",
+    "BrokerGateway stores encrypted keys with per-field nonces in broker_connections table",
+    "gateway.rs uses ON CONFLICT DO UPDATE to allow key rotation without deleting connections",
+    "subscriptions table uses user_id UNIQUE constraint for upsert pattern (ON CONFLICT (user_id))",
+    "Tier enum uses serde(rename_all = lowercase) so JSON serialization matches DB tier strings"
+  ]
+}
