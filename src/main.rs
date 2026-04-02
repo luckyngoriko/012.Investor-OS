@@ -217,30 +217,85 @@ async fn main() {
         db_pool: pool,
         projects: Arc::new(project_service),
         ml_sidecar: prediction::client::from_env().map(Arc::new),
-        nats: None, // Initialized async below if NATS_URL is set
+        nats: investor_os::nats::NatsClient::from_env()
+            .await
+            .map(Arc::new),
     };
 
     // Създаване на router
-    let app = create_router(state);
+    let app = create_router(state.clone());
 
-    info!("📡 API сървър стартира на: http://{}", addr);
+    // Spawn NATS workers if connected
+    if let Some(ref nats_client) = state.nats {
+        let publisher = Arc::new(investor_os::nats::NatsPublisher::new(
+            nats_client.as_ref().clone(),
+        ));
+
+        // Ensure JetStream streams exist
+        if let Err(e) = investor_os::nats::streams::ensure_streams(nats_client.jetstream()).await {
+            warn!("JetStream stream creation failed: {e}");
+        }
+
+        let pool = state.db_pool.clone();
+        let n = nats_client.clone();
+        let p = publisher.clone();
+        tokio::spawn(investor_os::nats::trade_executor::run(
+            n.clone(),
+            p.clone(),
+            pool.clone(),
+        ));
+        tokio::spawn(investor_os::nats::signal_router::run(
+            n.clone(),
+            p.clone(),
+            pool.clone(),
+        ));
+        tokio::spawn(investor_os::nats::portfolio_tracker::run(
+            n.clone(),
+            p.clone(),
+            pool.clone(),
+        ));
+        tokio::spawn(investor_os::nats::event_logger::run(
+            n.clone(),
+            pool.clone(),
+        ));
+        tokio::spawn(investor_os::nats::feature_service::run(
+            n.clone(),
+            p.clone(),
+            pool.clone(),
+        ));
+        // HRM worker uses burn tensors (not Send+Sync) — run on a dedicated thread
+        {
+            let n2 = n.clone();
+            let p2 = p.clone();
+            std::thread::spawn(move || {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .expect("HRM worker runtime");
+                rt.block_on(investor_os::nats::hrm_worker::run(n2, p2));
+            });
+        }
+        tokio::spawn(investor_os::nats::consensus_worker::run(
+            n.clone(),
+            p.clone(),
+        ));
+        tokio::spawn(investor_os::nats::trade_proposer::run(n.clone(), p.clone()));
+
+        info!("8 NATS workers spawned");
+    }
+
+    info!("API server starting on: http://{}", addr);
     info!("");
-    info!("📖 Документация:     http://{}/api/docs", addr);
-    info!("❤️  Health Check:    http://{}/api/health", addr);
-    info!("🔐 Security Status:  http://{}/api/security/status", addr);
-    info!(
-        "📊 Portfolio API:    http://{}/api/portfolio/optimize",
-        addr
-    );
-    info!("🤖 Strategy API:     http://{}/api/strategy/regime", addr);
-    info!("💰 Tax API:          http://{}/api/tax/status", addr);
-    info!(
-        "📈 Metrics:          http://{}/api/monitoring/metrics",
-        addr
-    );
-    info!("☸️  Deployment:      http://{}/api/deployment/status", addr);
+    info!("Docs:            http://{}/api/docs", addr);
+    info!("Health Check:    http://{}/api/health", addr);
+    info!("Security Status: http://{}/api/security/status", addr);
+    info!("Portfolio API:   http://{}/api/portfolio/optimize", addr);
+    info!("Strategy API:    http://{}/api/strategy/regime", addr);
+    info!("Tax API:         http://{}/api/tax/status", addr);
+    info!("Metrics:         http://{}/api/monitoring/metrics", addr);
+    info!("Deployment:      http://{}/api/deployment/status", addr);
     info!("");
-    info!("Натиснете Ctrl+C за спиране на сървъра");
+    info!("Press Ctrl+C to stop the server");
     info!("═══════════════════════════════════════════════════════════════");
     info!("");
 
@@ -384,9 +439,13 @@ async fn marketplace_list_handler(
 
 async fn marketplace_publish_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
     Json(body): Json<marketplace::PublishRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let creator_id = strategy_user_id();
+    let creator_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
     match marketplace::publish_strategy(&state.db_pool, creator_id, &body).await {
         Ok(id) => (
             StatusCode::CREATED,
@@ -404,9 +463,13 @@ async fn marketplace_publish_handler(
 
 async fn marketplace_subscribe_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
     Path(listing_id): Path<Uuid>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let user_id = strategy_user_id();
+    let user_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
     match marketplace::subscribe_to_strategy(&state.db_pool, user_id, listing_id).await {
         Ok(()) => (
             StatusCode::OK,
@@ -426,9 +489,13 @@ async fn marketplace_subscribe_handler(
 
 async fn custody_deposit_address_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
     Json(body): Json<custody::DepositAddressRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let user_id = strategy_user_id();
+    let user_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
     // Verify wallet ownership
     match custody::get_wallet(&state.db_pool, body.wallet_id, user_id).await {
         Ok(Some(wallet)) => {
@@ -466,9 +533,13 @@ async fn custody_deposit_address_handler(
 
 async fn custody_withdraw_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
     Json(body): Json<custody::WithdrawRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let user_id = strategy_user_id();
+    let user_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
     match custody::get_wallet(&state.db_pool, body.wallet_id, user_id).await {
         Ok(Some(wallet)) => {
             // Record the withdrawal transaction in the database
@@ -518,9 +589,13 @@ async fn custody_withdraw_handler(
 
 async fn custody_balance_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
     Query(params): Query<custody::BalanceQuery>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let user_id = strategy_user_id();
+    let user_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
     match custody::get_wallet(&state.db_pool, params.wallet_id, user_id).await {
         Ok(Some(wallet)) => (
             StatusCode::OK,
@@ -553,9 +628,13 @@ async fn custody_balance_handler(
 
 async fn custody_transactions_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
     Query(params): Query<custody::TransactionsQuery>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let user_id = strategy_user_id();
+    let user_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
     // Verify wallet ownership first
     match custody::get_wallet(&state.db_pool, params.wallet_id, user_id).await {
         Ok(Some(_wallet)) => {
@@ -606,9 +685,13 @@ struct StripeWebhookEvent {
 
 async fn fiat_deposit_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
     Json(body): Json<fiat_onramp::DepositRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let user_id = strategy_user_id();
+    let user_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
 
     // Try Stripe if configured, otherwise create a pending record only
     let stripe = fiat_onramp::StripeConnectClient::from_env();
@@ -661,9 +744,13 @@ async fn fiat_deposit_handler(
 
 async fn fiat_withdraw_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
     Json(body): Json<fiat_onramp::WithdrawalRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let user_id = strategy_user_id();
+    let user_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
 
     let stripe = fiat_onramp::StripeConnectClient::from_env();
     let (payout_id, status) = match &stripe {
@@ -710,8 +797,12 @@ async fn fiat_withdraw_handler(
 
 async fn fiat_history_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let user_id = strategy_user_id();
+    let user_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
     match fiat_onramp::list_transactions(&state.db_pool, user_id).await {
         Ok(txs) => (StatusCode::OK, Json(json!({"success": true, "data": txs}))),
         Err(e) => (
@@ -1136,18 +1227,25 @@ async fn kyc_webhook_handler(
 
 // ───────────────── Strategy Engine handlers (Wave 1b Task 5) ─────────────────
 
-/// Hardcoded admin user ID for strategy endpoints until full auth extraction is wired.
-const STRATEGY_ADMIN_USER_ID: &str = "00000000-0000-0000-0000-000000000001";
-
-fn strategy_user_id() -> Uuid {
-    Uuid::parse_str(STRATEGY_ADMIN_USER_ID).expect("valid hardcoded UUID")
+/// Extract real user_id from JWT auth extension.
+fn extract_user_id(user: &auth::AuthUser) -> Result<Uuid, (StatusCode, Json<serde_json::Value>)> {
+    Uuid::parse_str(&user.id).map_err(|_| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"success": false, "error": {"code": "INVALID_USER_ID", "message": "invalid user id"}})),
+        )
+    })
 }
 
 async fn strategy_create_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
     Json(body): Json<strategy::CreateStrategyRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let user_id = strategy_user_id();
+    let user_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
     match strategy::repository::create_strategy(&state.db_pool, user_id, &body).await {
         Ok(s) => (
             StatusCode::CREATED,
@@ -1164,8 +1262,12 @@ async fn strategy_create_handler(
 
 async fn strategy_list_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let user_id = strategy_user_id();
+    let user_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
     match strategy::repository::get_strategies(&state.db_pool, user_id).await {
         Ok(strategies) => (
             StatusCode::OK,
@@ -1180,9 +1282,13 @@ async fn strategy_list_handler(
 
 async fn strategy_get_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
     Path(id): Path<Uuid>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let user_id = strategy_user_id();
+    let user_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
     match strategy::repository::get_strategy(&state.db_pool, id, user_id).await {
         Ok(Some(s)) => (StatusCode::OK, Json(json!({"success": true, "data": s}))),
         Ok(None) => (
@@ -1200,10 +1306,14 @@ async fn strategy_get_handler(
 
 async fn strategy_update_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
     Path(id): Path<Uuid>,
     Json(body): Json<strategy::UpdateStrategyRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let user_id = strategy_user_id();
+    let user_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
     match strategy::repository::update_strategy(&state.db_pool, id, user_id, &body).await {
         Ok(Some(s)) => (StatusCode::OK, Json(json!({"success": true, "data": s}))),
         Ok(None) => (
@@ -1221,9 +1331,13 @@ async fn strategy_update_handler(
 
 async fn strategy_delete_handler(
     State(state): State<AppState>,
+    Extension(user): Extension<auth::AuthUser>,
     Path(id): Path<Uuid>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let user_id = strategy_user_id();
+    let user_id = match extract_user_id(&user) {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
     match strategy::repository::delete_strategy(&state.db_pool, id, user_id).await {
         Ok(true) => (
             StatusCode::OK,
