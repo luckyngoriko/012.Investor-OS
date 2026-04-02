@@ -27,6 +27,12 @@ pub mod multi_asset;
 /// Sprint 25: Paper Trading & Backtesting
 pub mod paper;
 
+/// Wave 1a: AES-256-GCM vault for encrypting broker API keys
+pub mod vault;
+
+/// Wave 1a: Unified broker gateway for encrypted key storage & retrieval
+pub mod gateway;
+
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};

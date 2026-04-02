@@ -84,6 +84,10 @@ fastrand = "2.3"
 argon2 = { version = "0.5", features = ["std"] }
 jsonwebtoken = "9.3"
 
+# Broker vault — AES-256-GCM encryption for API keys
+aes-gcm = "0.10"
+base64 = "0.22"
+
 # Monitoring & Metrics (Sprint 46)
 prometheus = { version = "0.14", features = ["process"] }
 lazy_static = "1.4"
